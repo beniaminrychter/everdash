@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "timeZone": "Europe/London",
+  "views": [
+    {
+      "id": "home",
+      "title": "Home"
+    }
+  ]
+}

@@ -1,7 +1,8 @@
 import { defineConfig } from '../../src/shared/config';
 
-// Stable browser-test input, independent of edits to the user's home.config.ts.
-export default defineConfig({
+// Stable browser-test input, independent of each user's runtime dashboard JSON.
+export const dashboardDocument = {
+  schemaVersion: 1 as const,
   sun: 'sun.sun',
   timeZone: 'Europe/Warsaw',
   views: [
@@ -41,4 +42,6 @@ export default defineConfig({
       ],
     },
   ],
-});
+};
+
+export default defineConfig(dashboardDocument);

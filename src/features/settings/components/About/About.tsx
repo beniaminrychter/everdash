@@ -21,7 +21,7 @@ export function About() {
           'Adding to your Home Screen and offline launch need a secure HTTPS connection. Live states and controls always require a connection to Home Assistant.',
         )}
       </p>
-      <p class={styles.aboutVersion}>{t('My Home · Home Assistant dashboard')}</p>
+      <p class={styles.aboutVersion}>{t('EverDash · Home Assistant dashboard')}</p>
     </div>
   );
 }

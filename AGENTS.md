@@ -2,7 +2,7 @@
 
 ## What this project is
 
-My Home is a Preact progressive web app for controlling explicitly configured Home Assistant devices and viewing home information on an iPad running iOS 12. It uses Home Assistant's REST API, TypeScript, Vite, and CSS Modules. The app includes accessory and climate controls, energy prices and usage, weather forecasts, sensor badges, saved dashboard and appearance preferences, and an offline app shell.
+EverDash is a Preact progressive web app for controlling explicitly configured Home Assistant devices and viewing home information on legacy screens, including an iPad running iOS 12. It uses Home Assistant's REST API, TypeScript, Vite, and CSS Modules. The app includes accessory and climate controls, energy prices and usage, weather forecasts, sensor badges, saved dashboard and appearance preferences, and an offline app shell.
 
 The production target is iOS 12 and Safari 12. Keep the app usable on that hardware when changing TypeScript, JavaScript, CSS, build configuration, or dependencies. The IE11 output is only a conservative JavaScript syntax floor; IE11 is not a supported product target.
 
@@ -12,7 +12,7 @@ The production target is iOS 12 and Safari 12. Keep the app usable on that hardw
 - `src/features/<feature>/components/` owns feature UI. Keep component logic and its CSS Module together, preferably in a component directory such as `components/AccessoryCard/AccessoryCard.tsx` and `AccessoryCard.module.css`.
 - `src/features/<feature>/data/` owns feature-specific models, stores, API-to-view mappings, and domain logic. Put feature hooks in a nearby `hooks/` directory when they are not part of a component.
 - `src/shared/` owns code used by multiple features: UI primitives, Home Assistant transport and transport contracts, cross-feature types, configuration, i18n, and shared low-level helpers. Shared modules must not import from `src/features/`.
-- `home.config.ts` is the user's build-time dashboard configuration. Keep entity IDs explicit; do not silently substitute entities by friendly name or invent production readings.
+- The runtime dashboard is versioned JSON validated by `src/shared/config/`. Keep entity IDs explicit; do not silently substitute entities by friendly name or invent production readings.
 
 ## Adding or changing a feature
 

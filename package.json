@@ -1,5 +1,5 @@
 {
-  "name": "home-assistant-legacy",
+  "name": "everdash",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -15,6 +15,7 @@
     "preview": "vite preview --host 0.0.0.0",
     "test": "node --import tsx --test tests/*.test.ts",
     "test:browser": "node tests/browser.smoke.mjs",
+    "config:export": "node --import tsx scripts/export-config.ts",
     "check:compat": "node scripts/check-compat.mjs"
   },
   "dependencies": {

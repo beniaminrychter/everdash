@@ -1,17 +1,10 @@
-# My Home
+# EverDash
 
-An Apple Home inspired dashboard for an iPad running iOS 12, built with **Vite, TypeScript, Preact 10, and CSS Modules**.
+EverDash gives older screens a new purpose as Home Assistant dashboards. It is built with Preact, TypeScript, Vite, and CSS Modules, with a Safari 12 / iOS 12 compatibility target.
 
-- One combined **First floor** dashboard, with a dropdown ready for additional configured dashboards. The selection is saved on this device.
-- Kitchen lights: Kuchnia, Jadalnia, Szafki and Skrytka. Living room: Salon Dodatkowe, Salon Główne and TV.
-- Actual outlet controls and a rounded kitchen-temperature badge at the top.
-- Energy card with Pstryk current price and usage side by side, today’s price range, two-decimal rates, and a header graph button. The graph opens above the figures; tap a bar or use Tab and Enter/Space to see its date, time and rate.
-- A compact current-weather strip with the next five hourly forecasts. All temperatures use one decimal place.
-- Inline Air Conditioner control: target temperature, +/− buttons, Off/Cool/Heat/Dry and Auto/Low/Mid/High fan settings.
-- Saved **Auto / Light / Dark** appearance. Auto follows Home Assistant sunrise/sunset through `sun.sun`.
-- The original `light.salon_dodatkowe` and `switch.ogrod_taras_kinkiety` bindings are retained.
-
-No production readings or entity IDs are fabricated. Sources that are missing, unavailable or offline show their actual status.
+- Explicitly configured lights, outlets, climate controls, sensors, energy prices, and weather.
+- Multiple dashboard views, saved appearance and language preferences, and an offline app shell.
+- No friendly-name entity guessing or fabricated readings; missing and unavailable sources remain visible.
 
 ## Configure and run
 
@@ -60,63 +53,19 @@ The Codex Home Assistant connector is useful for inspecting devices during devel
 
 ## App configuration
 
-Edit **`home.config.ts`** at the project root. This is the only user configuration file. `defineConfig()` supplies autocomplete, checks entity domains and supported card options, and supplies icons and polling defaults. The app does not discover extra controls or match entities by friendly name.
+The dashboard is described by a versioned JSON document. See [the generic example](examples/dashboard.json) and [JSON Schema](src/shared/config/schema.ts). Each entity ID is explicit; the dashboard never discovers controls or matches devices by friendly name. Local development currently loads the generic example; the HA OS release will load saved JSON through EverDash's management screen.
 
-```ts
-import { defineConfig } from './src/shared/config';
+If you are migrating the current TypeScript dashboard, its private source has been moved into the ignored `.local/home.config.ts` file. Export it to versioned JSON with:
 
-export default defineConfig({
-  timeZone: 'Europe/Warsaw',
-  sun: 'sun.sun',
-  views: [
-    {
-      id: 'first-floor',
-      title: 'First floor',
-      badges: [
-        { type: 'temperature', entity: 'sensor.czujnik_jadalnia_temperatura', name: 'Kitchen' },
-      ],
-      cards: [
-        { type: 'light', entity: 'light.kuchnia', name: 'Kuchnia' },
-        { type: 'light', entity: 'light.salon_dodatkowe', icon: 'floor-lamp' },
-        { type: 'outlet', entity: 'switch.ogrod_taras_kinkiety', name: 'Kinkiety Taras' },
-        {
-          type: 'pstryk',
-          entity: 'sensor.pstryk_current_buy_price',
-          sellPrice: 'sensor.pstryk_current_sell_price',
-          usage: 'sensor.pstryk_multisensor_activepower_0',
-        },
-        { type: 'weather', entity: 'weather.dom' },
-        { type: 'climate', entity: 'climate.ac', name: 'Air Conditioner' },
-      ],
-    },
-  ],
-});
+```sh
+npm run config:export
 ```
 
-The shipped config includes all eight existing accessories and the verified `climate.ac` air conditioner. `views` must contain at least one view, each with a unique stable `id` and a `title`. Adding a view adds a dashboard-picker option. The existing `first-floor` ID preserves saved selection. `badges` and `cards` can be omitted, including for a badge-only view. Cards render in array order; adjacent accessories or widgets share the existing responsive grids. The same device can appear in several views with different names/icons while sharing live state and one command queue.
+The output is written to `.local/dashboard.json`, which is excluded from Git. You can also provide source and destination paths: `npm run config:export -- /path/to/home.config.ts /path/to/dashboard.json`.
 
-| Type | Required entity | Optional fields | Default display |
-| --- | --- | --- | --- |
-| `light` | `light.*` | `name`, `icon` | HA friendly name, bulb icon |
-| `outlet` | `switch.*` | `name`, `icon` | HA friendly name, outlet icon |
-| `temperature` badge | `sensor.*` | `name`, `icon` | HA friendly name, thermometer icon |
-| `pstryk` | buying-price `sensor.*` | `name`, `sellPrice`, `nextPrice`, `usage`, `schedule` | Energy |
-| `weather` | `weather.*` | `name` | Current weather, condition-dependent icon |
-| `climate` | `climate.*` | `name`, `temperatureUnit` | HA friendly name; °C by default |
+Dashboard configuration uses JSON Schema version 1. See the [generic dashboard example](examples/dashboard.json) and [schema](src/shared/config/schema.ts). A dashboard contains `views`; each view has a stable `id`, a `title`, and optionally ordered `badges` and `cards`. Entity IDs are explicit and must match their Home Assistant domains.
 
-`entity` always contains the exact HA entity ID. `name` changes only the label in this app. An omitted accessory/badge name uses HA's `friendly_name`, falling back to the entity ID until metadata arrives. Brightness and colour capabilities come from HA. Invalid/missing entities stay configured and show an unavailable state; a similarly named entity is never substituted. **Settings → Connected data sources** lists the selected view's explicit sources.
-
-Optional root `polling` overrides are milliseconds: `{ controlsMs: 5000, observationsMs: 30000, metadataMs: 300000 }`. Omit it to use these defaults. Accessory and observation polling have minimum intervals of 1 and 5 seconds respectively. Metadata refresh is checked during each observation cycle. `sun` is optional: omit it to use the device appearance in Auto mode. `timeZone` supplies the home's IANA timezone for price schedule parsing and labels.
-
-The Pstryk card shows current usage in kW with two decimals. The installed config uses the verified total active-power sensor `sensor.pstryk_multisensor_activepower_0`; channels 1–3 are individual phases and are not added again. W and kW readings are supported, including zero. Negative readings are labelled **Grid export**. Offline, missing, invalid or unavailable readings show a dash; cumulative kWh meters are not treated as current power.
-
-Configuration is bundled at build time. Development reloads after edits; production requires **build → redeploy → Settings → Hard reload app**. Connection credentials remain in the local `.env`.
-
-The climate card is fully inline. Its +/− buttons use the entity's `target_temp_step`, `min_temp` and `max_temp`; missing setpoints stay unavailable. Mode buttons expose Off/Cool/Heat/Dry. While Off is selected, the target temperature is gray and temperature/fan buttons are disabled; mode buttons remain available to turn the AC on. Fan buttons expose Auto/Low/Mid/High, with Mid mapped to the entity's advertised `medium` (or `mid`/`middle`) value. Unsupported options are disabled. The verified AC uses Celsius, 16–32°C in 1°C steps; set `temperatureUnit: '°F'` for an installation using Fahrenheit. Selecting a mode sends `climate.set_hvac_mode`, temperature uses `climate.set_temperature`, and fan uses `climate.set_fan_mode`. The AC polls with accessory controls every five seconds, updates optimistically, coalesces temperature taps for 250 ms, and serializes commands per entity. Failed writes roll back only the affected setting with a small error toast. No commands are queued while offline.
-
-The original two-entity regression fixture now lives under `tests/fixtures/`, outside production configuration. Earlier mock fixtures and state helpers remain for regression coverage; the live dashboard does not use their saved state or sample measurements.
-
-The weather strip requests hourly forecasts through `weather.get_forecasts` with `return_response`. Forecasts refresh every 15 minutes and on manual refresh; current weather retains the normal observation polling interval. Only supplied future entries within the next five hours appear. Missing or unsupported hourly forecasts show an unavailable note while current weather remains usable.
+Supported cards are `light`, `outlet`, `pstryk`, `weather`, and `climate`. Temperature badges use `sensor.*`. Optional root fields are `timeZone`, `sun`, and polling intervals in milliseconds. The validator applies the existing polling and icon defaults, rejects unknown fields and invalid entity IDs, and returns field-level issues.
 
 ### Language
 
@@ -155,7 +104,7 @@ Sources used for these adapters: [Pstryk price and schedule attributes](https://
 1. Serve `dist/` from a private **HTTPS** host trusted by the iPad. Subfolders work; keep the trailing slash.
 2. Open that address in Safari and wait for the first complete online load.
 3. Tap **Share → Add to Home Screen → Add**.
-4. Launch **My Home** from the Home Screen.
+4. Launch **EverDash** from the Home Screen.
 
 The manifest, Apple standalone metadata, safe-area padding, and PNG Apple touch icon are included. Service workers require HTTPS over the network; plain HTTP LAN preview is only for initial testing. Safari can evict cached data.
 
@@ -174,8 +123,8 @@ Text selection, touch callouts and visible focus outlines are disabled across th
 
 | File | Responsibility |
 | --- | --- |
-| `home.config.ts` | Complete user configuration: views, badges, cards and explicit entity IDs |
-| `src/shared/config/` | Configuration types, defaults and validation |
+| `examples/dashboard.json` | Generic starter dashboard using the runtime JSON schema |
+| `src/shared/config/` | JSON contracts, schema, defaults and validation |
 | `src/features/dashboard/` | Dashboard composition, source resolution, observation polling and schedules |
 | `src/features/accessories/` | Accessory UI, capability/state mapping, commands and polling |
 | `src/features/climate/` | Climate UI, state/capabilities, optimistic command queue and polling |
@@ -207,7 +156,7 @@ npm run check:compat     # After build: ES5 syntax, Safari CSS, PWA/cache invent
 npm run test:browser     # Self-contained build/server + installed Chrome; no live devices
 ```
 
-The browser test uses a stable configuration in `tests/fixtures/dashboard.ts`, so edits to `home.config.ts` do not change its fixtures. It builds into an OS temporary directory using dummy environment credentials and an isolated cross-origin HTTP API fixture. No preview server is needed, and the normal `dist/` and `.env` remain untouched. It verifies explicit entity bindings and metadata refresh, saved dashboard/appearance preferences, multiple views with shared controls and badge-only views, ordered widgets, HA sunrise/sunset, compact Pstryk/weather/temperature widgets, real browser HTTP requests, service payloads, inline AC temperature/mode/fan controls and failure rollback, automatic polling, capability-dependent controls, dimming, authentication/error recovery, unavailable entities, modal keyboard behavior, offline disabled controls, reconnect, four responsive widths, and forced SystemJS startup. Screenshots go to the OS temporary directory; set `MY_HOME_SCREENSHOT_DIR` to choose another path. Set `MY_HOME_BROWSER_CHANNEL=chromium` to use a previously installed bundled Chromium.
+The browser test uses a stable configuration in `tests/fixtures/dashboard.ts`, independent of the generic runtime JSON example. It builds into an OS temporary directory using dummy environment credentials and an isolated cross-origin HTTP API fixture. No preview server is needed, and the normal `dist/` and `.env` remain untouched. It verifies explicit entity bindings and metadata refresh, saved dashboard/appearance preferences, multiple views with shared controls and badge-only views, ordered widgets, HA sunrise/sunset, compact Pstryk/weather/temperature widgets, real browser HTTP requests, service payloads, inline AC temperature/mode/fan controls and failure rollback, automatic polling, capability-dependent controls, dimming, authentication/error recovery, unavailable entities, modal keyboard behavior, offline disabled controls, reconnect, four responsive widths, and forced SystemJS startup. Screenshots go to the OS temporary directory; set `MY_HOME_SCREENSHOT_DIR` to choose another path. Set `MY_HOME_BROWSER_CHANNEL=chromium` to use a previously installed bundled Chromium.
 
 Modern-engine tests and syntax audits cannot prove iOS 12 behavior. The physical iPad still needs final testing for touch controls, TLS, Home Screen installation, and offline launch. End-to-end operation against the real server requires `.env` and CORS access; automated verification never actuates physical devices.
 

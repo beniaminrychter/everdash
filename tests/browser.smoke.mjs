@@ -299,11 +299,10 @@ try {
   appUrl = `http://127.0.0.1:${server.address().port}/`;
   const apiUrl = `http://127.0.0.1:${api.address().port}`;
   // Test-only Vite plugin loads stable configuration fixtures in the temporary build.
-  // It never edits home.config.ts or adds fixture views to the user's app.
+  // It never edits the user's runtime dashboard JSON or adds fixture views to it.
   const testConfig = join(temporary, 'vite.config.mjs');
   const fixtureModule = `
-    import base from ${JSON.stringify(resolvePath('tests/fixtures/dashboard.ts'))};
-    import { defineConfig } from ${JSON.stringify(resolvePath('src/shared/config/index.ts'))};
+    import { dashboardDocument as base } from ${JSON.stringify(resolvePath('tests/fixtures/dashboard.ts'))};
     const views = [...base.views, {
       id: 'fixture-room', title: 'Meter room',
       badges: [{ type: 'temperature', entity: 'sensor.fixture_living_temp' }],
@@ -317,7 +316,7 @@ try {
       id: 'fixture-sensors', title: 'Sensors',
       badges: [{ type: 'temperature', entity: 'sensor.fixture_living_temp' }],
     }];
-    export default defineConfig({ ...base, views: location.search.includes('sensors-only') ? views.filter(view => view.id === 'fixture-sensors') : views });
+    export default { ...base, views: location.search.includes('sensors-only') ? views.filter(view => view.id === 'fixture-sensors') : views };
   `;
   await writeFile(
     testConfig,
@@ -326,7 +325,7 @@ try {
     export default { ...original, plugins: [
       { name: 'isolated-config-fixture', enforce: 'pre',
         resolveId(source, importer) {
-          if (source === '../../home.config' && importer?.endsWith('/src/app/App.tsx')) {
+          if (source === '../../examples/dashboard.json' && importer?.endsWith('/src/app/main.tsx')) {
             return '\0browser-fixture-config';
           }
         },
@@ -389,7 +388,7 @@ try {
     await closeSettings();
   };
   await page.goto(appUrl);
-  await expect(page).toHaveTitle('My Home');
+  await expect(page).toHaveTitle('EverDash');
   await expect(page.locator('meta[name="viewport"]')).toHaveAttribute(
     'content',
     /maximum-scale=1, user-scalable=no/,
@@ -526,14 +525,14 @@ try {
   );
   delete states['sensor.fixture_next'];
   await refreshPage();
-  await expect(page.getByText('Next period', { exact: true }).locator('..')).toContainText('0.91');
+  await expect(page.getByText('Next hour', { exact: true }).locator('..')).toContainText('0.91');
   await expect(page.locator('[data-price-status]')).toHaveAttribute('data-price-status', 'cheap');
   await expect(page.getByText('Lowest today', { exact: true })).toBeVisible();
   await expect(page.getByTestId('energy-price-bar')).toHaveCount(24);
   states['sensor.pstryk_current_buy_price'] = originalBuy;
   states['sensor.fixture_next'] = originalNext;
   await refreshPage();
-  await expect(page.getByText('Next period', { exact: true }).locator('..')).toContainText('0.45');
+  await expect(page.getByText('Next hour', { exact: true }).locator('..')).toContainText('0.45');
   await expect(page.getByTestId('weather-temperature')).toHaveText('14.2°C');
   const weather = page.getByRole('region', { exact: true, name: 'Current weather' });
   await expect(weather.locator('[data-forecast-hour]')).toHaveCount(5);
@@ -561,7 +560,7 @@ try {
     'true',
   );
   await page.getByRole('button', { exact: true, name: 'Zamknij ustawienia' }).click();
-  await expect(page).toHaveTitle('Mój dom');
+  await expect(page).toHaveTitle('EverDash');
   await expect(page.locator('html')).toHaveAttribute('lang', 'pl');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('First floor');
   await expect(page.getByRole('heading', { exact: true, name: 'Air Conditioner' })).toBeVisible();
@@ -598,7 +597,7 @@ try {
   await expect(page.getByRole('heading', { exact: true, name: 'Język' })).toBeVisible();
   await page.getByRole('button', { exact: true, name: 'English' }).click();
   await closeSettings();
-  await expect(page).toHaveTitle('My Home');
+  await expect(page).toHaveTitle('EverDash');
   await expect(page.getByRole('heading', { exact: true, name: 'Energy' })).toBeVisible();
   const picker = page.getByRole('button', { exact: true, name: 'First floor, choose dashboard' });
   await picker.click();

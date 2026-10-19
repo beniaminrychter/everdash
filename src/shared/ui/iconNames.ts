@@ -1,0 +1,28 @@
+export const iconNames = [
+  'away',
+  'bed',
+  'bulb',
+  'check',
+  'close',
+  'cloud',
+  'coffee',
+  'desk-lamp',
+  'floor-lamp',
+  'home',
+  'laptop',
+  'moon',
+  'more',
+  'movie',
+  'outlet',
+  'pendant',
+  'plug',
+  'rain',
+  'share',
+  'sliders',
+  'sofa',
+  'sun',
+  'sunrise',
+  'thermometer',
+] as const;
+
+export type IconName = (typeof iconNames)[number];

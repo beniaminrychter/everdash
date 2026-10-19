@@ -1,7 +1,7 @@
 {
   "id": "./",
-  "name": "My Home",
-  "short_name": "My Home",
+  "name": "EverDash",
+  "short_name": "EverDash",
   "description": "A Home Assistant dashboard designed for older iPads.",
   "lang": "en",
   "start_url": "./",

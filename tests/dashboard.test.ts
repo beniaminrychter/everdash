@@ -4,7 +4,7 @@ import { resolveDashboard, parseEntities } from '../src/features/dashboard/data/
 import { mapEnergy, powerKilowatts } from '../src/features/energy/data/readings';
 import { mapWeather, parseForecastResponse } from '../src/features/weather/data/forecast';
 import { sensorValue } from '../src/features/sensors/data/readings';
-import config from '../home.config';
+import config from './fixtures/dashboard';
 
 const entity = (
   id: string,

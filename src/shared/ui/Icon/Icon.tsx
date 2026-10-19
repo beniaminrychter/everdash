@@ -1,4 +1,5 @@
 import type { ComponentChildren } from 'preact';
+import type { IconName } from '../iconNames';
 import styles from './Icon.module.css';
 
 const shapes = {
@@ -138,9 +139,9 @@ const shapes = {
       <path d="M12 8v10m6-11h3m-3 4h2" />
     </>
   ),
-} satisfies Record<string, ComponentChildren>;
+} satisfies Record<IconName, ComponentChildren>;
 
-export type IconName = keyof typeof shapes;
+export type { IconName } from '../iconNames';
 
 interface IconProps {
   name: IconName;

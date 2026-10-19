@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'preact/hooks';
 import { LanguageProvider, createTranslator, translateMessage } from '../shared/i18n/index';
-import config from '../../home.config';
+import type { AppConfig } from '../shared/config';
 import { useClimate } from '../features/climate/data/useClimate';
 import { useToast } from './hooks/useToast';
 import { useHomeAssistant } from '../features/accessories/data/useHomeAssistant';
@@ -22,12 +22,15 @@ import { ConnectedDataSources } from '../features/settings/components/ConnectedD
 import styles from './App.module.css';
 
 type OpenModal = { kind: 'light'; deviceId: string } | { kind: 'settings' } | null;
-export function App() {
+interface Props {
+  config: AppConfig;
+}
+export function App({ config }: Props) {
   usePreventZoom();
   const dashboard = useDashboard(config);
   const commandPage = useMemo(
     () => ({ cards: dashboard.resolved.cards, pollIntervalMs: config.polling.controlsMs }),
-    [dashboard.resolved.cards],
+    [config.polling.controlsMs, dashboard.resolved.cards],
   );
   const home = useHomeAssistant(commandPage);
   const climate = useClimate(dashboard.resolved.climates, config.polling.controlsMs);
@@ -49,7 +52,7 @@ export function App() {
   const t = useMemo(() => createTranslator(preferences.language), [preferences.language]);
   useEffect(() => {
     document.documentElement.lang = preferences.language;
-    document.title = t('My Home');
+    document.title = t('EverDash');
   }, [preferences.language, t]);
   const page =
     dashboard.resolved.views.find((item) => item.id === preferences.page) ||
