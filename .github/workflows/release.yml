@@ -12,7 +12,7 @@ jobs:
   validate-and-publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
     env:
       RELEASE_TAG: ${{ github.ref_name }}
@@ -102,3 +102,8 @@ jobs:
           tags: |
             ${{ env.IMAGE_NAME }}:${{ env.IMAGE_VERSION }}
             ${{ env.IMAGE_NAME }}:latest
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$RELEASE_TAG" --title "EverDash ${RELEASE_TAG#v}" --generate-notes
