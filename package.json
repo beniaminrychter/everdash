@@ -1,0 +1,47 @@
+{
+  "name": "home-assistant-legacy",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "typecheck": "tsc --noEmit",
+    "lint": "ultracite check",
+    "lint:fix": "ultracite fix",
+    "format": "ultracite fix",
+    "format:check": "oxfmt --check .",
+    "check": "npm run lint && npm run format:check && npm run typecheck && npm test",
+    "build": "npm run typecheck && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "test:browser": "node tests/browser.smoke.mjs",
+    "check:compat": "node scripts/check-compat.mjs"
+  },
+  "dependencies": {
+    "preact": "^10.29.8"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.0",
+    "@preact/preset-vite": "^2.10.6",
+    "@stale-styles/eslint-plugin": "^1.0.2",
+    "@types/node": "^22.0.0",
+    "@vitejs/plugin-legacy": "^7.2.1",
+    "acorn": "^8.15.0",
+    "autoprefixer": "^10.4.21",
+    "oxfmt": "^0.73.0",
+    "oxlint": "^1.88.0",
+    "postcss": "^8.5.6",
+    "terser": "^5.44.0",
+    "tsx": "^4.20.0",
+    "typescript": "~5.9.3",
+    "ultracite": "^8.0.1",
+    "vite": "^7.2.0"
+  },
+  "browserslist": [
+    "ios_saf >= 12",
+    "Safari >= 12"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

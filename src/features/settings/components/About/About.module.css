@@ -1,0 +1,32 @@
+.aboutContent {
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--muted);
+  padding-top: 24px;
+}
+
+.aboutContent h3 {
+  color: var(--muted);
+  font-size: 17px;
+  margin-top: 22px;
+}
+
+.aboutContent ol {
+  padding-left: 20px;
+}
+
+.aboutContent li {
+  margin-bottom: 10px;
+  padding-left: 4px;
+}
+
+.aboutContent li .aboutNote {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.aboutVersion {
+  font-size: 11px;
+  margin-top: 24px;
+  text-align: center;
+}

@@ -1,0 +1,25 @@
+.sourceDetails {
+  font-size: 12px;
+  line-height: 1.6;
+  margin-top: 20px;
+  color: var(--muted);
+}
+
+.sourceDetails summary {
+  cursor: pointer;
+  font-weight: 600;
+  min-height: 30px;
+}
+
+.sourceDetails ul {
+  padding-left: 17px;
+}
+
+.sourceDetails li {
+  margin-top: 8px;
+  overflow-wrap: break-word;
+}
+
+.sourceDetails span {
+  display: block;
+}

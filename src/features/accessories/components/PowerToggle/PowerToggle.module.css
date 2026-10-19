@@ -1,0 +1,77 @@
+.powerToggle {
+  display: block;
+  flex-shrink: 0;
+  width: 44px;
+  height: 32px;
+  padding: 4px 0;
+  position: relative;
+  background: transparent;
+  border-radius: 30px;
+}
+
+.powerToggle::before {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 4px;
+  left: 0;
+  right: 0;
+  height: 25px;
+  background: rgba(174, 201, 213, 0.18);
+  border-radius: 24px;
+}
+
+.powerToggle:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.powerToggle span {
+  display: block;
+  position: absolute;
+  height: 21px;
+  width: 21px;
+  border-radius: 50%;
+  top: 6px;
+  left: 3px;
+  background: #b6cad4;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  transition: transform 0.18s;
+}
+
+.powerToggle[aria-pressed='true']::before {
+  background: #ffa321;
+}
+
+.powerToggle[aria-pressed='true'] span {
+  background: #fff;
+  transform: translateX(17px);
+}
+
+@media (max-width: 1190px) {
+  .powerToggle {
+    width: 39px;
+  }
+  .powerToggle[aria-pressed='true'] span {
+    transform: translateX(12px);
+  }
+}
+
+@media (min-width: 1440px) {
+  .powerToggle {
+    width: 50px;
+    height: 39px;
+  }
+  .powerToggle::before {
+    top: 3px;
+    height: 30px;
+  }
+  .powerToggle span {
+    top: 5px;
+    height: 26px;
+    width: 26px;
+  }
+  .powerToggle[aria-pressed='true'] span {
+    transform: translateX(18px);
+  }
+}

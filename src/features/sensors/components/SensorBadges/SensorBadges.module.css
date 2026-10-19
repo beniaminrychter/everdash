@@ -1,0 +1,31 @@
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 4px -5px 22px;
+}
+.badge {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 10px 15px;
+  border-radius: 24px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  margin: 5px;
+  font-size: 14px;
+}
+.badge span {
+  color: var(--muted);
+  margin-right: 12px;
+}
+.badge strong {
+  font-size: 15px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  color: var(--accent);
+}

@@ -1,0 +1,111 @@
+.strip {
+  display: flex;
+  align-items: center;
+  margin-top: 14px;
+}
+.current {
+  display: flex;
+  align-items: center;
+  flex: 0 0 30%;
+  min-width: 0;
+  padding-right: 20px;
+}
+.currentIcon {
+  width: 36px;
+  height: 36px;
+  color: #dfae42;
+  flex-shrink: 0;
+  margin-right: 14px;
+}
+.temperature {
+  display: block;
+  font-size: 32px;
+  font-weight: 650;
+  letter-spacing: -1px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.condition {
+  margin-top: 5px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.forecast {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 20px;
+  border-left: 1px solid var(--line);
+}
+.forecast li {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+}
+.forecast time {
+  font-size: 11px;
+  color: var(--muted);
+  display: block;
+}
+.hourIcon {
+  display: block;
+  width: 22px;
+  height: 22px;
+  color: #dfae42;
+  margin: 9px auto;
+}
+.forecast strong {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.note {
+  flex: 1;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+  line-height: 1.5;
+}
+@media (max-width: 699px) {
+  .strip {
+    display: block;
+  }
+  .current {
+    padding: 0;
+  }
+  .currentIcon {
+    width: 32px;
+    height: 32px;
+  }
+  .temperature {
+    font-size: 30px;
+  }
+  .forecast {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    margin-top: 16px;
+    padding: 14px 0 0;
+  }
+  .forecast strong {
+    font-size: 12px;
+  }
+  .forecast time {
+    font-size: 10px;
+  }
+  .note {
+    margin-top: 16px;
+    text-align: left;
+  }
+}
+
+.conditionLabel {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}

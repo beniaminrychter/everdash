@@ -1,0 +1,61 @@
+.sheetHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modalBackdrop {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  background: rgba(12, 18, 32, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.sheet {
+  width: 440px;
+  max-width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--sheet);
+  color: var(--text);
+  border-radius: 28px;
+  padding: 27px 30px;
+  box-shadow: 0 24px 100px #0005;
+}
+.sheet .roundButton {
+  color: var(--muted);
+  background: var(--surface-strong);
+  border: none;
+  width: 36px;
+  height: 36px;
+  margin-left: 12px;
+}
+.sheetHeader h2 {
+  font-size: 25px;
+  letter-spacing: -0.8px;
+}
+.sheetEyebrow {
+  color: var(--muted);
+  font-size: 13px;
+  display: block;
+  margin-bottom: 5px;
+}
+@media (max-width: 599px) {
+  .modalBackdrop {
+    padding: 16px;
+  }
+  .sheet {
+    border-radius: 24px;
+    padding: 25px;
+  }
+  .sheetHeader h2 {
+    font-size: 23px;
+  }
+}

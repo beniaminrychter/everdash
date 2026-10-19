@@ -1,0 +1,90 @@
+.chartHeading,
+.axis {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.chartHeading {
+  margin: 0 0 8px;
+}
+
+.selectedPrice {
+  min-height: 32px;
+  margin: 0 0 8px;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+.chartScroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.chartCanvas {
+  width: 100%;
+}
+
+.chart {
+  display: flex;
+  width: 100%;
+  height: 104px;
+}
+
+.bar {
+  display: block;
+  flex: 1 0 24px;
+  min-width: 24px;
+  height: 104px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.bar svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.bar line {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.bar rect {
+  fill: currentColor;
+}
+
+.bar[data-lowest='true'] {
+  color: var(--success);
+}
+
+.bar[data-current='true'],
+.bar[aria-pressed='true'] {
+  color: var(--accent);
+}
+
+.bar[aria-pressed='true'] {
+  background: var(--surface-strong);
+}
+
+.axis {
+  margin-top: 6px;
+}
+
+.cheapest {
+  color: var(--success);
+  font-size: 11px;
+  line-height: 1.6;
+  margin-top: 14px;
+}

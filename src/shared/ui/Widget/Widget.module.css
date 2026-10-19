@@ -1,0 +1,25 @@
+.widget {
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 26px;
+  min-width: 0;
+}
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.header h2 {
+  min-width: 0;
+  margin-right: 12px;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 650;
+}
+@media (max-width: 599px) {
+  .widget {
+    padding: 18px;
+    border-radius: 24px;
+  }
+}

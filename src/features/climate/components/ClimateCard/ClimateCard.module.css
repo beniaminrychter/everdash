@@ -1,0 +1,101 @@
+.setpoint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18px;
+}
+.step {
+  -webkit-appearance: none;
+  appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  flex: 0 0 44px;
+  min-width: 44px;
+  max-width: 44px;
+  min-height: 44px;
+  max-height: 44px;
+  width: 44px;
+  height: 44px;
+  border-radius: 22px;
+  background: var(--surface-strong);
+  font-size: 28px;
+  line-height: 1;
+}
+.target {
+  min-width: 0;
+  text-align: center;
+  padding: 0 8px;
+}
+.target output {
+  display: block;
+  font-size: 36px;
+  font-weight: 650;
+  letter-spacing: -1px;
+  font-variant-numeric: tabular-nums;
+}
+.targetOff {
+  color: var(--muted);
+}
+.options {
+  padding: 0;
+  margin: 18px 0 0;
+  border: 0;
+  min-width: 0;
+}
+.options legend {
+  padding: 0;
+  margin-bottom: 7px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.buttons {
+  display: flex;
+  padding: 3px;
+  border-radius: 13px;
+  background: var(--icon-bg);
+}
+.buttons button {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  padding: 7px 3px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.buttons button[aria-pressed='true'] {
+  background: var(--surface-strong);
+  color: var(--text);
+}
+.step:disabled,
+.buttons button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.status {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.step svg {
+  display: block;
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+@media (max-width: 360px) {
+  .buttons button {
+    font-size: 11px;
+    padding-right: 1px;
+    padding-left: 1px;
+  }
+}

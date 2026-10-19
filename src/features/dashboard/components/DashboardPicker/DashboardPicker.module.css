@@ -1,0 +1,58 @@
+.picker {
+  position: relative;
+  min-width: 0;
+}
+.picker h1 {
+  margin: 0;
+}
+.trigger {
+  display: flex;
+  align-items: center;
+  padding: 6px 0;
+  text-align: left;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  min-height: 44px;
+}
+.trigger svg {
+  flex-shrink: 0;
+  margin-left: 12px;
+  color: var(--muted);
+}
+.options {
+  position: absolute;
+  z-index: 4;
+  left: 0;
+  top: 100%;
+  min-width: 240px;
+  max-width: calc(100vw - 40px);
+  padding: 7px;
+  background: var(--sheet);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: 0 12px 40px #0003;
+}
+.options button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 14px;
+  font-size: 16px;
+  border-radius: 12px;
+  text-align: left;
+}
+.options button[aria-pressed='true'] {
+  background: var(--surface-strong);
+}
+.options span {
+  margin-left: 20px;
+  color: var(--accent);
+}
+@media (max-width: 599px) {
+  .trigger {
+    font-size: 28px;
+  }
+}
