@@ -4,9 +4,9 @@ EverDash serves a dashboard through Home Assistant Ingress and can optionally se
 
 ## Install
 
-Add the EverDash repository to Home Assistant's app store and install the EverDash app. Start it, then open **EverDash** from the Home Assistant sidebar. The first start creates an empty dashboard. Open Settings → Dashboard configuration to import a JSON file or edit the configuration, validate it, and save it.
+Add the EverDash repository to Home Assistant's app store. In the app store menu, choose **Check for updates** if EverDash does not appear yet, then install it. Start it, then open **EverDash** from the Home Assistant sidebar. The first start creates an empty dashboard. Open Settings → Dashboard configuration to import a JSON file or edit the configuration, validate it, and save it.
 
-The repository and image URLs in this source checkout are release placeholders. A published repository must replace them with its actual GitHub and container-registry coordinates before users can install it.
+The repository and image coordinates are set for the public EverDash project. The app appears in the store before release, but installation requires a published, public versioned image in GitHub Container Registry.
 
 ## Optional direct HTTPS access
 
