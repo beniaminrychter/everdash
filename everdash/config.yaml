@@ -3,7 +3,7 @@ version: 0.1.0
 slug: everdash
 description: A Home Assistant dashboard that gives legacy tablets a new purpose.
 url: https://github.com/beniaminrychter/everdash
-image: ghcr.io/beniaminrychter/everdash:0.1.0
+image: ghcr.io/beniaminrychter/everdash
 arch:
   - aarch64
   - amd64

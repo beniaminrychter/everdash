@@ -12,7 +12,7 @@ EverDash is designed to run as a Home Assistant app. Installation does not requi
 
 [![Add EverDash repository to Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fbeniaminrychter%2Feverdash)
 
-The button opens Home Assistant's add-repository dialog with EverDash prefilled. Installing the app will become available after a versioned image has been published.
+The button opens Home Assistant's add-repository dialog with EverDash prefilled. After adding it, refresh the app store and look under **Settings → Apps → Install app**. EverDash can be installed after its first versioned image is published to GHCR and the package is public.
 
 1. In Home Assistant, open **Settings → Apps** and choose **Install app from another repository** (or open the App Store menu and choose **Repositories**).
 2. Add the public Git repository URL for EverDash, then refresh the app store and open **EverDash**.

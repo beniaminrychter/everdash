@@ -4,9 +4,9 @@
 
 EverDash is packaged as a Home Assistant app with Ingress enabled. Ingress keeps management behind Home Assistant authentication, so the app does not create a separate username/password database. The server accepts management traffic only from Supervisor's trusted Ingress peer and uses Home Assistant's server-side Supervisor API token for HA reads and service calls.
 
-Once the project has a public repository, add its repository URL in Home Assistant under **Settings → Apps → App Store menu → Repositories**. Refresh the store, choose EverDash, install, and start it. The app appears in the sidebar; open it there to pair devices and edit, validate, import, or export dashboard JSON. Visual entity selection and drag-to-arrange are planned follow-up work; the current release uses the JSON editor. The browser never receives `SUPERVISOR_TOKEN`.
+Add the repository URL in Home Assistant under **Settings → Apps → App Store menu → Repositories**. Then refresh the store and look under **Settings → Apps → Install app**. The app appears there after its matching versioned image has been published to GHCR and the package is public. After installation, start it and open it from the sidebar to pair devices and edit, validate, import, or export dashboard JSON. Visual entity selection and drag-to-arrange are planned follow-up work; the current release uses the JSON editor. The browser never receives `SUPERVISOR_TOKEN`.
 
-The app image is built for `amd64` and `aarch64`. The release publishes a multi-architecture image. The manifests point to `beniaminrychter/everdash`; installation becomes available after the matching tagged image is published to GHCR.
+The app image is built for `amd64` and `aarch64`. The release publishes a multi-architecture image. The manifest points to the untagged image name `ghcr.io/beniaminrychter/everdash`; Home Assistant uses the manifest's `version` as the image tag. The matching image must be published and its GHCR package made public before it can be installed.
 
 ## Direct HTTPS access (optional)
 

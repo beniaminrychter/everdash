@@ -20,7 +20,7 @@ if (!/^[^/]+\/everdash$/.test(repository)) {
 }
 
 const version = tag.replace(/^v/, '');
-const expectedImage = repository ? `ghcr.io/${repository.toLowerCase()}:${version}` : '';
+const expectedImage = repository ? `ghcr.io/${repository.toLowerCase()}` : '';
 const expectedUrl = repository ? `https://github.com/${repository}` : '';
 
 if (version !== packageJson.version) {
@@ -32,7 +32,7 @@ if (manifestValue(appManifest, 'version') !== version) {
 }
 
 if (manifestValue(appManifest, 'image') !== expectedImage) {
-  errors.push('App image must match this repository owner and the exact release version.');
+  errors.push('App image must match this repository owner without a version tag.');
 }
 
 if (manifestValue(appManifest, 'url') !== expectedUrl) {
