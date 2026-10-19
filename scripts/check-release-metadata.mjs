@@ -5,10 +5,7 @@ const repository = process.env.GITHUB_REPOSITORY || '';
 const errors = [];
 const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 const appManifest = readFileSync(new URL('../everdash/config.yaml', import.meta.url), 'utf8');
-const repositoryManifest = readFileSync(
-  new URL('../everdash/repository.yaml', import.meta.url),
-  'utf8',
-);
+const repositoryManifest = readFileSync(new URL('../repository.yaml', import.meta.url), 'utf8');
 const manifestValue = (source, key) => {
   const match = source.match(new RegExp(`^${key}:\\s*["']?([^"'\\s]+)`, 'm'));
   return match?.[1] || '';

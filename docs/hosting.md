@@ -6,7 +6,7 @@ EverDash is packaged as a Home Assistant app with Ingress enabled. Ingress keeps
 
 Once the project has a public repository, add its repository URL in Home Assistant under **Settings → Apps → App Store menu → Repositories**. Refresh the store, choose EverDash, install, and start it. The app appears in the sidebar; open it there to pair devices and edit, validate, import, or export dashboard JSON. Visual entity selection and drag-to-arrange are planned follow-up work; the current release uses the JSON editor. The browser never receives `SUPERVISOR_TOKEN`.
 
-The app image is built for `amd64` and `aarch64`. The release publishes a multi-architecture image. A release is not installable from the app store until the Git repository and image references in `everdash/config.yaml` point at the actual public owner and the tagged image exists.
+The app image is built for `amd64` and `aarch64`. The release publishes a multi-architecture image. The manifests point to `beniaminrychter/everdash`; installation becomes available after the matching tagged image is published to GHCR.
 
 ## Direct HTTPS access (optional)
 

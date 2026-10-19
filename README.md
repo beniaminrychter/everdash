@@ -10,13 +10,17 @@ EverDash gives legacy tablets new possibilities as Home Assistant dashboards. It
 
 EverDash is designed to run as a Home Assistant app. Installation does not require npm or a separate server:
 
+[![Add EverDash repository to Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fbeniaminrychter%2Feverdash)
+
+The button opens Home Assistant's add-repository dialog with EverDash prefilled. Installing the app will become available after a versioned image has been published.
+
 1. In Home Assistant, open **Settings → Apps** and choose **Install app from another repository** (or open the App Store menu and choose **Repositories**).
 2. Add the public Git repository URL for EverDash, then refresh the app store and open **EverDash**.
 3. Install and start the app. Home Assistant Ingress provides the authenticated management view; open EverDash from the Home Assistant sidebar.
 4. Use **Pair a device** in EverDash, then approve the displayed short code from the authenticated Home Assistant management screen.
 5. Import or edit the versioned JSON dashboard configuration, then open the dashboard in Safari on the iPad and add it to the Home Screen.
 
-The repository URL and image coordinates in `everdash/config.yaml` must be set to the actual public repository before a release. See [hosting and installation](docs/hosting.md) for direct HTTPS, architecture, and update details. Home Assistant apps use Ingress for authenticated management; the optional direct HTTPS listener is intended for a tablet that cannot use the Home Assistant panel.
+The manifests point to `beniaminrychter/everdash`; install becomes available once a versioned image is published. See [hosting and installation](docs/hosting.md) for direct HTTPS, architecture, and update details. Home Assistant apps use Ingress for authenticated management; the optional direct HTTPS listener is intended for a tablet that cannot use the Home Assistant panel.
 
 No software license has been selected yet. Until the owner chooses and adds a license, the source is not granted an open-source license for reuse or redistribution.
 
