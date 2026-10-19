@@ -70,9 +70,10 @@ jobs:
         run: |
           smoke_data="$(mktemp -d)"
           printf '%s\n' '{"direct_enabled":false}' > "$smoke_data/options.json"
-          chmod 777 "$smoke_data"
+          chmod 755 "$smoke_data"
           chmod 600 "$smoke_data/options.json"
-          trap 'docker logs everdash-release-smoke || true; docker rm --force everdash-release-smoke || true; rm -rf "$smoke_data"' EXIT
+          sudo chown root:root "$smoke_data" "$smoke_data/options.json"
+          trap 'docker logs everdash-release-smoke || true; docker rm --force everdash-release-smoke || true; sudo rm -rf "$smoke_data"' EXIT
           docker run --detach --name everdash-release-smoke --publish 8099:8099 \
             --mount "type=bind,src=$smoke_data,dst=/data" \
             --env SUPERVISOR_TOKEN=fixture-only-supervisor-token \

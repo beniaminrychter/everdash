@@ -5,6 +5,7 @@ umask 077
 mkdir -p /data
 chown node:node /data
 mkdir -p /run/everdash
+chown node:node /run/everdash
 cp /data/options.json /run/everdash/options.json
 chown node:node /run/everdash/options.json
 chmod 600 /run/everdash/options.json
