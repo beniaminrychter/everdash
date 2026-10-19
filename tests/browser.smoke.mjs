@@ -978,6 +978,7 @@ try {
   await expectConnection('offline');
   expect(commands.length).toBe(beforeOffline);
   await context.setOffline(false);
+  await expectConnection('Connected to Home Assistant');
   await expect(light.getByTestId('device-status')).toHaveText('67%');
   const beforeReload = commands.length;
   const savedPreferences = await page.evaluate(() =>
