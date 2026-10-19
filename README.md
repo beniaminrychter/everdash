@@ -57,13 +57,13 @@ The Codex Home Assistant connector is useful for inspecting devices during devel
 
 The dashboard is described by a versioned JSON document. See [the generic example](examples/dashboard.json) and [JSON Schema](src/shared/config/schema.ts). Each entity ID is explicit; the dashboard never guesses controls by friendly name. The Home Assistant management screen supports JSON editing, validation, import/export, and restoring the previous version. Visual entity selection and drag-to-arrange are planned follow-up work; for now, edit or import the JSON directly.
 
-If you are migrating the current TypeScript dashboard, its private source has been moved into the ignored `.local/home.config.ts` file. Export it to versioned JSON with:
+To migrate a TypeScript dashboard configuration to the versioned JSON format, run:
 
 ```sh
 npm run config:export
 ```
 
-The output is written to `.local/dashboard.json`, which is excluded from Git. You can also provide source and destination paths: `npm run config:export -- /path/to/home.config.ts /path/to/dashboard.json`.
+Pass source and destination paths when needed: `npm run config:export -- /path/to/home.config.ts /path/to/dashboard.json`. Keep personal dashboards and exports out of the public repository.
 
 Dashboard configuration uses JSON Schema version 1. See the [generic dashboard example](examples/dashboard.json) and [schema](src/shared/config/schema.ts). A dashboard contains `views`; each view has a stable `id`, a `title`, and optionally ordered `badges` and `cards`. Entity IDs are explicit and must match their Home Assistant domains.
 
