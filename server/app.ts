@@ -10,6 +10,7 @@ import { isTrustedIngressPeer } from './auth/ingress';
 import { mapRouteError } from './http/errors';
 import { registerApiRoutes } from './http/routes';
 import { registerStaticFiles } from './http/static';
+import type { SupervisorAccessInfo } from './supervisor/access';
 
 export interface ServerDependencies {
   config: ConfigRepository;
@@ -23,6 +24,10 @@ export interface ServerDependencies {
   expectedOrigin?: (request: FastifyRequest, mode: 'management' | 'direct') => string | null;
   homeAssistant: HomeAssistantTransport;
   staticDirectory?: string;
+  previewDirectory?: string;
+  getAccessInfo?: () => Promise<SupervisorAccessInfo>;
+  secureCookies?: boolean;
+  deviceCookieName?: string;
   logger?: boolean;
   requireIngressPeer?: boolean;
   httpsOptions?: ServerOptions;
@@ -79,7 +84,7 @@ export async function buildApp(
 
   registerApiRoutes(app, dependencies, listenerMode);
   if (dependencies.staticDirectory) {
-    registerStaticFiles(app, dependencies.staticDirectory);
+    registerStaticFiles(app, dependencies.staticDirectory, dependencies.previewDirectory);
   }
   return app;
 }

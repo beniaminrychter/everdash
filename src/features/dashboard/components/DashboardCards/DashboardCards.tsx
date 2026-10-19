@@ -22,6 +22,7 @@ interface Props {
   timeZone?: string;
   onToggle: (id: string) => void;
   onDetails: (id: string) => void;
+  readOnly?: boolean;
 }
 export function DashboardCards({
   view,
@@ -35,6 +36,7 @@ export function DashboardCards({
   timeZone,
   onToggle,
   onDetails,
+  readOnly = false,
 }: Props) {
   const { t } = useI18n();
   const reading = (id: string | undefined) => (id ? readings[id] : undefined);
@@ -53,7 +55,7 @@ export function DashboardCards({
                   <AccessoryCard
                     key={cardIndex}
                     device={{ ...device, icon: card.icon, name: card.name, room: view.title }}
-                    disabled={!online}
+                    disabled={!online || readOnly}
                     onToggle={onToggle}
                     onDetails={onDetails}
                   />
@@ -90,6 +92,7 @@ export function DashboardCards({
                       title={card.name}
                       titleId={titleId}
                       online={online}
+                      disabled={readOnly}
                       climate={
                         climates.find((item) => item.entityId === card.entity) ||
                         createClimate({

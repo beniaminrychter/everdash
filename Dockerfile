@@ -16,10 +16,12 @@ RUN apk add --no-cache su-exec \
 COPY --from=build --chown=node:node /app/package.json /app/package-lock.json ./
 RUN npm ci --omit=dev
 COPY --from=build --chown=node:node /app/dist ./dist
+COPY --from=build --chown=node:node /app/dist-admin ./dist-admin
+COPY --from=build --chown=node:node /app/dist-preview ./dist-preview
 COPY --from=build --chown=node:node /app/dist-server ./dist-server
 COPY --chown=root:root run.sh /app/run.sh
 RUN chmod 755 /app/run.sh
 
-EXPOSE 8099 8443
+EXPOSE 8095 8099 8443
 VOLUME ["/data", "/ssl"]
 ENTRYPOINT ["/app/run.sh"]

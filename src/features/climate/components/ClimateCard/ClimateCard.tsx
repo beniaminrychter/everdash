@@ -10,6 +10,7 @@ interface Props {
   title: string;
   titleId: string;
   online: boolean;
+  disabled?: boolean;
   onChange: (change: ClimateChange, debounceMs?: number) => void;
 }
 const modes = [
@@ -18,11 +19,18 @@ const modes = [
   { label: 'Heat', value: 'heat' },
   { label: 'Dry', value: 'dry' },
 ];
-export function ClimateCard({ climate, title, titleId, online, onChange }: Props) {
+export function ClimateCard({
+  climate,
+  title,
+  titleId,
+  online,
+  disabled = false,
+  onChange,
+}: Props) {
   const { t, locale } = useI18n();
   const available = online && climate.availability === 'available';
   const off = climate.hvacMode === 'off';
-  const controlsEnabled = available && !off;
+  const controlsEnabled = available && !off && !disabled;
   const lower = stepTemperature(climate, -1);
   const higher = stepTemperature(climate, 1);
   const middle =
@@ -86,7 +94,7 @@ export function ClimateCard({ climate, title, titleId, online, onChange }: Props
               type="button"
               key={mode.value}
               aria-pressed={available && climate.hvacMode === mode.value}
-              disabled={!available || !climate.hvacModes.includes(mode.value)}
+              disabled={!available || disabled || !climate.hvacModes.includes(mode.value)}
               onClick={() => onChange({ hvacMode: mode.value })}
             >
               {translateText(mode.label, t)}

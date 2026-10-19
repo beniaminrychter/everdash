@@ -4,14 +4,17 @@ import { buildApp } from './app';
 import { createSupervisorHomeAssistant } from './home-assistant/client';
 import { DeviceRepository } from './auth/devices';
 import { PairingService } from './auth/pairing';
-import { createAuthorizer, DeviceSessions } from './auth/sessions';
+import { createAuthorizer, DeviceSessions, HTTP_DEVICE_COOKIE_NAME } from './auth/sessions';
 import type { FastifyRequest } from 'fastify';
 import type { ServerOptions } from 'node:https';
 import { pathToFileURL } from 'node:url';
+import { createSupervisorAccessReader } from './supervisor/access';
 
 export interface RuntimeOptions {
   dataDirectory?: string;
   staticDirectory?: string;
+  adminStaticDirectory?: string;
+  previewDirectory?: string;
   supervisorToken?: string;
   publicUrl?: string;
   httpsOptions?: ServerOptions;
@@ -30,7 +33,8 @@ export async function createEverDashApps(options: RuntimeOptions = {}) {
   const deviceSessions = new DeviceSessions(devices);
   const homeAssistant = createSupervisorHomeAssistant({ token });
   const publicUrl = options.publicUrl ?? process.env.EVERDASH_PUBLIC_URL;
-  const authorize = createAuthorizer(devices);
+  const authorizeHttps = createAuthorizer(devices);
+  const authorizeHttp = createAuthorizer(devices, HTTP_DEVICE_COOKIE_NAME);
   const expectedOrigin = (request: FastifyRequest, mode: 'management' | 'direct') => {
     if (mode === 'direct') {
       if (!publicUrl) {
@@ -66,21 +70,57 @@ export async function createEverDashApps(options: RuntimeOptions = {}) {
       return null;
     }
   };
+  const expectedHttpOrigin = (request: FastifyRequest, mode: 'management' | 'direct') => {
+    if (mode !== 'direct') {
+      return expectedOrigin(request, mode);
+    }
+    const host = request.headers.host;
+    if (typeof host !== 'string' || !/^[a-z0-9.:[\]-]+(?::\d{1,5})?$/i.test(host)) {
+      return null;
+    }
+    return `http://${host}`;
+  };
   const shared = {
     config,
     devices,
     deviceSessions,
     pairing,
     homeAssistant,
-    authorize,
     expectedOrigin,
     logger: true,
-    staticDirectory: options.staticDirectory ?? resolve('dist'),
     requireIngressPeer: options.requireIngressPeer ?? false,
+    getAccessInfo: createSupervisorAccessReader(token),
   };
-  const management = await buildApp(shared, 'management');
-  const direct = await buildApp({ ...shared, httpsOptions: options.httpsOptions }, 'direct');
-  return { config, devices, direct, management };
+  const management = await buildApp(
+    {
+      ...shared,
+      authorize: authorizeHttps,
+      staticDirectory: options.adminStaticDirectory ?? resolve('dist-admin'),
+      previewDirectory: options.previewDirectory ?? resolve('dist-preview'),
+    },
+    'management',
+  );
+  const direct = await buildApp(
+    {
+      ...shared,
+      authorize: authorizeHttps,
+      staticDirectory: options.staticDirectory ?? resolve('dist'),
+      httpsOptions: options.httpsOptions,
+    },
+    'direct',
+  );
+  const directHttp = await buildApp(
+    {
+      ...shared,
+      authorize: authorizeHttp,
+      expectedOrigin: expectedHttpOrigin,
+      staticDirectory: options.staticDirectory ?? resolve('dist'),
+      secureCookies: false,
+      deviceCookieName: HTTP_DEVICE_COOKIE_NAME,
+    },
+    'direct',
+  );
+  return { config, devices, direct, directHttp, management };
 }
 
 async function startFromCommandLine() {

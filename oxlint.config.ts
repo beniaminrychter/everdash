@@ -16,6 +16,17 @@ export default defineConfig({
       ],
       rules: { 'jsx-a11y/prefer-tag-over-role': 'off' },
     },
+    {
+      files: ['admin/src/ui/AdminApp.tsx'],
+      rules: {
+        // This screen intentionally launches async loads from lifecycle effects,
+        // and the lint React Compiler does not yet understand guarded finally blocks.
+        'eslint/no-use-before-define': 'off',
+        'eslint/no-void': 'off',
+        'react/set-state-in-effect': 'off',
+        'react/todo': 'off',
+      },
+    },
   ],
   rules: {
     // Preserve the existing Preact and Node test conventions while migrating

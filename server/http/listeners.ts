@@ -100,6 +100,8 @@ export async function startEverDash(
   });
   await apps.management.listen({ host: '0.0.0.0', port: 8099 });
   process.stdout.write('EverDash management Ingress listening on port 8099.\n');
+  await apps.directHttp.listen({ host: '0.0.0.0', port: 8095 });
+  process.stdout.write('EverDash local HTTP dashboard listening on port 8095.\n');
   if (parsed.options.directEnabled) {
     try {
       await apps.direct.listen({ host: '0.0.0.0', port: 8443 });
@@ -111,7 +113,9 @@ export async function startEverDash(
     }
   }
   const stop = () => {
-    Promise.all([apps.management.close(), apps.direct.close()]).finally(() => process.exit(0));
+    Promise.all([apps.management.close(), apps.direct.close(), apps.directHttp.close()]).finally(
+      () => process.exit(0),
+    );
   };
   process.once('SIGTERM', stop);
   process.once('SIGINT', stop);

@@ -4,6 +4,8 @@
 .local
 node_modules
 dist
+dist-admin
+dist-preview
 dist-server
 test-results
 playwright-report
@@ -13,3 +15,4 @@ tests
 .env.*
 !.env.example
 home.config.ts
+docs

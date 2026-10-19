@@ -128,6 +128,42 @@ export class ConfigRepository extends EventTarget {
     return operation;
   }
 
+  recover(input: unknown): Promise<ConfigSnapshot> {
+    const operation = this.queue.then(() => this.recoverSerialized(input));
+    this.queue = operation.then(
+      () => undefined,
+      () => undefined,
+    );
+    return operation;
+  }
+
+  private async recoverSerialized(input: unknown): Promise<ConfigSnapshot> {
+    if (this.read()) {
+      throw new ConfigRepositoryError(
+        'The dashboard changed while recovery was in progress. Reload before saving.',
+        'CONFIG_CONFLICT',
+      );
+    }
+    const validation = validateDashboard(input);
+    if (!validation.ok) {
+      throw new ConfigRepositoryError(
+        'Dashboard validation failed.',
+        'CONFIG_INVALID',
+        validation.issues,
+      );
+    }
+    const next = ConfigRepository.snapshot(validation.document);
+    this.ensureDirectory();
+    this.writeAtomic(this.currentPath, next.config, 'beforeCurrentRename');
+    this.current = next;
+    this.currentIsPersisted = true;
+    this.diagnostic = null;
+    const event = new Event('change') as Event & { snapshot: ConfigSnapshot };
+    event.snapshot = next;
+    this.dispatchEvent(event);
+    return next;
+  }
+
   private async saveSerialized(
     baseRevision: string | null,
     input: unknown,

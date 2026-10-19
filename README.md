@@ -2,11 +2,12 @@
 
 [![Latest release](https://img.shields.io/github/v/release/beniaminrychter/everdash?display_name=tag&sort=semver)](https://github.com/beniaminrychter/everdash/releases/latest) ![Architectures: aarch64 and amd64](https://img.shields.io/badge/architectures-aarch64%20%7C%20amd64-blue) [![Checks](https://github.com/beniaminrychter/everdash/actions/workflows/checks.yml/badge.svg)](https://github.com/beniaminrychter/everdash/actions/workflows/checks.yml) [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a-Coffee-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/beniaminryu)
 
-EverDash gives legacy tablets new possibilities as Home Assistant dashboards. It pairs with Home Assistant, serves an iPad-friendly dashboard with an offline app shell, and lets you manage its explicit entity configuration as JSON. The project is a Preact progressive web app plus a Node.js Home Assistant app (formerly add-on).
+EverDash gives legacy tablets new possibilities as Home Assistant dashboards. It pairs with Home Assistant, serves an iPad-friendly dashboard, and provides a visual builder for choosing entities and arranging views. The Home Assistant workspace uses React and shadcn/ui; the tablet remains a separate Preact app built for iOS 12 and Safari 12.
 
 - Explicitly configured lights, outlets, climate controls, sensors, energy prices, and weather.
 - Multiple dashboard views, saved appearance and language preferences, and an offline app shell.
 - No friendly-name entity guessing or fabricated readings; missing and unavailable sources remain visible.
+- A visual Home Assistant builder, read-only tablet preview, and optional advanced JSON editing.
 
 ## Install in Home Assistant
 
@@ -14,17 +15,20 @@ EverDash is designed to run as a Home Assistant app. Installation does not requi
 
 [![Add EverDash repository to Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fbeniaminrychter%2Feverdash)
 
-The button opens Home Assistant's add-repository dialog with EverDash prefilled. After adding it, refresh the app store and look under **Settings → Apps → Install app**. EverDash can be installed after its first versioned image is published to GHCR and the package is public.
+The button opens Home Assistant's add-repository dialog with EverDash prefilled. After adding it, refresh the app store and look under **Settings → Apps → Install app**. EverDash becomes installable after its versioned multi-architecture image is published to GHCR and the package is public.
 
 1. In Home Assistant, open **Settings → Apps** and choose **Install app from another repository** (or open the App Store menu and choose **Repositories**).
 2. Add the public Git repository URL for EverDash, then refresh the app store and open **EverDash**.
-3. Install and start the app. Home Assistant Ingress provides the authenticated management view; open EverDash from the Home Assistant sidebar.
-4. Use **Pair a device** in EverDash, then approve the displayed short code from the authenticated Home Assistant management screen.
-5. Import or edit the versioned JSON dashboard configuration, then open the dashboard in Safari on the iPad and add it to the Home Screen.
+3. Install and start EverDash, then open it from the Home Assistant sidebar. This opens the authenticated configuration workspace.
+4. In **Builder**, add views and cards, choose entities by name or ID, then select **Save and apply**. JSON editing is available under **Advanced JSON**.
+5. Use the **Tablet access** pane on the same page. It shows the local URL, a QR code, detected Home Assistant addresses, pairing approval, and registered tablets.
+6. Open the displayed URL on the iPad, start pairing, and approve the code and device name in Home Assistant. Then add the dashboard to the Home Screen from Safari.
 
-The manifests point to `beniaminrychter/everdash`; install becomes available once a versioned image is published. See [hosting and installation](docs/hosting.md) for direct HTTPS, architecture, and update details. Home Assistant apps use Ingress for authenticated management; the optional direct HTTPS listener is intended for a tablet that cannot use the Home Assistant panel.
+By default the dashboard is available on the Home Assistant LAN at `http://homeassistant.local:8095/`, with the actual mapped port and IP addresses shown in the Tablet access pane. The Home Assistant panel opens configuration; the direct URL opens the tablet dashboard. Optional trusted HTTPS is available for installations that need offline service-worker support.
 
 EverDash is licensed under the [MIT License](LICENSE). You may use, modify, and redistribute it, including publishing modified versions, if you retain the copyright and license notice.
+
+Third-party dependency and asset information is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Run from source
 
@@ -51,13 +55,13 @@ Open the printed LAN address on the iPad. `localhost` on the iPad refers to the 
 
 ## Home Assistant connection
 
-The server uses Home Assistant's fixed Supervisor API route. Browser requests go to same-origin EverDash endpoints, and server policy filters reads and commands to entities in the published JSON configuration. There is no browser-side Home Assistant credential or cross-origin request.
+The server uses Home Assistant's fixed Supervisor API route. Browser requests go to same-origin EverDash endpoints, and server policy filters tablet reads and commands to entities in the saved dashboard configuration. The admin entity picker searches Home Assistant entities, while the tablet only receives configured data. Home Assistant credentials remain on the server.
 
 The Codex Home Assistant connector is useful for inspecting devices during development. The deployed PWA uses the configured REST connection independently of Codex.
 
 ## App configuration
 
-The dashboard is described by a versioned JSON document. See [the generic example](examples/dashboard.json) and [JSON Schema](src/shared/config/schema.ts). Each entity ID is explicit; the dashboard never guesses controls by friendly name. The Home Assistant management screen supports JSON editing, validation, import/export, and restoring the previous version. Visual entity selection and drag-to-arrange are planned follow-up work; for now, edit or import the JSON directly.
+The dashboard is stored as a versioned JSON document. Use the visual builder to create views, choose entities, edit card settings, and arrange their order. The **Preview** tab renders the current draft with a read-only Home Assistant snapshot. **Advanced JSON** supports validation, import, and export. Each entity ID remains explicit; the dashboard never guesses controls by friendly name. See [the generic example](examples/dashboard.json) and [JSON Schema](src/shared/config/schema.ts).
 
 To migrate a TypeScript dashboard configuration to the versioned JSON format, run:
 
@@ -105,12 +109,12 @@ Sources used for these adapters: [Pstryk price and schedule attributes](https://
 
 ## Install on the iPad
 
-1. Serve `dist/` from a private **HTTPS** host trusted by the iPad. Subfolders work; keep the trailing slash.
-2. Open that address in Safari and wait for the first complete online load.
+1. Open **Tablet access** in EverDash and copy, open, or scan its LAN URL. The default uses local HTTP on port 8095.
+2. On the iPad, open that URL in Safari and start pairing. Approve its short code and name in the Home Assistant workspace.
 3. Tap **Share → Add to Home Screen → Add**.
-4. Launch **EverDash** from the Home Screen.
+4. Launch **EverDash** from the Home Screen. Configure the optional trusted HTTPS listener for offline app-shell support.
 
-The manifest, Apple standalone metadata, safe-area padding, and PNG Apple touch icon are included. Service workers require HTTPS over the network; plain HTTP LAN preview is only for initial testing. Safari can evict cached data.
+The manifest, Apple standalone metadata, safe-area padding, and PNG Apple touch icon are included. Plain HTTP supports online local dashboard use. Service workers require trusted HTTPS, so the offline app shell is available when optional HTTPS is configured. Safari can evict cached data.
 
 The ES5 service worker caches the app shell, modern and legacy bundles, CSS, manifest, and icons. It normalizes navigation fragments and only handles the exact static URLs, never Home Assistant API requests. A new version waits until all app windows close before activating. After deployment, visit online and close/reopen all copies. Serve `sw.js` with revalidation (`Cache-Control: no-cache`), and hashed assets with a long cache lifetime.
 
@@ -123,12 +127,15 @@ Text selection, touch callouts and visible focus outlines are disabled across th
 - Preact is restricted to major version 10. TSX targets Preact directly; React compatibility aliases and production devtools are disabled.
 - Vite's official legacy plugin emits an ES5 SystemJS fallback plus a modern bundle. IE11 is only a conservative syntax floor, not a supported product target.
 - Native XMLHttpRequest provides timeouts, cancellation, and authenticated requests on iOS 12 without a Fetch/AbortController polyfill. Runtime code uses APIs available in Safari 12; SystemJS is retained without IE-only core-js polyfills.
-- All authored styles use colocated CSS Modules, with shared tokens and explicit document defaults in `src/app/App.module.css`. PostCSS and Autoprefixer target Safari 12. No Tailwind, flex gap, native dialog, external fonts, or component kit.
+- The tablet uses Preact, CSS Modules, and a Safari 12 CSS target. The admin workspace uses React, shadcn/ui Base UI primitives, and Tailwind; its files build separately and stay out of the tablet bundle and offline cache.
+- The Ingress preview is a separate Preact entry that renders the tablet components in read-only mode and receives a validated draft plus configured entity snapshot through same-origin messaging.
 
 | File | Responsibility |
 | --- | --- |
 | `examples/dashboard.json` | Generic starter dashboard using the runtime JSON schema |
 | `src/shared/config/` | JSON contracts, schema, defaults and validation |
+| `admin/` | React/shadcn Home Assistant workspace and visual builder |
+| `preview/` | Same-origin read-only Preact tablet preview entry |
 | `src/features/dashboard/` | Dashboard composition, source resolution, observation polling and schedules |
 | `src/features/accessories/` | Accessory UI, capability/state mapping, commands and polling |
 | `src/features/climate/` | Climate UI, state/capabilities, optimistic command queue and polling |
@@ -138,7 +145,7 @@ Text selection, touch callouts and visible focus outlines are disabled across th
 | `src/shared/home-assistant/` | REST client and transport contracts |
 | `src/shared/ui/` | Reusable interface primitives with adjacent CSS Modules |
 | `src/app/App.tsx` | Configured live page and modal composition |
-| `vite.config.ts` | Legacy build and versioned offline shell |
+| `vite.config.ts`, `admin/vite.config.ts`, `vite.preview.config.ts` | Separate tablet, admin, and preview builds |
 | `public/` | Manifest and Home Screen icons |
 
 ## Quality tools and checks
@@ -154,8 +161,8 @@ npm run lint             # Fail on warnings and errors
 npm run lint:fix         # Apply safe lint fixes
 npm run format           # Apply Ultracite safe fixes and format authored files
 npm run format:check     # Verify formatting
-npm run check            # Lint + formatting + TypeScript + all unit tests
-npm run build            # TypeScript + production bundles
+npm run check            # Lint + formatting + both TypeScript projects + unit tests
+npm run build            # Tablet, admin, and preview production bundles
 npm run check:compat     # After build: ES5 syntax, Safari CSS, PWA/cache inventory
 npm run test:browser     # Self-contained build/server + installed Chrome; no live devices
 ```
@@ -163,5 +170,3 @@ npm run test:browser     # Self-contained build/server + installed Chrome; no li
 The browser test uses a stable configuration in `tests/fixtures/dashboard.ts`, independent of the generic runtime JSON example. It builds into an OS temporary directory using dummy environment credentials and an isolated cross-origin HTTP API fixture. No preview server is needed, and the normal `dist/` and `.env` remain untouched. It verifies explicit entity bindings and metadata refresh, saved dashboard/appearance preferences, multiple views with shared controls and badge-only views, ordered widgets, HA sunrise/sunset, compact Pstryk/weather/temperature widgets, real browser HTTP requests, service payloads, inline AC temperature/mode/fan controls and failure rollback, automatic polling, capability-dependent controls, dimming, authentication/error recovery, unavailable entities, modal keyboard behavior, offline disabled controls, reconnect, four responsive widths, and forced SystemJS startup. Screenshots go to the OS temporary directory; set `MY_HOME_SCREENSHOT_DIR` to choose another path. Set `MY_HOME_BROWSER_CHANNEL=chromium` to use a previously installed bundled Chromium.
 
 Modern-engine tests and syntax audits cannot prove iOS 12 behavior. The physical iPad still needs final testing for touch controls, TLS, Home Screen installation, and offline launch. End-to-end operation against the real server requires `.env` and CORS access; automated verification never actuates physical devices.
-
-The original [design brief](docs/design.md), [scaffold plan](docs/implementation-plan.md), and [visual concept](docs/design/dashboard-concept.png) describe the earlier mock foundation.

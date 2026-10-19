@@ -50,7 +50,14 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run isolated browser suite
+        env:
+          MY_HOME_BROWSER_CHANNEL: chromium
         run: npm run test:browser
+
+      - name: Run Home Assistant builder browser suite
+        env:
+          MY_HOME_BROWSER_CHANNEL: chromium
+        run: npm run test:admin-browser
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
@@ -74,7 +81,7 @@ jobs:
           chmod 600 "$smoke_data/options.json"
           sudo chown root:root "$smoke_data" "$smoke_data/options.json"
           trap 'docker logs everdash-release-smoke || true; docker rm --force everdash-release-smoke || true; sudo rm -rf "$smoke_data"' EXIT
-          docker run --detach --name everdash-release-smoke --publish 8099:8099 \
+          docker run --detach --name everdash-release-smoke --publish 8099:8099 --publish 8095:8095 \
             --mount "type=bind,src=$smoke_data,dst=/data" \
             --env SUPERVISOR_TOKEN=fixture-only-supervisor-token \
             everdash:release-smoke
@@ -85,6 +92,8 @@ jobs:
             sleep 1
           done
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8099/api/bootstrap)" = 403
+          curl --silent --fail http://127.0.0.1:8095/ | grep -q 'EverDash'
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8095/api/manage/access)" = 404
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v4

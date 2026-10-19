@@ -1,5 +1,7 @@
 node_modules/
 dist/
+dist-admin/
+dist-preview/
 dist-server/
 test-results/
 playwright-report/
@@ -9,3 +11,4 @@ playwright-report/
 .env
 .env.*
 !.env.example
+/docs/

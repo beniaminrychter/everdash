@@ -10,5 +10,10 @@ test('Home Assistant app image uses an untagged repository name', () => {
 });
 
 test('optional direct HTTPS does not reserve host port 8443 by default', () => {
-  assert.match(appManifest, /^ports:\s*\n\s+8443\/tcp:\s+null$/m);
+  assert.match(appManifest, /^\s+8443\/tcp:\s+null$/m);
+});
+
+test('local HTTP dashboard port is mapped for tablet access', () => {
+  assert.match(appManifest, /^\s+8095\/tcp:\s+8095$/m);
+  assert.match(appManifest, /^hassio_api:\s+true$/m);
 });

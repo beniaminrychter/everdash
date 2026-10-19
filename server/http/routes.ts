@@ -89,7 +89,14 @@ export function registerApiRoutes(
       }
       const result = await dependencies.pairing.status(requestId, pollSecret);
       if (result.status === 'approved') {
-        reply.header('Set-Cookie', deviceCookie(result.session));
+        reply.header(
+          'Set-Cookie',
+          deviceCookie(
+            result.session,
+            dependencies.secureCookies !== false,
+            dependencies.deviceCookieName,
+          ),
+        );
         return { status: 'approved', deviceId: result.deviceId };
       }
       return result;
@@ -103,26 +110,163 @@ export function registerApiRoutes(
     if (!(await requireMutationOrigin(request, reply, expectedOrigin))) {
       return;
     }
-    const session = readDeviceCookie(request.headers.cookie);
+    const cookieName = dependencies.deviceCookieName;
+    const session = readDeviceCookie(request.headers.cookie, cookieName);
     if (listenerMode === 'direct' && session && dependencies.deviceSessions) {
       await dependencies.deviceSessions.logout(session);
     }
-    reply.header('Set-Cookie', expiredDeviceCookie());
+    reply.header(
+      'Set-Cookie',
+      expiredDeviceCookie(dependencies.secureCookies !== false, cookieName),
+    );
     return { success: true };
   });
 
   if (listenerMode === 'management') {
+    app.get('/api/manage/access', async (request, reply) => {
+      if (!(await verifyAuthorized(request, reply, dependencies, 'management'))) {
+        return;
+      }
+      if (!dependencies.getAccessInfo) {
+        return {
+          hostName: null,
+          addresses: [],
+          httpPort: null,
+          httpsPort: null,
+          errors: ['Home Assistant network discovery is not available.'],
+        };
+      }
+      return dependencies.getAccessInfo();
+    });
+
+    app.get<{ Querystring: { q?: string; domain?: string; limit?: string } }>(
+      '/api/manage/entities',
+      async (request, reply) => {
+        if (!(await verifyAuthorized(request, reply, dependencies, 'management'))) {
+          return;
+        }
+        const query = request.query.q?.trim() ?? '';
+        const domain = request.query.domain?.trim() ?? '';
+        const rawLimit = request.query.limit ?? '50';
+        const limit = Number(rawLimit);
+        if (
+          query.length > 120 ||
+          (domain && !/^[a-z_]{1,32}$/.test(domain)) ||
+          !/^\d{1,3}$/.test(rawLimit) ||
+          !Number.isInteger(limit) ||
+          limit < 1 ||
+          limit > 100
+        ) {
+          reply
+            .code(400)
+            .send(apiError('INVALID_ENTITY_QUERY', 'Entity search parameters are invalid.'));
+          return;
+        }
+        const raw = await dependencies.homeAssistant.getStates(requestSignal(request));
+        if (!Array.isArray(raw)) {
+          reply
+            .code(502)
+            .send(
+              apiError('HA_INVALID_CATALOG', 'Home Assistant returned an invalid entity list.'),
+            );
+          return;
+        }
+        const needle = query.toLocaleLowerCase();
+        const entities = raw.flatMap((candidate) => {
+          if (typeof candidate !== 'object' || candidate === null || !('entity_id' in candidate)) {
+            return [];
+          }
+          const entity = candidate as {
+            entity_id?: unknown;
+            state?: unknown;
+            attributes?: Record<string, unknown>;
+          };
+          if (
+            typeof entity.entity_id !== 'string' ||
+            !/^[a-z_]+\.[a-z0-9_]+$/.test(entity.entity_id)
+          ) {
+            return [];
+          }
+          const [entityDomain] = entity.entity_id.split('.');
+          if (domain && entityDomain !== domain) {
+            return [];
+          }
+          const attributes = entity.attributes ?? {};
+          const name =
+            typeof attributes.friendly_name === 'string' && attributes.friendly_name.trim()
+              ? attributes.friendly_name.trim().slice(0, 120)
+              : entity.entity_id;
+          if (
+            needle &&
+            !entity.entity_id.toLocaleLowerCase().includes(needle) &&
+            !name.toLocaleLowerCase().includes(needle)
+          ) {
+            return [];
+          }
+          const rawState = typeof entity.state === 'string' ? entity.state.toLowerCase() : '';
+          const available = rawState !== 'unavailable' && rawState !== 'unknown' && rawState !== '';
+          return [
+            {
+              entityId: entity.entity_id,
+              name,
+              domain: entityDomain,
+              state: available ? 'Available' : rawState,
+              available,
+              unit:
+                typeof attributes.unit_of_measurement === 'string'
+                  ? attributes.unit_of_measurement.slice(0, 32)
+                  : null,
+              deviceClass:
+                typeof attributes.device_class === 'string'
+                  ? attributes.device_class.slice(0, 64)
+                  : null,
+              icon: typeof attributes.icon === 'string' ? attributes.icon.slice(0, 80) : null,
+            },
+          ];
+        });
+        entities.sort((left, right) => left.name.localeCompare(right.name));
+        return { entities: entities.slice(0, limit), total: entities.length };
+      },
+    );
+
+    app.post<{ Body: { config?: unknown } }>('/api/manage/preview', async (request, reply) => {
+      if (!(await verifyAuthorized(request, reply, dependencies, 'management'))) {
+        return;
+      }
+      if (!(await requireMutationOrigin(request, reply, expectedOrigin))) {
+        return;
+      }
+      const validation = config.validate(request.body?.config);
+      if (!validation.ok) {
+        reply
+          .code(422)
+          .send(apiError('CONFIG_INVALID', 'Dashboard validation failed.', validation.issues));
+        return;
+      }
+      const states = await dependencies.homeAssistant.getStates(requestSignal(request));
+      return {
+        config: validation.document,
+        states: filterConfiguredStates(states, validation.config),
+      };
+    });
+
     app.get('/api/manage/config', async (request, reply) => {
       if (!(await verifyAuthorized(request, reply, dependencies, 'management'))) {
         return;
       }
       const snapshot = config.read();
       if (!snapshot) {
-        recoveryError(
-          reply,
-          config.diagnostic?.message ?? 'Dashboard configuration needs recovery.',
-        );
-        return;
+        return {
+          revision: null,
+          config: {
+            schemaVersion: 1,
+            views: [{ id: 'home', title: 'Home', cards: [], badges: [] }],
+          },
+          previousAvailable: config.readPrevious() !== null,
+          configured: false,
+          recovery: true,
+          diagnostic: config.diagnostic?.message ?? 'Create and save a dashboard to finish setup.',
+        };
       }
       return {
         revision: snapshot.revision,
@@ -165,6 +309,9 @@ export function registerApiRoutes(
         if (baseRevision !== null && typeof baseRevision !== 'string') {
           reply.code(400).send(apiError('INVALID_CONFIG_REQUEST', 'A base revision is required.'));
           return;
+        }
+        if (baseRevision === null && !config.read()) {
+          return config.recover(input);
         }
         return config.save(baseRevision, input);
       },

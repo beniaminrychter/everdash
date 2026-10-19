@@ -1,0 +1,30 @@
+.mainContent {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 36px 36px 32px;
+}
+
+.dashboardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+@media (max-width: 899px) {
+  .mainContent {
+    padding: 28px 24px;
+  }
+}
+
+@media (max-width: 699px) {
+  .mainContent {
+    padding: 24px 20px;
+  }
+}
+
+@media (max-width: 360px) {
+  .mainContent {
+    padding: 20px 14px;
+  }
+}

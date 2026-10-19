@@ -43,4 +43,11 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run isolated browser suite
+        env:
+          MY_HOME_BROWSER_CHANNEL: chromium
         run: npm run test:browser
+
+      - name: Run Home Assistant builder browser suite
+        env:
+          MY_HOME_BROWSER_CHANNEL: chromium
+        run: npm run test:admin-browser
