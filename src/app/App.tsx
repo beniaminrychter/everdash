@@ -24,8 +24,9 @@ import styles from './App.module.css';
 type OpenModal = { kind: 'light'; deviceId: string } | { kind: 'settings' } | null;
 interface Props {
   config: AppConfig;
+  mode?: 'direct' | 'management';
 }
-export function App({ config }: Props) {
+export function App({ config, mode = 'direct' }: Props) {
   usePreventZoom();
   const dashboard = useDashboard(config);
   const commandPage = useMemo(
@@ -176,6 +177,7 @@ export function App({ config }: Props) {
             sunAvailable={sun === 'above_horizon' || sun === 'below_horizon'}
             storageError={storageError}
             onHardReload={hardReload}
+            accessMode={mode}
           />
           <ConnectedDataSources
             view={page}

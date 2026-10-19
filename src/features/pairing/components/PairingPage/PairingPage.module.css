@@ -1,0 +1,50 @@
+.page {
+  align-items: center;
+  background: var(--page-background);
+  box-sizing: border-box;
+  color: var(--text);
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-sizing: border-box;
+  max-width: 540px;
+  padding: 24px;
+  width: 100%;
+}
+
+.language {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.language button {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  margin-left: 6px;
+  min-height: 40px;
+  padding: 6px 10px;
+}
+
+.brand {
+  color: var(--accent);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 18px 0 6px;
+  text-transform: uppercase;
+}
+
+.error {
+  color: var(--danger, #a32626);
+}

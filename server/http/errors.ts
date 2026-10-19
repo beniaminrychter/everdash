@@ -12,10 +12,34 @@ export function apiError(
   return issues ? { code, message, issues } : { code, message };
 }
 import { ConfigRepositoryError } from '../config/errors';
+import { PairingError } from '../auth/errors';
 import { HomeAssistantUpstreamError } from '../home-assistant/errors';
 import { PolicyError } from '../home-assistant/policy-error';
 
-export function mapRouteError(error: unknown): { status: number; body: ApiErrorBody } {
+export function mapRouteError(error: unknown): {
+  status: number;
+  body: ApiErrorBody;
+  retryAfterSeconds?: number;
+} {
+  if (error instanceof PairingError) {
+    const status =
+      error.code === 'RATE_LIMITED'
+        ? 429
+        : error.code === 'PAIRING_CAPACITY'
+          ? 503
+          : error.code === 'PAIRING_NOT_FOUND'
+            ? 404
+            : error.code === 'PAIRING_POLL_DENIED'
+              ? 403
+              : error.code === 'PAIRING_REDEEMED'
+                ? 409
+                : 400;
+    return {
+      status,
+      body: apiError(error.code, error.message),
+      retryAfterSeconds: error.retryAfterSeconds,
+    };
+  }
   if (error instanceof ConfigRepositoryError) {
     const status =
       error.code === 'CONFIG_CONFLICT' ? 409 : error.code === 'CONFIG_INVALID' ? 422 : 503;

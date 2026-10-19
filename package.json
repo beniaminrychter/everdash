@@ -16,7 +16,7 @@
     "build": "npm run typecheck && vite build",
     "preview": "vite preview --host 0.0.0.0",
     "test": "node --import tsx --test tests/*.test.ts",
-    "test:browser": "node tests/browser.smoke.mjs",
+    "test:browser": "node --import tsx tests/browser.smoke.mjs",
     "config:export": "node --import tsx scripts/export-config.ts",
     "check:compat": "node scripts/check-compat.mjs"
   },

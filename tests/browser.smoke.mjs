@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, extname, resolve as resolvePath } from 'node:path';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
+import { dashboardDocument } from './fixtures/dashboard.ts';
 
 // Isolated fixtures use Playwright; the user's existing IAB tab is verified separately.
 // A separate build uses an isolated HA fixture, never the user's credentials or devices.
@@ -299,6 +300,48 @@ try {
   appUrl = `http://127.0.0.1:${server.address().port}/`;
   const apiUrl = `http://127.0.0.1:${api.address().port}`;
   const routeHaApi = async (browserContext) => {
+    await browserContext.route('**/api/bootstrap', async (route) => {
+      const source = route.request().headers().referer || route.request().url();
+      const url = new URL(source);
+      const fixtureViews = [
+        ...dashboardDocument.views,
+        {
+          id: 'fixture-room',
+          title: 'Meter room',
+          badges: [{ type: 'temperature', entity: 'sensor.fixture_living_temp' }],
+          cards: [
+            { type: 'weather', entity: 'weather.dom', name: 'Room weather' },
+            {
+              type: 'light',
+              entity: 'light.salon_dodatkowe',
+              name: 'Reading lamp',
+              icon: 'pendant',
+            },
+            {
+              type: 'pstryk',
+              entity: 'sensor.pstryk_current_buy_price',
+              name: 'Room energy',
+              usage: 'sensor.pstryk_multisensor_activepower_0',
+            },
+            { type: 'weather', entity: 'weather.dom', name: 'Outdoor weather' },
+          ],
+        },
+        {
+          id: 'fixture-sensors',
+          title: 'Sensors',
+          badges: [{ type: 'temperature', entity: 'sensor.fixture_living_temp' }],
+        },
+      ];
+      const config = {
+        ...dashboardDocument,
+        views: url.searchParams.has('sensors-only')
+          ? fixtureViews.filter((view) => view.id === 'fixture-sensors')
+          : fixtureViews,
+      };
+      await route.fulfill({
+        json: { mode: 'direct', configured: true, revision: 'fixture-v1', config },
+      });
+    });
     await browserContext.route('**/api/ha/**', async (route) => {
       const incoming = new URL(route.request().url());
       const upstreamPath = incoming.pathname.replace('/api/ha', '/api');
@@ -312,44 +355,13 @@ try {
       await route.fulfill({ response });
     });
   };
-  // Test-only Vite plugin loads stable configuration fixtures in the temporary build.
-  // It never edits the user's runtime dashboard JSON or adds fixture views to it.
+  // Build an isolated copy so browser checks never edit the user's installed app.
   const testConfig = join(temporary, 'vite.config.mjs');
-  const fixtureModule = `
-    import { dashboardDocument as base } from ${JSON.stringify(resolvePath('tests/fixtures/dashboard.ts'))};
-    const views = [...base.views, {
-      id: 'fixture-room', title: 'Meter room',
-      badges: [{ type: 'temperature', entity: 'sensor.fixture_living_temp' }],
-      cards: [
-        { type: 'weather', entity: 'weather.dom', name: 'Room weather' },
-        { type: 'light', entity: 'light.salon_dodatkowe', name: 'Reading lamp', icon: 'pendant' },
-        { type: 'pstryk', entity: 'sensor.pstryk_current_buy_price', name: 'Room energy', usage: 'sensor.pstryk_multisensor_activepower_0' },
-        { type: 'weather', entity: 'weather.dom', name: 'Outdoor weather' },
-      ],
-    }, {
-      id: 'fixture-sensors', title: 'Sensors',
-      badges: [{ type: 'temperature', entity: 'sensor.fixture_living_temp' }],
-    }];
-    export default { ...base, views: location.search.includes('sensors-only') ? views.filter(view => view.id === 'fixture-sensors') : views };
-  `;
   await writeFile(
     testConfig,
     `
     import original from ${JSON.stringify(resolvePath('vite.config.ts'))};
-    export default { ...original, plugins: [
-      { name: 'isolated-config-fixture', enforce: 'pre',
-        resolveId(source, importer) {
-          if (source === '../../examples/dashboard.json' && importer?.endsWith('/src/app/main.tsx')) {
-            return '\0browser-fixture-config';
-          }
-        },
-        load(id) {
-          if (id === '\0browser-fixture-config') {
-            return ${JSON.stringify(fixtureModule)};
-          }
-        },
-      }, ...original.plugins,
-    ] };
+    export default original;
   `,
   );
   await new Promise((resolve, reject) => {
@@ -1087,6 +1099,42 @@ try {
     'Connected to Home Assistant',
   );
   await sensorContext.close();
+
+  const pairingContext = await browser.newContext();
+  await routeHaApi(pairingContext);
+  let pairingRequests = 0;
+  let pairingPolls = 0;
+  await pairingContext.route('**/api/bootstrap', async (route) => {
+    await route.fulfill({ status: 401, json: { code: 'UNAUTHORIZED', mode: 'direct' } });
+  });
+  await pairingContext.route('**/api/pairings', async (route) => {
+    pairingRequests++;
+    await route.fulfill({
+      json: {
+        requestId: 'fixture-request',
+        code: 'ABCD2345',
+        pollSecret: 'fixture-poll-secret',
+        expiresAt: Date.now() + 300_000,
+      },
+    });
+  });
+  await pairingContext.route('**/api/pairings/status', async (route) => {
+    pairingPolls++;
+    await route.fulfill({ json: { status: 'pending' } });
+  });
+  const pairingPage = await pairingContext.newPage();
+  pairingPage.on('pageerror', (error) => errors.push(error.message));
+  await pairingPage.goto(appUrl);
+  await expect(
+    pairingPage.getByRole('heading', { name: 'Give this tablet a new purpose.' }),
+  ).toBeVisible();
+  await expect(pairingPage.getByRole('button', { name: 'Start pairing' })).toBeVisible();
+  assert.equal(pairingRequests, 0, 'opening an unpaired tablet must not create a pairing request');
+  await pairingPage.getByRole('button', { name: 'Start pairing' }).click();
+  await expect(pairingPage.getByLabel('Pairing code')).toHaveText('ABCD2345');
+  await expect.poll(() => pairingPolls, { timeout: 5000 }).toBeGreaterThan(0);
+  assert.equal(pairingRequests, 1, 'pairing starts only after an explicit button press');
+  await pairingContext.close();
 
   const blockedContext = await browser.newContext();
   await routeHaApi(blockedContext);

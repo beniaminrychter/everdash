@@ -3,6 +3,7 @@ import { useI18n, translateMessage } from '../../../../shared/i18n/index';
 import type { Language } from '../../../../shared/i18n/index';
 import type { Appearance } from '../../data/preferences';
 import { About } from '../About/About';
+import { PairingPanel } from '../../../pairing/components/PairingPanel/PairingPanel';
 import styles from './Settings.module.css';
 
 interface Props {
@@ -16,6 +17,7 @@ interface Props {
   sunAvailable: boolean;
   storageError: boolean;
   onHardReload: () => Promise<void>;
+  accessMode: 'direct' | 'management';
 }
 export function Settings({
   appearance,
@@ -28,6 +30,7 @@ export function Settings({
   sunAvailable,
   storageError,
   onHardReload,
+  accessMode,
 }: Props) {
   const { t } = useI18n();
   const [reloading, setReloading] = useState(false);
@@ -105,6 +108,8 @@ export function Settings({
       <button type="button" class={styles.refresh} disabled={!online} onClick={onRefresh}>
         {t('Refresh')}
       </button>
+      <h3>{t('Tablet access')}</h3>
+      <PairingPanel mode={accessMode === 'management' ? 'manager' : 'tablet'} />
       <h3>{t('App')}</h3>
       <button type="button" class={styles.refresh} disabled={!online || reloading} onClick={reload}>
         {reloading ? t('Reloading…') : t('Hard reload app')}

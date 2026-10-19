@@ -1,6 +1,8 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { validateDashboard } from '../../src/shared/config/validate';
 import type { ServerDependencies } from '../app';
+import { getIngressUserId } from '../auth/ingress';
+import { deviceCookie, expiredDeviceCookie, readDeviceCookie } from '../auth/sessions';
 import { filterConfiguredStates, validateServiceCommand } from '../home-assistant/policy';
 import { apiError } from './errors';
 import { requireMutationOrigin } from './security';
@@ -18,9 +20,10 @@ async function verifyAuthorized(
   listenerMode: 'management' | 'direct',
 ): Promise<boolean> {
   if (!(await (dependencies.authorize?.(request, listenerMode) ?? false))) {
-    reply
-      .code(401)
-      .send(apiError('UNAUTHORIZED', 'Pair this device or open EverDash through Home Assistant.'));
+    reply.code(401).send({
+      ...apiError('UNAUTHORIZED', 'Pair this device or open EverDash through Home Assistant.'),
+      mode: listenerMode,
+    });
     return false;
   }
   return true;
@@ -40,6 +43,147 @@ export function registerApiRoutes(
     verifyAuthorized(request, reply, dependencies, listenerMode);
   const expectedOrigin = (request: FastifyRequest) =>
     dependencies.expectedOrigin?.(request, listenerMode) ?? null;
+
+  app.post('/api/pairings', async (request, reply) => {
+    if (listenerMode !== 'direct') {
+      reply
+        .code(403)
+        .send(apiError('PAIRING_DIRECT_ONLY', 'Pairing is available on the direct dashboard URL.'));
+      return;
+    }
+    if (!(await requireMutationOrigin(request, reply, expectedOrigin))) {
+      return;
+    }
+    if (!dependencies.pairing) {
+      reply.code(503).send(apiError('PAIRING_UNAVAILABLE', 'Pairing is not available yet.'));
+      return;
+    }
+    const peerIp = request.raw.socket.remoteAddress ?? 'unknown';
+    return dependencies.pairing.create(peerIp);
+  });
+
+  app.post<{ Body: { requestId?: string; pollSecret?: string } }>(
+    '/api/pairings/status',
+    async (request, reply) => {
+      if (listenerMode !== 'direct') {
+        reply
+          .code(403)
+          .send(
+            apiError('PAIRING_DIRECT_ONLY', 'Pairing is available on the direct dashboard URL.'),
+          );
+        return;
+      }
+      if (!(await requireMutationOrigin(request, reply, expectedOrigin))) {
+        return;
+      }
+      if (!dependencies.pairing) {
+        reply.code(503).send(apiError('PAIRING_UNAVAILABLE', 'Pairing is not available yet.'));
+        return;
+      }
+      const { requestId, pollSecret } = request.body ?? {};
+      if (typeof requestId !== 'string' || typeof pollSecret !== 'string') {
+        reply
+          .code(400)
+          .send(apiError('INVALID_PAIRING_REQUEST', 'A request ID and poll secret are required.'));
+        return;
+      }
+      const result = await dependencies.pairing.status(requestId, pollSecret);
+      if (result.status === 'approved') {
+        reply.header('Set-Cookie', deviceCookie(result.session));
+        return { status: 'approved', deviceId: result.deviceId };
+      }
+      return result;
+    },
+  );
+
+  app.post('/api/logout', async (request, reply) => {
+    if (!(await authorize(request, reply))) {
+      return;
+    }
+    if (!(await requireMutationOrigin(request, reply, expectedOrigin))) {
+      return;
+    }
+    const session = readDeviceCookie(request.headers.cookie);
+    if (listenerMode === 'direct' && session && dependencies.deviceSessions) {
+      await dependencies.deviceSessions.logout(session);
+    }
+    reply.header('Set-Cookie', expiredDeviceCookie());
+    return { success: true };
+  });
+
+  if (listenerMode === 'management') {
+    app.get('/api/manage/devices', async (request, reply) => {
+      if (!(await authorize(request, reply))) {
+        return;
+      }
+      if (!dependencies.devices) {
+        reply
+          .code(503)
+          .send(apiError('DEVICE_STORAGE_UNAVAILABLE', 'Device storage is unavailable.'));
+        return;
+      }
+      return dependencies.devices.list();
+    });
+
+    app.post<{ Body: { code?: string; label?: string } }>(
+      '/api/manage/pairings/approve',
+      async (request, reply) => {
+        if (!(await authorize(request, reply))) {
+          return;
+        }
+        if (!(await requireMutationOrigin(request, reply, expectedOrigin))) {
+          return;
+        }
+        if (!dependencies.pairing) {
+          reply.code(503).send(apiError('PAIRING_UNAVAILABLE', 'Pairing is unavailable.'));
+          return;
+        }
+        const userId = getIngressUserId({
+          headers: request.headers,
+          socket: { remoteAddress: request.raw.socket.remoteAddress },
+        });
+        if (!userId) {
+          reply.code(401).send(apiError('UNAUTHORIZED', 'Open EverDash through Home Assistant.'));
+          return;
+        }
+        const { code, label } = request.body ?? {};
+        if (typeof code !== 'string' || typeof label !== 'string') {
+          reply
+            .code(400)
+            .send(
+              apiError('INVALID_PAIRING_REQUEST', 'A pairing code and device label are required.'),
+            );
+          return;
+        }
+        await dependencies.pairing.approve(userId, code, label);
+        return { approved: true };
+      },
+    );
+
+    app.delete<{ Params: { id: string } }>('/api/manage/devices/:id', async (request, reply) => {
+      if (!(await authorize(request, reply))) {
+        return;
+      }
+      if (!(await requireMutationOrigin(request, reply, expectedOrigin))) {
+        return;
+      }
+      if (!dependencies.devices) {
+        reply
+          .code(503)
+          .send(apiError('DEVICE_STORAGE_UNAVAILABLE', 'Device storage is unavailable.'));
+        return;
+      }
+      if (!/^[a-f0-9]{32}$/.test(request.params.id)) {
+        reply.code(404).send(apiError('DEVICE_NOT_FOUND', 'Device was not found.'));
+        return;
+      }
+      if (!(await dependencies.devices.revoke(request.params.id))) {
+        reply.code(404).send(apiError('DEVICE_NOT_FOUND', 'Device was not found.'));
+        return;
+      }
+      return { revoked: true };
+    });
+  }
 
   app.get('/api/bootstrap', async (request, reply) => {
     if (!(await authorize(request, reply))) {

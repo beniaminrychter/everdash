@@ -2,12 +2,18 @@ import Fastify from 'fastify';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { ConfigRepository } from './config/repository';
 import type { HomeAssistantTransport } from './home-assistant/client';
+import type { DeviceRepository } from './auth/devices';
+import type { DeviceSessions } from './auth/sessions';
+import type { PairingService } from './auth/pairing';
 import { mapRouteError } from './http/errors';
 import { registerApiRoutes } from './http/routes';
 import { registerStaticFiles } from './http/static';
 
 export interface ServerDependencies {
   config: ConfigRepository;
+  devices?: DeviceRepository;
+  deviceSessions?: DeviceSessions;
+  pairing?: PairingService;
   authorize?: (
     request: FastifyRequest,
     mode: 'management' | 'direct',
@@ -44,6 +50,9 @@ export async function buildApp(
   // oxlint-disable-next-line promise/prefer-await-to-callbacks
   app.setErrorHandler(async (error, _request, reply) => {
     const mapped = mapRouteError(error);
+    if (mapped.retryAfterSeconds !== undefined) {
+      reply.header('Retry-After', mapped.retryAfterSeconds);
+    }
     await reply.code(mapped.status).send(mapped.body);
   });
 
