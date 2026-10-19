@@ -68,9 +68,16 @@ jobs:
 
       - name: Verify container health and Ingress boundary
         run: |
+          smoke_data="$(mktemp -d)"
+          printf '%s\n' '{"direct_enabled":false}' > "$smoke_data/options.json"
+          chmod 755 "$smoke_data"
+          chmod 644 "$smoke_data/options.json"
+          trap 'docker logs everdash-release-smoke || true; docker rm --force everdash-release-smoke || true; rm -rf "$smoke_data"' EXIT
           docker run --detach --name everdash-release-smoke --publish 8099:8099 \
-            --env SUPERVISOR_TOKEN=fixture-only-supervisor-token everdash:release-smoke
-          trap 'docker logs everdash-release-smoke || true; docker rm --force everdash-release-smoke || true' EXIT
+            --mount "type=bind,src=$smoke_data,dst=/run/everdash-smoke,readonly" \
+            --env SUPERVISOR_TOKEN=fixture-only-supervisor-token \
+            --env EVERDASH_OPTIONS_FILE=/run/everdash-smoke/options.json \
+            everdash:release-smoke
           for attempt in $(seq 1 30); do
             if curl --silent --fail http://127.0.0.1:8099/health; then
               break
