@@ -12,19 +12,9 @@ Requires Node.js 22.12+ and npm.
 
 ```sh
 npm ci
-cp .env.example .env  # Only if .env does not already exist
 ```
 
-Fill in the local `.env` file:
-
-```dotenv
-VITE_HOME_ASSISTANT_URL=https://your-home-assistant-address
-VITE_HOME_ASSISTANT_TOKEN=your-long-lived-access-token
-```
-
-Use the server address the iPad can reach, without `/api` at the end. Create a long-lived access token in your Home Assistant user profile's Security section. Never commit it. `.env` and `.env.*` are ignored, with `.env.example` kept as the empty template.
-
-**This is a temporary client-side credential setup:** Vite embeds both `VITE_` values in the JavaScript bundle. Anyone who can access the built app can extract its token, including from the offline cache. Keep this deployment private. Changing `.env` requires restarting the dev server or rebuilding and redeploying the production app; it does not change an existing build. No token is additionally written to browser storage or logs.
+The browser app never receives a Home Assistant token. In production, the Home Assistant app supplies a server-only `SUPERVISOR_TOKEN` and persistent `/data` directory. The current development preview expects the backend API on the same origin; use isolated test fixtures rather than a real Home Assistant credential.
 
 ```sh
 npm run dev
@@ -37,17 +27,11 @@ npm run build
 npm run preview -- --port 4173
 ```
 
-Open the printed LAN address on the iPad. `localhost` on the iPad refers to the iPad itself. Missing or invalid environment values show a configuration message and disable controls; there is no fallback to pretend device state.
+Open the printed LAN address on the iPad. `localhost` on the iPad refers to the iPad itself. The production Home Assistant app and management setup flow are under development.
 
 ## Home Assistant connection
 
-The app connects directly to Home Assistant's [REST API](https://developers.home-assistant.io/docs/api/rest/). It loads entity metadata with `GET /api/states` for display names and source diagnostics, polls only configured entities with `GET /api/states/<entity_id>` and controls hardware through `POST /api/services/light/turn_on`, `light/turn_off`, `switch/turn_on`, and `switch/turn_off`. It does not write to the state API.
-
-When the dashboard and Home Assistant have different origins, add the dashboard's exact origin (scheme, host, port; no path) to Home Assistant's CORS allowed origins. For example, a local preview could require `http://192.168.1.20:4173`. See the [Home Assistant HTTP settings](https://www.home-assistant.io/integrations/http/); older installations configure `http.cors_allowed_origins` in YAML. Do not use a wildcard. An HTTPS dashboard also needs an HTTPS Home Assistant address with a certificate trusted by the iPad; browsers block HTTPS-to-HTTP requests.
-
-The current desktop preview at `http://localhost:4174` needs that exact origin allowed. The iPad also needs the origin of the LAN address you open there, with the actual preview port. A successful authenticated request outside the browser does not confirm CORS: a rejected preflight prevents the browser from sending its authenticated request.
-
-Alternatively, serve `dist/` under Home Assistant's `/config/www/my-home/` directory and open `/local/my-home/` on its origin. Those static files are publicly accessible to anyone who can reach that URL; the embedded token makes private access especially important.
+The server uses Home Assistant's fixed Supervisor API route. Browser requests go to same-origin EverDash endpoints, and server policy filters reads and commands to entities in the published JSON configuration. There is no browser-side Home Assistant credential or cross-origin request.
 
 The Codex Home Assistant connector is useful for inspecting devices during development. The deployed PWA uses the configured REST connection independently of Codex.
 

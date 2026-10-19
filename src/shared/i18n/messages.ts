@@ -2,8 +2,8 @@ export type Language = 'en' | 'pl';
 export const polish = {
   'A price chart appears when your sensor publishes a timestamped schedule.':
     'Wykres pojawi się, gdy czujnik udostępni harmonogram cen z datami.',
-  'A simple home dashboard, made for your iPad. Accessory states and controls connect directly to your Home Assistant server.':
-    'Prosty pulpit domowy na iPada. Dane i sterowanie urządzeniami łączą się bezpośrednio z Twoim serwerem Home Assistant.',
+  'A simple home dashboard, made for your iPad. Accessory states and controls connect through EverDash to Home Assistant.':
+    'Prosty pulpit domowy na iPada. Dane i sterowanie urządzeniami łączą się przez EverDash z Home Assistant.',
   Accessories: 'Urządzenia',
   'Add to your Home Screen': 'Dodaj do ekranu początkowego',
   'Adding to your Home Screen and offline launch need a secure HTTPS connection. Live states and controls always require a connection to Home Assistant.':
@@ -18,14 +18,15 @@ export const polish = {
   Brightness: 'Jasność',
   'Cannot download the latest app. Check the app server and your connection, then retry.':
     'Nie można pobrać najnowszej aplikacji. Sprawdź serwer aplikacji i połączenie, a następnie spróbuj ponownie.',
-  'Cannot reach Home Assistant. Check the URL, connection, HTTPS, and CORS settings.':
-    'Nie można połączyć się z Home Assistant. Sprawdź adres, połączenie, HTTPS i ustawienia CORS.',
+  'Cannot reach Home Assistant through EverDash.':
+    'Nie można połączyć się z Home Assistant przez EverDash.',
   'Clear night': 'Bezchmurna noc',
   'Close settings': 'Zamknij ustawienia',
   Cloudy: 'Pochmurnie',
   Color: 'Kolor',
   'Connected data sources': 'Źródła danych',
   'Connected to Home Assistant': 'Połączono z Home Assistant',
+  'Connected through EverDash': 'Połączono przez EverDash',
   'Connecting to Home Assistant…': 'Łączenie z Home Assistant…',
   'Connection needs attention': 'Problem z połączeniem',
   Cool: 'Chłodzenie',
@@ -66,9 +67,8 @@ export const polish = {
   'Home Assistant data is unavailable.': 'Dane Home Assistant są niedostępne.',
   'Home Assistant did not respond within 10 seconds.':
     'Home Assistant nie odpowiedział w ciągu 10 sekund.',
-  'Home Assistant rejected the token.': 'Home Assistant odrzucił token.',
-  'Home Assistant rejected the token. Check .env and rebuild.':
-    'Home Assistant odrzucił token. Sprawdź plik .env i ponownie zbuduj aplikację.',
+  'EverDash could not connect to Home Assistant.':
+    'EverDash nie może połączyć się z Home Assistant.',
   'Home Assistant request cancelled.': 'Anulowano zapytanie do Home Assistant.',
   'Home Assistant request failed (HTTP {status}).':
     'Błąd zapytania do Home Assistant (HTTP {status}).',
@@ -77,9 +77,8 @@ export const polish = {
   'Hourly forecast unavailable': 'Prognoza godzinowa niedostępna',
   'Increase {name} temperature': 'Zwiększ temperaturę: {name}',
   'Installation & about': 'Instalacja i informacje',
-  'Invalid Home Assistant URL.': 'Nieprawidłowy adres Home Assistant.',
-  'Invalid Home Assistant URL. Use an HTTP(S) server address without credentials, query, or fragment.':
-    'Nieprawidłowy adres Home Assistant. Użyj adresu HTTP(S) bez danych logowania, zapytania i fragmentu.',
+  'This device is not paired or authorized.': 'To urządzenie nie jest sparowane ani autoryzowane.',
+  'This request is not allowed.': 'To żądanie jest niedozwolone.',
   'Invalid Home Assistant configuration.': 'Nieprawidłowa konfiguracja Home Assistant.',
   'Invalid Home Assistant entity catalog.': 'Nieprawidłowy katalog encji Home Assistant.',
   'Invalid Home Assistant entity response.': 'Nieprawidłowa odpowiedź encji Home Assistant.',
@@ -128,8 +127,6 @@ export const polish = {
   'Room temperatures': 'Temperatury w pokojach',
   'Select a bar to see its price.': 'Dotknij słupka, aby zobaczyć cenę.',
   Selling: 'Sprzedaż',
-  'Set VITE_HOME_ASSISTANT_URL and VITE_HOME_ASSISTANT_TOKEN in .env, then restart or rebuild the app.':
-    'Ustaw VITE_HOME_ASSISTANT_URL i VITE_HOME_ASSISTANT_TOKEN w pliku .env, a następnie uruchom ponownie lub zbuduj aplikację.',
   Settings: 'Ustawienia',
   'Show price chart': 'Pokaż wykres cen',
   Sleet: 'Deszcz ze śniegiem',

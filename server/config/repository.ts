@@ -49,6 +49,10 @@ export class ConfigRepository extends EventTarget {
   private queue: Promise<void> = Promise.resolve();
   diagnostic: ConfigDiagnostic | null = null;
 
+  get isConfigured(): boolean {
+    return this.currentIsPersisted;
+  }
+
   constructor(private readonly options: ConfigRepositoryOptions) {
     super();
     this.currentPath = join(options.directory, 'dashboard.json');

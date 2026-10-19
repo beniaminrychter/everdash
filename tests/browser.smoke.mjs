@@ -7,7 +7,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 
 // Isolated fixtures use Playwright; the user's existing IAB tab is verified separately.
-// A separate build uses dummy credentials, never the user's .env or physical devices.
+// A separate build uses an isolated HA fixture, never the user's credentials or devices.
 const temporary = await mkdtemp(join(tmpdir(), 'my-home-ha-check-'));
 const buildDirectory = join(temporary, 'dist');
 const output = process.env.MY_HOME_SCREENSHOT_DIR || join(tmpdir(), 'my-home-browser-check');
@@ -298,6 +298,20 @@ try {
   await listen(api);
   appUrl = `http://127.0.0.1:${server.address().port}/`;
   const apiUrl = `http://127.0.0.1:${api.address().port}`;
+  const routeHaApi = async (browserContext) => {
+    await browserContext.route('**/api/ha/**', async (route) => {
+      const incoming = new URL(route.request().url());
+      const upstreamPath = incoming.pathname.replace('/api/ha', '/api');
+      const query = incoming.pathname.endsWith('/weather/get_forecasts')
+        ? '?return_response'
+        : incoming.search;
+      const response = await route.fetch({
+        url: `${apiUrl}${upstreamPath}${query}`,
+        headers: { ...route.request().headers(), authorization: `Bearer ${token}` },
+      });
+      await route.fulfill({ response });
+    });
+  };
   // Test-only Vite plugin loads stable configuration fixtures in the temporary build.
   // It never edits the user's runtime dashboard JSON or adds fixture views to it.
   const testConfig = join(temporary, 'vite.config.mjs');
@@ -350,7 +364,7 @@ try {
         buildDirectory,
       ],
       {
-        env: { ...process.env, VITE_HOME_ASSISTANT_TOKEN: token, VITE_HOME_ASSISTANT_URL: apiUrl },
+        env: { ...process.env },
         stdio: ['ignore', 'pipe', 'pipe'],
       },
     );
@@ -369,6 +383,7 @@ try {
     headless: true,
   });
   const context = await browser.newContext({ viewport: { height: 768, width: 1024 } });
+  await routeHaApi(context);
   const page = await context.newPage();
   page.on('pageerror', (error) => errors.push(error.message));
   const openSettings = async (target = page) =>
@@ -610,7 +625,7 @@ try {
     await page.evaluate(() => JSON.parse(localStorage.getItem('my-home:preferences:v1')).page),
   ).toBe('first-floor');
   await openSettings();
-  await expect(page.getByText(apiUrl, { exact: true })).toBeVisible();
+  await expect(page.getByText('Connected through EverDash', { exact: true })).toBeVisible();
   await page.getByRole('button', { exact: true, name: 'Dark' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await closeSettings();
@@ -892,7 +907,7 @@ try {
 
   responseStatus = 401;
   await refreshPage();
-  await expectConnection('rejected the token');
+  await expectConnection('not paired or authorized');
   await expect(
     light.getByRole('button', { exact: true, name: 'Salon Dodatkowe power' }),
   ).toBeDisabled();
@@ -1059,6 +1074,7 @@ try {
 
   // Entirely read-only apps must connect without a successful accessory read.
   const sensorContext = await browser.newContext();
+  await routeHaApi(sensorContext);
   const sensorPage = await sensorContext.newPage();
   sensorPage.on('pageerror', (error) => errors.push(error.message));
   await sensorPage.goto(`${appUrl}?sensors-only=1`);
@@ -1073,6 +1089,7 @@ try {
   await sensorContext.close();
 
   const blockedContext = await browser.newContext();
+  await routeHaApi(blockedContext);
   await blockedContext.addInitScript(() => {
     Object.defineProperty(window, 'localStorage', {
       get() {
@@ -1090,6 +1107,7 @@ try {
   await blockedContext.close();
 
   const changingContext = await browser.newContext();
+  await routeHaApi(changingContext);
   const changingPage = await changingContext.newPage();
   changingPage.on('pageerror', (error) => errors.push(error.message));
   await changingPage.clock.install();
@@ -1116,6 +1134,7 @@ try {
   await changingContext.close();
 
   const legacyContext = await browser.newContext();
+  await routeHaApi(legacyContext);
   const legacyPage = await legacyContext.newPage();
   legacyPage.on('pageerror', (error) => errors.push(error.message));
   // Serve the ES5-only HTML over real HTTP: route.fulfill gives Chrome an unknown
@@ -1154,7 +1173,7 @@ try {
       {
         appUrl,
         checks: [
-          'cross-origin authenticated REST reads',
+          'same-origin dashboard API with isolated Home Assistant fixture',
           'configured views, persistent selection, shared control state, badge-only view and widget order',
           'saved appearance and HA sunrise/sunset',
           'one-decimal temperatures, five real forecast hours, forecast failure recovery, daily-low price status and compact usage',

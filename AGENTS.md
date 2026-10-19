@@ -2,7 +2,7 @@
 
 ## What this project is
 
-EverDash is a Preact progressive web app for controlling explicitly configured Home Assistant devices and viewing home information on legacy screens, including an iPad running iOS 12. It uses Home Assistant's REST API, TypeScript, Vite, and CSS Modules. The app includes accessory and climate controls, energy prices and usage, weather forecasts, sensor badges, saved dashboard and appearance preferences, and an offline app shell.
+EverDash is a Preact progressive web app and Node.js service for controlling explicitly configured Home Assistant devices on legacy screens, including an iPad running iOS 12. Browser requests use same-origin endpoints; only the server holds the Supervisor credential and talks to Home Assistant's REST API. The app includes accessory and climate controls, energy prices and usage, weather forecasts, sensor badges, saved dashboard and appearance preferences, and an offline app shell.
 
 The production target is iOS 12 and Safari 12. Keep the app usable on that hardware when changing TypeScript, JavaScript, CSS, build configuration, or dependencies. The IE11 output is only a conservative JavaScript syntax floor; IE11 is not a supported product target.
 
@@ -12,6 +12,7 @@ The production target is iOS 12 and Safari 12. Keep the app usable on that hardw
 - `src/features/<feature>/components/` owns feature UI. Keep component logic and its CSS Module together, preferably in a component directory such as `components/AccessoryCard/AccessoryCard.tsx` and `AccessoryCard.module.css`.
 - `src/features/<feature>/data/` owns feature-specific models, stores, API-to-view mappings, and domain logic. Put feature hooks in a nearby `hooks/` directory when they are not part of a component.
 - `src/shared/` owns code used by multiple features: UI primitives, Home Assistant transport and transport contracts, cross-feature types, configuration, i18n, and shared low-level helpers. Shared modules must not import from `src/features/`.
+- `server/` owns Node.js persistence, authentication boundaries, Home Assistant transport policy, and HTTP serving. It may import browser-safe contracts from `src/shared/`, but never feature modules or frontend credentials.
 - The runtime dashboard is versioned JSON validated by `src/shared/config/`. Keep entity IDs explicit; do not silently substitute entities by friendly name or invent production readings.
 
 ## Adding or changing a feature
@@ -51,7 +52,9 @@ npm run format          # Apply Ultracite safe fixes and formatting
 npm run lint            # Check lint and formatting rules
 npm run format:check    # Verify Oxfmt formatting
 npm run typecheck       # Run TypeScript without emitting files
+npm run typecheck:server # Typecheck Node.js server modules
 npm run build           # Typecheck and create production bundles
+npm run build:server    # Bundle the server entry separately
 npm run check:compat    # Run after build; inspect fresh dist output for iOS/Safari compatibility
 npm test                # Run the Node test suite
 npm run test:browser    # Run the browser smoke suite with its isolated fixtures

@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
-import { createClient, validateConnection } from '../../../shared/home-assistant/client';
+import { createClient } from '../../../shared/home-assistant/client';
+import type { HomeAssistantClientFactory } from '../../../shared/home-assistant/client';
 import { resolveDashboard } from './discovery';
 import { ObservationStore } from './store';
 import type { ObservationSnapshot } from './store';
 import type { AppConfig } from '../../../shared/config';
 
-export function useDashboard(config: AppConfig) {
+export function useDashboard(
+  config: AppConfig,
+  clientFactory: HomeAssistantClientFactory = createClient,
+) {
   const [snapshot, setSnapshot] = useState<ObservationSnapshot>(() => ({
     error: null,
     forecasts: {},
@@ -16,24 +20,7 @@ export function useDashboard(config: AppConfig) {
   }));
   const store = useRef<ObservationStore | null>(null);
   useEffect(() => {
-    let current: ObservationStore;
-    try {
-      current = new ObservationStore(
-        config,
-        createClient(
-          validateConnection(
-            import.meta.env.VITE_HOME_ASSISTANT_URL || '',
-            import.meta.env.VITE_HOME_ASSISTANT_TOKEN || '',
-          ),
-        ),
-      );
-    } catch (error) {
-      setSnapshot((previous) => ({
-        ...previous,
-        error: error instanceof Error ? error.message : 'Invalid Home Assistant configuration.',
-      }));
-      return;
-    }
+    const current = new ObservationStore(config, clientFactory());
     store.current = current;
     const unsubscribe = current.subscribe(() => setSnapshot(current.getSnapshot()));
     const updateActive = () => current.setActive(!document.hidden && navigator.onLine);
@@ -50,7 +37,7 @@ export function useDashboard(config: AppConfig) {
       window.removeEventListener('online', updateActive);
       window.removeEventListener('offline', updateActive);
     };
-  }, [config]);
+  }, [config, clientFactory]);
   const refresh = useCallback(() => {
     void store.current?.refresh(true);
   }, []);

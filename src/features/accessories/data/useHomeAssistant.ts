@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
-import { createClient, validateConnection } from '../../../shared/home-assistant/client';
+import { createClient } from '../../../shared/home-assistant/client';
+import type { HomeAssistantClientFactory } from '../../../shared/home-assistant/client';
 import { createDevice } from './model';
 import type { DesiredState, PageConfig } from './model';
 import { HomeAssistantStore } from './store';
 import type { HomeSnapshot } from './store';
 
-export function useHomeAssistant(page: PageConfig) {
+export function useHomeAssistant(
+  page: PageConfig,
+  clientFactory: HomeAssistantClientFactory = createClient,
+) {
   const [snapshot, setSnapshot] = useState<HomeSnapshot>(() => ({
     actionFailure: null,
     devices: page.cards.map(createDevice),
@@ -14,22 +18,7 @@ export function useHomeAssistant(page: PageConfig) {
   }));
   const store = useRef<HomeAssistantStore | null>(null);
   useEffect(() => {
-    let connection;
-    try {
-      connection = validateConnection(
-        import.meta.env.VITE_HOME_ASSISTANT_URL || '',
-        import.meta.env.VITE_HOME_ASSISTANT_TOKEN || '',
-      );
-    } catch (error) {
-      setSnapshot({
-        devices: page.cards.map((card) => ({ ...createDevice(card), availability: 'error' })),
-        error: error instanceof Error ? error.message : 'Invalid Home Assistant configuration.',
-        actionFailure: null,
-        updatedAt: null,
-      });
-      return;
-    }
-    const current = new HomeAssistantStore(page, createClient(connection));
+    const current = new HomeAssistantStore(page, clientFactory());
     store.current = current;
     setSnapshot(current.getSnapshot());
     const unsubscribe = current.subscribe(() => setSnapshot(current.getSnapshot()));
@@ -47,7 +36,7 @@ export function useHomeAssistant(page: PageConfig) {
       window.removeEventListener('online', updateActive);
       window.removeEventListener('offline', updateActive);
     };
-  }, [page]);
+  }, [page, clientFactory]);
   const update = useCallback(
     (id: string, desired: DesiredState, debounceMs = 0) =>
       store.current?.update(id, desired, debounceMs),

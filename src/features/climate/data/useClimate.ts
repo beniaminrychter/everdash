@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
-import { createClient, validateConnection } from '../../../shared/home-assistant/client';
+import { createClient } from '../../../shared/home-assistant/client';
+import type { HomeAssistantClientFactory } from '../../../shared/home-assistant/client';
 import { createClimate } from './model';
 import type { ClimateBinding, ClimateChange } from './model';
 import { ClimateStore } from './store';
 import type { ClimateSnapshot } from './store';
 
-export function useClimate(bindings: readonly ClimateBinding[], interval: number) {
+export function useClimate(
+  bindings: readonly ClimateBinding[],
+  interval: number,
+  clientFactory: HomeAssistantClientFactory = createClient,
+) {
   const [snapshot, setSnapshot] = useState<ClimateSnapshot>(() => ({
     actionFailure: null,
     climates: bindings.map(createClimate),
@@ -17,27 +22,7 @@ export function useClimate(bindings: readonly ClimateBinding[], interval: number
     if (!bindings.length) {
       return;
     }
-    let current: ClimateStore;
-    try {
-      current = new ClimateStore(
-        bindings,
-        interval,
-        createClient(
-          validateConnection(
-            import.meta.env.VITE_HOME_ASSISTANT_URL || '',
-            import.meta.env.VITE_HOME_ASSISTANT_TOKEN || '',
-          ),
-        ),
-      );
-    } catch (error) {
-      setSnapshot({
-        climates: bindings.map((binding) => ({ ...createClimate(binding), availability: 'error' })),
-        error: error instanceof Error ? error.message : 'Invalid Home Assistant configuration.',
-        actionFailure: null,
-        updatedAt: null,
-      });
-      return;
-    }
+    const current = new ClimateStore(bindings, interval, clientFactory());
     store.current = current;
     setSnapshot(current.getSnapshot());
     const unsubscribe = current.subscribe(() => setSnapshot(current.getSnapshot()));
@@ -55,7 +40,7 @@ export function useClimate(bindings: readonly ClimateBinding[], interval: number
       window.removeEventListener('online', active);
       window.removeEventListener('offline', active);
     };
-  }, [bindings, interval]);
+  }, [bindings, interval, clientFactory]);
   const update = useCallback(
     (id: string, change: ClimateChange, debounceMs = 0) =>
       store.current?.update(id, change, debounceMs),

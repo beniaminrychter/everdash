@@ -101,9 +101,7 @@ export function Settings({
       <output aria-label={t('Home Assistant connection')} aria-live="polite">
         {connection}
       </output>
-      <p class={styles.url}>
-        {import.meta.env.VITE_HOME_ASSISTANT_URL || t('No server configured')}
-      </p>
+      <p class={styles.url}>{t('Connected through EverDash')}</p>
       <button type="button" class={styles.refresh} disabled={!online} onClick={onRefresh}>
         {t('Refresh')}
       </button>

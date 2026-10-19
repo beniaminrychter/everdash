@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createCommand, createDevice, mapState } from '../src/features/accessories/data/model';
-import { validateConnection } from '../src/shared/home-assistant/client';
 import { homePage } from './fixtures/home';
 
 const light = homePage.cards[0];
@@ -106,16 +105,4 @@ test('commands call real domain services with only the configured entity', () =>
   assert.throws(() => createCommand(outlet, { brightness: 50 }), /light/);
   assert.throws(() => createCommand(light, { brightness: Number.NaN }), /brightness/);
   assert.throws(() => createCommand(light, { color: 'red' }), /color/);
-});
-
-test('connection config normalizes the URL and rejects credentials in URLs', () => {
-  assert.deepEqual(validateConnection(' https://ha.example.test/ ', ' token '), {
-    token: 'token',
-    url: 'https://ha.example.test',
-  });
-  assert.throws(() => validateConnection('', ''), /VITE_HOME_ASSISTANT/);
-  assert.throws(() => validateConnection('https://user:password@ha.example.test', 'token'), /URL/);
-  // This hostile URL is the input under test, so keep the protocol literal.
-  // oxlint-disable-next-line no-script-url
-  assert.throws(() => validateConnection('javascript:alert(1)', 'token'), /URL/);
 });

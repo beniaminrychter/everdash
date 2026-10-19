@@ -1,17 +1,17 @@
-import { resolve } from 'node:path';
+import { isAbsolute, resolve } from 'node:path';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
   build: {
     lib: {
-      entry: resolve(import.meta.dirname, 'server/config/repository.ts'),
+      entry: resolve(import.meta.dirname, 'server/main.ts'),
       formats: ['es'],
-      fileName: 'repository',
+      fileName: 'server',
     },
     outDir: 'dist-server',
     emptyOutDir: true,
     rollupOptions: {
-      external: ['node:crypto', 'node:events', 'node:fs', 'node:path'],
+      external: (id) => id.startsWith('node:') || (!id.startsWith('.') && !isAbsolute(id)),
     },
   },
 });

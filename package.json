@@ -21,6 +21,7 @@
     "check:compat": "node scripts/check-compat.mjs"
   },
   "dependencies": {
+    "fastify": "5.12.7",
     "preact": "^10.29.8"
   },
   "devDependencies": {

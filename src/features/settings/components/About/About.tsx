@@ -7,7 +7,7 @@ export function About() {
     <div class={styles.aboutContent}>
       <p>
         {t(
-          'A simple home dashboard, made for your iPad. Accessory states and controls connect directly to your Home Assistant server.',
+          'A simple home dashboard, made for your iPad. Accessory states and controls connect through EverDash to Home Assistant.',
         )}
       </p>
       <h3>{t('Add to your Home Screen')}</h3>

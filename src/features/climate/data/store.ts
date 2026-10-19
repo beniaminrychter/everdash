@@ -245,7 +245,7 @@ export class ClimateStore {
       const status = error instanceof HomeAssistantError ? error.status : 0;
       if (status === 401 || status === 403) {
         this.rejectAuthentication(
-          error instanceof Error ? error.message : 'Home Assistant rejected the token.',
+          error instanceof Error ? error.message : 'EverDash could not connect to Home Assistant.',
         );
       } else if (status === 404) {
         this.queued.delete(id);
