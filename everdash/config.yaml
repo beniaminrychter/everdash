@@ -1,5 +1,5 @@
 name: EverDash
-version: 0.1.0
+version: 0.1.1
 slug: everdash
 description: A Home Assistant dashboard that gives legacy tablets a new purpose.
 url: https://github.com/beniaminrychter/everdash
@@ -18,9 +18,9 @@ hassio_role: default
 map:
   - ssl:ro
 ports:
-  8443/tcp: 8443
+  8443/tcp: null
 ports_description:
-  8443/tcp: Direct HTTPS dashboard (optional)
+  8443/tcp: Direct HTTPS dashboard (optional; disabled by default)
 watchdog: http://[HOST]:[PORT:8099]/health
 backup: cold
 options:

@@ -14,7 +14,7 @@ Ingress is the management surface. To serve the dashboard directly to a tablet:
 
 1. Place a TLS certificate and its private key in Home Assistant's `/ssl` directory.
 2. In the EverDash app configuration, enable **Direct HTTPS**, enter the public HTTPS origin, and enter the certificate and key paths under `/ssl`.
-3. Map the app's port 8443 to a port reachable by the tablet. Configure the router and DNS so the public origin resolves to that address.
+3. In the app's **Network** settings, map container port `8443/tcp` to an unused host port reachable by the tablet. This mapping is disabled by default, so it will not reserve a host port unless you enable direct access. If you choose a host port other than `8443`, include it in `public_url` and configure the router and DNS to reach it.
 4. Restart EverDash, then visit the HTTPS origin in Safari and explicitly start pairing.
 5. Make sure Safari trusts the certificate, open the HTTPS origin, and approve the pairing code under Settings → Tablet access in Home Assistant Ingress.
 

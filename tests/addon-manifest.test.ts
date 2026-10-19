@@ -8,3 +8,7 @@ const image = appManifest.match(/^image:\s*(\S+)$/m)?.[1];
 test('Home Assistant app image uses an untagged repository name', () => {
   assert.equal(image, 'ghcr.io/beniaminrychter/everdash');
 });
+
+test('optional direct HTTPS does not reserve host port 8443 by default', () => {
+  assert.match(appManifest, /^ports:\s*\n\s+8443\/tcp:\s+null$/m);
+});
