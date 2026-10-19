@@ -13,7 +13,10 @@ The production target is iOS 12 and Safari 12. Keep the app usable on that hardw
 - `src/features/<feature>/data/` owns feature-specific models, stores, API-to-view mappings, and domain logic. Put feature hooks in a nearby `hooks/` directory when they are not part of a component.
 - `src/shared/` owns code used by multiple features: UI primitives, Home Assistant transport and transport contracts, cross-feature types, configuration, i18n, and shared low-level helpers. Shared modules must not import from `src/features/`.
 - `server/` owns Node.js persistence, authentication boundaries, Home Assistant transport policy, and HTTP serving. It may import browser-safe contracts from `src/shared/`, but never feature modules or frontend credentials.
-- The runtime dashboard is versioned JSON validated by `src/shared/config/`. Keep entity IDs explicit; do not silently substitute entities by friendly name or invent production readings.
+
+The runtime dashboard is versioned JSON validated by `src/shared/config/` and edited through Home Assistant management. Keep entity IDs explicit; do not silently substitute entities by friendly name or invent production readings. The visual selector may use Home Assistant's entity registry to help a person choose IDs, but the saved dashboard must retain each selected ID explicitly.
+
+The Home Assistant app package lives in `everdash/`; repository and image owner placeholders must remain unreleased until replaced with real public coordinates. Never add a license file without the repository owner's explicit choice. Home Assistant credentials are server-only and must not enter frontend build variables, static files, or test fixtures outside isolated dummy values.
 
 ## Adding or changing a feature
 

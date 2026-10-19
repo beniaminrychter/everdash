@@ -1,12 +1,26 @@
 # EverDash
 
-EverDash gives older screens a new purpose as Home Assistant dashboards. It is built with Preact, TypeScript, Vite, and CSS Modules, with a Safari 12 / iOS 12 compatibility target.
+EverDash gives legacy tablets new possibilities as Home Assistant dashboards. It pairs with Home Assistant, serves an iPad-friendly dashboard with an offline app shell, and lets you manage its explicit entity configuration as JSON. The project is a Preact progressive web app plus a Node.js Home Assistant app (formerly add-on).
 
 - Explicitly configured lights, outlets, climate controls, sensors, energy prices, and weather.
 - Multiple dashboard views, saved appearance and language preferences, and an offline app shell.
 - No friendly-name entity guessing or fabricated readings; missing and unavailable sources remain visible.
 
-## Configure and run
+## Install in Home Assistant
+
+EverDash is designed to run as a Home Assistant app. Installation does not require npm or a separate server:
+
+1. In Home Assistant, open **Settings → Apps** and choose **Install app from another repository** (or open the App Store menu and choose **Repositories**).
+2. Add the public Git repository URL for EverDash, then refresh the app store and open **EverDash**.
+3. Install and start the app. Home Assistant Ingress provides the authenticated management view; open EverDash from the Home Assistant sidebar.
+4. Use **Pair a device** in EverDash, then approve the displayed short code from the authenticated Home Assistant management screen.
+5. Import or edit the versioned JSON dashboard configuration, then open the dashboard in Safari on the iPad and add it to the Home Screen.
+
+The repository URL and image coordinates in `everdash/config.yaml` must be set to the actual public repository before a release. See [hosting and installation](docs/hosting.md) for direct HTTPS, architecture, and update details. Home Assistant apps use Ingress for authenticated management; the optional direct HTTPS listener is intended for a tablet that cannot use the Home Assistant panel.
+
+No software license has been selected yet. Until the owner chooses and adds a license, the source is not granted an open-source license for reuse or redistribution.
+
+## Run from source
 
 Requires Node.js 22.12+ and npm.
 
@@ -14,7 +28,7 @@ Requires Node.js 22.12+ and npm.
 npm ci
 ```
 
-The browser app never receives a Home Assistant token. In production, the Home Assistant app supplies a server-only `SUPERVISOR_TOKEN` and persistent `/data` directory. The current development preview expects the backend API on the same origin; use isolated test fixtures rather than a real Home Assistant credential.
+The browser app never receives a Home Assistant token. In production, Home Assistant supplies a server-only `SUPERVISOR_TOKEN` and persistent `/data` directory. Local development uses the example dashboard and does not connect to a real Home Assistant instance by default. Never put HA credentials in frontend build variables.
 
 ```sh
 npm run dev
@@ -27,7 +41,7 @@ npm run build
 npm run preview -- --port 4173
 ```
 
-Open the printed LAN address on the iPad. `localhost` on the iPad refers to the iPad itself. The production Home Assistant app and management setup flow are under development.
+Open the printed LAN address on the iPad. `localhost` on the iPad refers to the iPad itself. For the packaged app, use the Home Assistant installation steps above.
 
 ## Home Assistant connection
 
@@ -37,7 +51,7 @@ The Codex Home Assistant connector is useful for inspecting devices during devel
 
 ## App configuration
 
-The dashboard is described by a versioned JSON document. See [the generic example](examples/dashboard.json) and [JSON Schema](src/shared/config/schema.ts). Each entity ID is explicit; the dashboard never discovers controls or matches devices by friendly name. Local development currently loads the generic example; the HA OS release will load saved JSON through EverDash's management screen.
+The dashboard is described by a versioned JSON document. See [the generic example](examples/dashboard.json) and [JSON Schema](src/shared/config/schema.ts). Each entity ID is explicit; the dashboard never guesses controls by friendly name. The Home Assistant management screen supports JSON editing, validation, import/export, and restoring the previous version. Visual entity selection and drag-to-arrange are planned follow-up work; for now, edit or import the JSON directly.
 
 If you are migrating the current TypeScript dashboard, its private source has been moved into the ignored `.local/home.config.ts` file. Export it to versioned JSON with:
 
