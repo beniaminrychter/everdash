@@ -93,7 +93,7 @@ jobs:
           done
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8099/api/bootstrap)" = 403
           curl --silent --fail http://127.0.0.1:8095/ | grep -q 'EverDash'
-          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8095/api/manage/access)" = 404
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8095/api/manage/access)" = 403
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v4
