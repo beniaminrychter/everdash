@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "typecheck": "tsc --noEmit",
+    "typecheck:server": "tsc -p tsconfig.server.json",
+    "build:server": "vite build --config vite.server.config.ts",
     "lint": "ultracite check",
     "lint:fix": "ultracite fix",
     "format": "ultracite fix",
