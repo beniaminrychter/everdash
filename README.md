@@ -22,7 +22,7 @@ The button opens Home Assistant's add-repository dialog with EverDash prefilled.
 
 The manifests point to `beniaminrychter/everdash`; install becomes available once a versioned image is published. See [hosting and installation](docs/hosting.md) for direct HTTPS, architecture, and update details. Home Assistant apps use Ingress for authenticated management; the optional direct HTTPS listener is intended for a tablet that cannot use the Home Assistant panel.
 
-No software license has been selected yet. Until the owner chooses and adds a license, the source is not granted an open-source license for reuse or redistribution.
+EverDash is licensed under the [MIT License](LICENSE). You may use, modify, and redistribute it, including publishing modified versions, if you retain the copyright and license notice.
 
 ## Run from source
 

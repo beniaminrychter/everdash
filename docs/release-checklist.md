@@ -4,7 +4,7 @@ Do not create a public release until every release blocker below has an owner an
 
 ## Public repository and licensing
 
-- [ ] Choose and approve a license; add the corresponding `LICENSE` file. No license is selected yet.
+- [x] Choose and add the MIT license in the root `LICENSE` file.
 - [x] Set the actual public GitHub owner/repository in `everdash/config.yaml` and root `repository.yaml`; replace all owner placeholders.
 - [x] Confirm the image reference matches the public GHCR namespace and current app version. Publishing that image is still pending.
 - [ ] Enable GitHub private vulnerability reporting and publish a monitored security contact.
