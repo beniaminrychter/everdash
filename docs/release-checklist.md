@@ -7,8 +7,8 @@ Do not create a public release until every release blocker below has an owner an
 - [x] Choose and add the MIT license in the root `LICENSE` file.
 - [x] Set the actual public GitHub owner/repository in `everdash/config.yaml` and root `repository.yaml`; replace all owner placeholders.
 - [x] Confirm the untagged image reference matches the public GHCR namespace; Home Assistant selects the image tag from the app version. Publishing that image is still pending.
-- [ ] Enable GitHub private vulnerability reporting and publish a monitored security contact.
-- [ ] Review source and history for credentials, private dashboard configuration, user names, local paths, and private network addresses. Rotate exposed credentials and arrange any authorized history cleanup before publication.
+- [x] Enable GitHub private vulnerability reporting and publish a monitored security contact; enable the dependency graph and Dependabot alerts.
+- [x] Review source and history for credentials, private dashboard configuration, user names, local paths, and private network addresses. Remove the historical private dashboard configuration from public Git history; no credential patterns were found in that file.
 - [x] Inventory current runtime dependency licenses and shipped asset attribution in [third-party notices](third-party-notices.md); re-audit after dependency or asset changes.
 
 ## Release validation
