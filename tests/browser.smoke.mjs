@@ -1136,6 +1136,114 @@ try {
   assert.equal(pairingRequests, 1, 'pairing starts only after an explicit button press');
   await pairingContext.close();
 
+  const editorContext = await browser.newContext();
+  await routeHaApi(editorContext);
+  let editorRevision = 'editor-v1';
+  let editorDocument = dashboardDocument;
+  let publishedDocuments = 0;
+  let conflictOnce = true;
+  await editorContext.route('**/api/bootstrap', async (route) => {
+    await route.fulfill({
+      json: {
+        mode: 'management',
+        configured: true,
+        revision: editorRevision,
+        config: editorDocument,
+      },
+    });
+  });
+  await editorContext.route('**/api/manage/devices', async (route) => route.fulfill({ json: [] }));
+  await editorContext.route('**/api/manage/config/validate', async (route) => {
+    await route.fulfill({ json: { config: route.request().postDataJSON().config } });
+  });
+  await editorContext.route('**/api/manage/config/previous', async (route) => {
+    await route.fulfill({ json: { config: dashboardDocument } });
+  });
+  await editorContext.route('**/api/manage/config', async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({
+        json: { revision: editorRevision, config: editorDocument, previousAvailable: true },
+      });
+      return;
+    }
+    const body = route.request().postDataJSON();
+    assert.equal(body.baseRevision, editorRevision);
+    if (conflictOnce) {
+      conflictOnce = false;
+      await route.fulfill({
+        status: 409,
+        json: { code: 'CONFIG_CONFLICT', message: 'The dashboard changed since it was loaded.' },
+      });
+      return;
+    }
+    editorDocument = body.config;
+    editorRevision = 'editor-v2';
+    publishedDocuments++;
+    await route.fulfill({ json: { revision: editorRevision, config: editorDocument } });
+  });
+  const editorPage = await editorContext.newPage();
+  editorPage.on('pageerror', (error) => errors.push(error.message));
+  await editorPage.goto(appUrl);
+  await openSettings(editorPage);
+  const editor = editorPage.getByLabel('Dashboard JSON', { exact: true });
+  await expect(editor).toBeVisible();
+  await editorPage.getByRole('button', { name: 'Restore previous', exact: true }).click();
+  await expect(
+    editorPage.getByText('Previous dashboard loaded as a draft. Save to apply it.', {
+      exact: true,
+    }),
+  ).toBeVisible();
+  const imported = structuredClone(dashboardDocument);
+  imported.views[0].title = 'Imported draft';
+  await editorPage.locator('input[type="file"]').setInputFiles({
+    name: 'dashboard.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(imported)),
+  });
+  await expect(
+    editorPage.getByText('Imported as a draft. Validate before saving.', { exact: true }),
+  ).toBeVisible();
+  const draft = structuredClone(dashboardDocument);
+  draft.views[0].title = 'Published rooms';
+  await editor.fill(JSON.stringify(draft, null, 2));
+  await editorPage.getByRole('button', { name: 'Validate', exact: true }).click();
+  await expect(editorPage.getByText('Dashboard JSON is valid.', { exact: true })).toBeVisible();
+  assert.equal(publishedDocuments, 0, 'validation must never publish a draft');
+  await editorPage.getByRole('button', { name: 'Save and apply', exact: true }).click();
+  await expect(
+    editorPage.getByText('Another editor saved a newer dashboard. Your draft is unchanged.', {
+      exact: true,
+    }),
+  ).toBeVisible();
+  expect(await editor.inputValue()).toContain('Published rooms');
+  assert.equal(publishedDocuments, 0, 'a stale save must preserve the draft without publishing');
+  await editorPage.getByRole('button', { name: 'Save and apply', exact: true }).click();
+  await expect(editorPage.getByText('Dashboard saved and applied.', { exact: true })).toBeVisible();
+  assert.equal(publishedDocuments, 1);
+  assert.equal(editorRevision, 'editor-v2');
+  await editorContext.close();
+
+  const liveContext = await browser.newContext();
+  await routeHaApi(liveContext);
+  let liveRevision = 'live-v1';
+  let liveDocument = dashboardDocument;
+  await liveContext.route('**/api/bootstrap', async (route) => {
+    await route.fulfill({
+      json: { mode: 'direct', configured: true, revision: liveRevision, config: liveDocument },
+    });
+  });
+  const livePage = await liveContext.newPage();
+  livePage.on('pageerror', (error) => errors.push(error.message));
+  await livePage.clock.install();
+  await livePage.goto(appUrl);
+  await expect(livePage.getByRole('heading', { level: 1 })).toHaveText('First floor');
+  liveDocument = structuredClone(dashboardDocument);
+  liveDocument.views[0].title = 'Updated live';
+  liveRevision = 'live-v2';
+  await livePage.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  await expect(livePage.getByRole('heading', { level: 1 })).toHaveText('Updated live');
+  await liveContext.close();
+
   const blockedContext = await browser.newContext();
   await routeHaApi(blockedContext);
   await blockedContext.addInitScript(() => {
@@ -1222,6 +1330,9 @@ try {
         appUrl,
         checks: [
           'same-origin dashboard API with isolated Home Assistant fixture',
+          'explicit tablet pairing with no automatic request for an unpaired device',
+          'JSON editor import, previous recovery, validation, stale-save preservation and publish',
+          'open tablet dashboards refresh published configuration revisions',
           'configured views, persistent selection, shared control state, badge-only view and widget order',
           'saved appearance and HA sunrise/sunset',
           'one-decimal temperatures, five real forecast hours, forecast failure recovery, daily-low price status and compact usage',

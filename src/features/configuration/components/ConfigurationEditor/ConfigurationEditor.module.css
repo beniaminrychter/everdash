@@ -1,0 +1,67 @@
+.editor {
+  display: flex;
+  flex-direction: column;
+  margin-top: 12px;
+}
+
+.editor > * + * {
+  margin-top: 12px;
+}
+
+.editor textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 280px;
+  padding: 12px;
+  border: 1px solid var(--border-color, #9ca3af);
+  border-radius: 8px;
+  background: var(--surface-color, #fff);
+  color: inherit;
+  font:
+    13px/1.5 ui-monospace,
+    Menlo,
+    Consolas,
+    monospace;
+  resize: vertical;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.actions button,
+.fileLabel {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color, #9ca3af);
+  border-radius: 8px;
+  background: var(--surface-color, #fff);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  margin: 4px 4px 4px 0;
+}
+
+.fileLabel input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.message {
+  min-height: 1.4em;
+  margin: 0;
+}
+
+.issues {
+  padding-left: 20px;
+  color: var(--danger-color, #a32121);
+}
+
+.dirty {
+  color: var(--danger-color, #a32121);
+}

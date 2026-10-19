@@ -112,6 +112,78 @@ export function registerApiRoutes(
   });
 
   if (listenerMode === 'management') {
+    app.get('/api/manage/config', async (request, reply) => {
+      if (!(await verifyAuthorized(request, reply, dependencies, 'management'))) {
+        return;
+      }
+      const snapshot = config.read();
+      if (!snapshot) {
+        recoveryError(
+          reply,
+          config.diagnostic?.message ?? 'Dashboard configuration needs recovery.',
+        );
+        return;
+      }
+      return {
+        revision: snapshot.revision,
+        config: snapshot.config,
+        previousAvailable: config.readPrevious() !== null,
+        configured: config.isConfigured,
+      };
+    });
+
+    app.post<{ Body: { config?: unknown } }>(
+      '/api/manage/config/validate',
+      async (request, reply) => {
+        if (!(await verifyAuthorized(request, reply, dependencies, 'management'))) {
+          return;
+        }
+        if (!(await requireMutationOrigin(request, reply, expectedOrigin))) {
+          return;
+        }
+        const validation = config.validate(request.body?.config);
+        if (!validation.ok) {
+          reply
+            .code(422)
+            .send(apiError('CONFIG_INVALID', 'Dashboard validation failed.', validation.issues));
+          return;
+        }
+        return { config: validation.document, normalized: validation.config };
+      },
+    );
+
+    app.put<{ Body: { baseRevision?: string | null; config?: unknown } }>(
+      '/api/manage/config',
+      async (request, reply) => {
+        if (!(await verifyAuthorized(request, reply, dependencies, 'management'))) {
+          return;
+        }
+        if (!(await requireMutationOrigin(request, reply, expectedOrigin))) {
+          return;
+        }
+        const { baseRevision, config: input } = request.body ?? {};
+        if (baseRevision !== null && typeof baseRevision !== 'string') {
+          reply.code(400).send(apiError('INVALID_CONFIG_REQUEST', 'A base revision is required.'));
+          return;
+        }
+        return config.save(baseRevision, input);
+      },
+    );
+
+    app.get('/api/manage/config/previous', async (request, reply) => {
+      if (!(await verifyAuthorized(request, reply, dependencies, 'management'))) {
+        return;
+      }
+      const previous = config.readPrevious();
+      if (!previous) {
+        reply
+          .code(404)
+          .send(apiError('CONFIG_PREVIOUS_NOT_FOUND', 'No previous dashboard is available.'));
+        return;
+      }
+      return { config: previous };
+    });
+
     app.get('/api/manage/devices', async (request, reply) => {
       if (!(await authorize(request, reply))) {
         return;

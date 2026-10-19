@@ -1,18 +1,59 @@
 import { render } from 'preact';
+import { useCallback, useEffect, useState } from 'preact/hooks';
 import { App } from './App';
+import { readOfflineRuntimeConfig, useRuntimeConfig } from './hooks/useRuntimeConfig';
 import { registerWorker } from './registerWorker';
 import { removeReloadMarker } from './hardReload';
 import { PairingPage } from '../features/pairing/components/PairingPage/PairingPage';
 import { validateDashboard } from '../shared/config/validate';
+import type { RuntimeSnapshot } from '../features/configuration/data/api';
 
 interface BootstrapResponse {
   mode?: 'direct' | 'management';
   configured?: boolean;
+  revision?: string;
   config?: unknown;
 }
 
 removeReloadMarker();
 const root = document.querySelector('#app')!;
+
+function RuntimeApp({
+  initial,
+  mode,
+}: {
+  initial: RuntimeSnapshot;
+  mode: 'direct' | 'management';
+}) {
+  const [accessLost, setAccessLost] = useState(false);
+  const handleUnauthorized = useCallback(() => setAccessLost(true), []);
+  const { snapshot, publish } = useRuntimeConfig(initial, handleUnauthorized);
+  useEffect(() => {
+    try {
+      localStorage.setItem('everdash:offline-config:v1', JSON.stringify(initial));
+    } catch {
+      // The runtime dashboard remains available without offline layout storage.
+    }
+  }, [initial]);
+  if (accessLost) {
+    return <PairingPage mode={mode === 'direct' ? 'tablet' : 'management'} />;
+  }
+  const validated = validateDashboard(snapshot.config);
+  if (!validated.ok) {
+    return (
+      <PairingPage mode="error" message="EverDash received an invalid dashboard configuration." />
+    );
+  }
+  return (
+    <App
+      config={validated.config}
+      dashboardDocument={snapshot.config}
+      revision={snapshot.revision}
+      mode={mode}
+      onConfigPublished={publish}
+    />
+  );
+}
 
 function loadDashboard() {
   const xhr = new XMLHttpRequest();
@@ -62,10 +103,11 @@ function loadDashboard() {
       );
       return;
     }
+    const mode = response.mode === 'management' ? 'management' : 'direct';
     render(
-      <App
-        config={parsed.config}
-        mode={response.mode === 'management' ? 'management' : 'direct'}
+      <RuntimeApp
+        initial={{ revision: response.revision ?? 'unrevisioned', config: parsed.document }}
+        mode={mode}
       />,
       root,
     );
@@ -74,9 +116,19 @@ function loadDashboard() {
     }
   });
   xhr.addEventListener('error', () => {
+    const cached = readOfflineRuntimeConfig();
+    if (cached) {
+      render(<RuntimeApp initial={cached} mode="direct" />, root);
+      return;
+    }
     render(<PairingPage mode="error" onRetry={loadDashboard} />, root);
   });
   xhr.addEventListener('timeout', () => {
+    const cached = readOfflineRuntimeConfig();
+    if (cached) {
+      render(<RuntimeApp initial={cached} mode="direct" />, root);
+      return;
+    }
     render(
       <PairingPage
         mode="error"

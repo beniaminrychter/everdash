@@ -4,6 +4,9 @@ import type { Language } from '../../../../shared/i18n/index';
 import type { Appearance } from '../../data/preferences';
 import { About } from '../About/About';
 import { PairingPanel } from '../../../pairing/components/PairingPanel/PairingPanel';
+import { ConfigurationEditor } from '../../../configuration/components/ConfigurationEditor/ConfigurationEditor';
+import type { DashboardDocument } from '../../../../shared/config/types';
+import type { RuntimeSnapshot } from '../../../configuration/data/api';
 import styles from './Settings.module.css';
 
 interface Props {
@@ -18,6 +21,9 @@ interface Props {
   storageError: boolean;
   onHardReload: () => Promise<void>;
   accessMode: 'direct' | 'management';
+  configRevision: string;
+  dashboardDocument: DashboardDocument;
+  onConfigPublished: (snapshot: RuntimeSnapshot) => void;
 }
 export function Settings({
   appearance,
@@ -31,6 +37,9 @@ export function Settings({
   storageError,
   onHardReload,
   accessMode,
+  configRevision,
+  dashboardDocument,
+  onConfigPublished,
 }: Props) {
   const { t } = useI18n();
   const [reloading, setReloading] = useState(false);
@@ -110,6 +119,15 @@ export function Settings({
       </button>
       <h3>{t('Tablet access')}</h3>
       <PairingPanel mode={accessMode === 'management' ? 'manager' : 'tablet'} />
+      {accessMode === 'management' && (
+        <>
+          <h3>{t('Dashboard configuration')}</h3>
+          <ConfigurationEditor
+            initial={{ revision: configRevision, config: dashboardDocument }}
+            onPublished={onConfigPublished}
+          />
+        </>
+      )}
       <h3>{t('App')}</h3>
       <button type="button" class={styles.refresh} disabled={!online || reloading} onClick={reload}>
         {reloading ? t('Reloading…') : t('Hard reload app')}

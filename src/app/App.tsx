@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'preact/hooks';
 import { LanguageProvider, createTranslator, translateMessage } from '../shared/i18n/index';
 import type { AppConfig } from '../shared/config';
+import type { DashboardDocument } from '../shared/config/types';
+import type { RuntimeSnapshot } from '../features/configuration/data/api';
 import { useClimate } from '../features/climate/data/useClimate';
 import { useToast } from './hooks/useToast';
 import { useHomeAssistant } from '../features/accessories/data/useHomeAssistant';
@@ -25,8 +27,17 @@ type OpenModal = { kind: 'light'; deviceId: string } | { kind: 'settings' } | nu
 interface Props {
   config: AppConfig;
   mode?: 'direct' | 'management';
+  revision: string;
+  dashboardDocument: DashboardDocument;
+  onConfigPublished: (snapshot: RuntimeSnapshot) => void;
 }
-export function App({ config, mode = 'direct' }: Props) {
+export function App({
+  config,
+  mode = 'direct',
+  revision,
+  dashboardDocument,
+  onConfigPublished,
+}: Props) {
   usePreventZoom();
   const dashboard = useDashboard(config);
   const commandPage = useMemo(
@@ -178,6 +189,9 @@ export function App({ config, mode = 'direct' }: Props) {
             storageError={storageError}
             onHardReload={hardReload}
             accessMode={mode}
+            configRevision={revision}
+            dashboardDocument={dashboardDocument}
+            onConfigPublished={onConfigPublished}
           />
           <ConnectedDataSources
             view={page}
