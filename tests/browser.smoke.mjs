@@ -348,11 +348,19 @@ try {
       const query = incoming.pathname.endsWith('/weather/get_forecasts')
         ? '?return_response'
         : incoming.search;
-      const response = await route.fetch({
-        url: `${apiUrl}${upstreamPath}${query}`,
-        headers: { ...route.request().headers(), authorization: `Bearer ${token}` },
-      });
-      await route.fulfill({ response });
+      try {
+        const response = await route.fetch({
+          url: `${apiUrl}${upstreamPath}${query}`,
+          headers: { ...route.request().headers(), authorization: `Bearer ${token}` },
+        });
+        await route.fulfill({ response });
+      } catch {
+        try {
+          await route.abort();
+        } catch {
+          // The owning page may have navigated or closed while the fixture was in flight.
+        }
+      }
     });
   };
   // Build an isolated copy so browser checks never edit the user's installed app.
@@ -946,7 +954,7 @@ try {
   const cached = await page.evaluate(async () => {
     const cacheNames = await caches.keys();
     const requests = await (
-      await caches.open(cacheNames.find((name) => name.startsWith('my-home-')))
+      await caches.open(cacheNames.find((name) => name.startsWith('everdash-')))
     ).keys();
     return requests.map((request) => request.url);
   });
@@ -977,7 +985,7 @@ try {
   );
   await page.evaluate(async () => {
     const names = await caches.keys();
-    const name = names.find((value) => value.startsWith('my-home-'));
+    const name = names.find((value) => value.startsWith('everdash-'));
     await (await caches.open(name)).put('/stale-test-marker', new Response('old'));
     await (await caches.open('unrelated-app-cache')).put('/keep', new Response('keep'));
   });
@@ -1184,6 +1192,13 @@ try {
   const editorPage = await editorContext.newPage();
   editorPage.on('pageerror', (error) => errors.push(error.message));
   await editorPage.goto(appUrl);
+  assert.equal(
+    await editorPage.evaluate(
+      async () => (await navigator.serviceWorker.getRegistrations()).length,
+    ),
+    0,
+    'management Ingress must not register the offline worker',
+  );
   await openSettings(editorPage);
   const editor = editorPage.getByLabel('Dashboard JSON', { exact: true });
   await expect(editor).toBeVisible();
@@ -1223,11 +1238,59 @@ try {
   assert.equal(editorRevision, 'editor-v2');
   await editorContext.close();
 
+  const logoutContext = await browser.newContext();
+  await routeHaApi(logoutContext);
+  let logoutCompleted = false;
+  let logoutRequests = 0;
+  await logoutContext.route('**/api/bootstrap', async (route) => {
+    if (logoutCompleted) {
+      await route.fulfill({ status: 401, json: { code: 'UNAUTHORIZED', mode: 'direct' } });
+      return;
+    }
+    await route.fulfill({
+      json: { mode: 'direct', configured: true, revision: 'logout-v1', config: dashboardDocument },
+    });
+  });
+  await logoutContext.route('**/api/logout', async (route) => {
+    logoutRequests++;
+    logoutCompleted = true;
+    await route.fulfill({
+      json: { success: true },
+      headers: {
+        'set-cookie': 'everdash_device=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict',
+      },
+    });
+  });
+  const logoutPage = await logoutContext.newPage();
+  logoutPage.on('pageerror', (error) => errors.push(error.message));
+  await logoutPage.goto(appUrl);
+  await expect(logoutPage.getByRole('heading', { level: 1 })).toHaveText('First floor');
+  const preferencesBeforeLogout = await logoutPage.evaluate(() =>
+    localStorage.getItem('my-home:preferences:v1'),
+  );
+  await openSettings(logoutPage);
+  await logoutPage.getByRole('button', { name: 'Unpair this tablet', exact: true }).click();
+  await expect(
+    logoutPage.getByRole('heading', { name: 'Give this tablet a new purpose.' }),
+  ).toBeVisible();
+  assert.equal(logoutRequests, 1);
+  assert.equal(
+    await logoutPage.evaluate(() => localStorage.getItem('everdash:offline-config:v1')),
+    null,
+  );
+  assert.equal(
+    await logoutPage.evaluate(() => localStorage.getItem('my-home:preferences:v1')),
+    preferencesBeforeLogout,
+  );
+  await logoutContext.close();
+
   const liveContext = await browser.newContext();
   await routeHaApi(liveContext);
   let liveRevision = 'live-v1';
   let liveDocument = dashboardDocument;
+  let liveBootstrapCalls = 0;
   await liveContext.route('**/api/bootstrap', async (route) => {
+    liveBootstrapCalls++;
     await route.fulfill({
       json: { mode: 'direct', configured: true, revision: liveRevision, config: liveDocument },
     });
@@ -1240,7 +1303,9 @@ try {
   liveDocument = structuredClone(dashboardDocument);
   liveDocument.views[0].title = 'Updated live';
   liveRevision = 'live-v2';
-  await livePage.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  await livePage.bringToFront();
+  await livePage.evaluate(() => window.dispatchEvent(new Event('online')));
+  await expect.poll(() => liveBootstrapCalls).toBeGreaterThan(1);
   await expect(livePage.getByRole('heading', { level: 1 })).toHaveText('Updated live');
   await liveContext.close();
 
@@ -1333,6 +1398,8 @@ try {
           'explicit tablet pairing with no automatic request for an unpaired device',
           'JSON editor import, previous recovery, validation, stale-save preservation and publish',
           'open tablet dashboards refresh published configuration revisions',
+          'logout revokes the tablet and clears only its offline config snapshot',
+          'management mode does not register a service worker',
           'configured views, persistent selection, shared control state, badge-only view and widget order',
           'saved appearance and HA sunrise/sunset',
           'one-decimal temperatures, five real forecast hours, forecast failure recovery, daily-low price status and compact usage',

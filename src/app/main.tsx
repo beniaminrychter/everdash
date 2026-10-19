@@ -21,13 +21,19 @@ const root = document.querySelector('#app')!;
 function RuntimeApp({
   initial,
   mode,
+  initiallyAuthorized = true,
 }: {
   initial: RuntimeSnapshot;
   mode: 'direct' | 'management';
+  initiallyAuthorized?: boolean;
 }) {
   const [accessLost, setAccessLost] = useState(false);
   const handleUnauthorized = useCallback(() => setAccessLost(true), []);
-  const { snapshot, publish } = useRuntimeConfig(initial, handleUnauthorized);
+  const { snapshot, publish, authorized } = useRuntimeConfig(
+    initial,
+    handleUnauthorized,
+    initiallyAuthorized,
+  );
   useEffect(() => {
     try {
       localStorage.setItem('everdash:offline-config:v1', JSON.stringify(initial));
@@ -51,6 +57,7 @@ function RuntimeApp({
       revision={snapshot.revision}
       mode={mode}
       onConfigPublished={publish}
+      sessionAuthorized={authorized}
     />
   );
 }
@@ -118,7 +125,7 @@ function loadDashboard() {
   xhr.addEventListener('error', () => {
     const cached = readOfflineRuntimeConfig();
     if (cached) {
-      render(<RuntimeApp initial={cached} mode="direct" />, root);
+      render(<RuntimeApp initial={cached} mode="direct" initiallyAuthorized={false} />, root);
       return;
     }
     render(<PairingPage mode="error" onRetry={loadDashboard} />, root);
@@ -126,7 +133,7 @@ function loadDashboard() {
   xhr.addEventListener('timeout', () => {
     const cached = readOfflineRuntimeConfig();
     if (cached) {
-      render(<RuntimeApp initial={cached} mode="direct" />, root);
+      render(<RuntimeApp initial={cached} mode="direct" initiallyAuthorized={false} />, root);
       return;
     }
     render(

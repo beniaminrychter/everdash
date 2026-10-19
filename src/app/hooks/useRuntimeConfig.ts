@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useState } from 'preact/hooks';
 import { validateDashboard } from '../../shared/config/validate';
+import {
+  clearOfflineRuntimeConfig,
+  runtimeConfigStorageKey,
+} from '../../shared/config/runtime-cache';
 import type { RuntimeSnapshot } from '../../features/configuration/data/api';
 
-export const runtimeConfigStorageKey = 'everdash:offline-config:v1';
+export { runtimeConfigStorageKey } from '../../shared/config/runtime-cache';
 
 export function readOfflineRuntimeConfig(): RuntimeSnapshot | null {
   try {
@@ -74,8 +78,13 @@ function bootstrap(): Promise<Bootstrap> {
   });
 }
 
-export function useRuntimeConfig(initial: RuntimeSnapshot, onUnauthorized: () => void) {
+export function useRuntimeConfig(
+  initial: RuntimeSnapshot,
+  onUnauthorized: () => void,
+  initiallyAuthorized = true,
+) {
   const [snapshot, setSnapshot] = useState(initial);
+  const [authorized, setAuthorized] = useState(initiallyAuthorized);
   const refresh = useCallback(async () => {
     if (!navigator.onLine || document.hidden) {
       return;
@@ -92,6 +101,7 @@ export function useRuntimeConfig(initial: RuntimeSnapshot, onUnauthorized: () =>
       } catch {
         // Layout snapshots are optional; authorization always comes from the server.
       }
+      setAuthorized(true);
       setSnapshot((current) => (current.revision === next.revision ? current : next));
     } catch (error) {
       if (
@@ -100,11 +110,8 @@ export function useRuntimeConfig(initial: RuntimeSnapshot, onUnauthorized: () =>
         'status' in error &&
         error.status === 401
       ) {
-        try {
-          localStorage.removeItem(runtimeConfigStorageKey);
-        } catch {
-          // Storage may be unavailable on older/private browser sessions.
-        }
+        clearOfflineRuntimeConfig();
+        setAuthorized(false);
         onUnauthorized();
       }
     }
@@ -137,5 +144,5 @@ export function useRuntimeConfig(initial: RuntimeSnapshot, onUnauthorized: () =>
     }
   }, []);
 
-  return { snapshot, publish };
+  return { snapshot, publish, authorized };
 }

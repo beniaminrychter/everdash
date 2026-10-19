@@ -46,7 +46,8 @@
 }
 
 .actions button,
-.device button {
+.device button,
+.panel > button {
   background: var(--surface-raised);
   border: 1px solid var(--line);
   border-radius: 10px;

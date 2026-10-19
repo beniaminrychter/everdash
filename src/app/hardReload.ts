@@ -33,10 +33,15 @@ export async function clearAppShell(
   ) {
     await registration.unregister();
   }
-  const prefix = `my-home-${encodeURIComponent(scope)}-`;
+  const prefixes = [
+    `everdash-${encodeURIComponent(scope)}-`,
+    `my-home-${encodeURIComponent(scope)}-`,
+  ];
   const names = (await storage?.keys()) || [];
   await Promise.all(
-    names.filter((name) => name.startsWith(prefix)).map((name) => storage!.delete(name)),
+    names
+      .filter((name) => prefixes.some((prefix) => name.startsWith(prefix)))
+      .map((name) => storage!.delete(name)),
   );
 }
 

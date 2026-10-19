@@ -24,6 +24,7 @@ interface Props {
   configRevision: string;
   dashboardDocument: DashboardDocument;
   onConfigPublished: (snapshot: RuntimeSnapshot) => void;
+  canLogout: boolean;
 }
 export function Settings({
   appearance,
@@ -40,6 +41,7 @@ export function Settings({
   configRevision,
   dashboardDocument,
   onConfigPublished,
+  canLogout,
 }: Props) {
   const { t } = useI18n();
   const [reloading, setReloading] = useState(false);
@@ -118,7 +120,10 @@ export function Settings({
         {t('Refresh')}
       </button>
       <h3>{t('Tablet access')}</h3>
-      <PairingPanel mode={accessMode === 'management' ? 'manager' : 'tablet'} />
+      <PairingPanel
+        mode={accessMode === 'management' ? 'manager' : 'tablet'}
+        canLogout={canLogout}
+      />
       {accessMode === 'management' && (
         <>
           <h3>{t('Dashboard configuration')}</h3>

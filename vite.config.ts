@@ -31,7 +31,7 @@ function offlineShell(): Plugin {
         'icons/icon-512.png',
       ];
       const hash = createHash('sha256');
-      hash.update('offline-shell-v3-ignore-static-vary-and-fragment');
+      hash.update('everdash-shell-v4-ignore-static-vary-and-fragment');
       [...files, ...publicFiles]
         .sort()
         .forEach((name) => hash.update(readFileSync(resolve(directory, name))));
@@ -44,7 +44,7 @@ function offlineShell(): Plugin {
       writeFileSync(
         resolve(directory, 'sw.js'),
         `/* Generated application shell cache. ES5 for iOS 12. */
-var PREFIX = 'my-home-' + encodeURIComponent(self.registration.scope) + '-';
+var PREFIX = 'everdash-' + encodeURIComponent(self.registration.scope) + '-';
 var CACHE = PREFIX + '${version}';
 var FILES = ${precache};
 var URLS = FILES.map(function (path) { return new URL(path, self.registration.scope).href; });

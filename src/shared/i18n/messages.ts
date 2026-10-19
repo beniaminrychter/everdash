@@ -29,6 +29,7 @@ export const polish = {
     'Nie można połączyć się z Home Assistant przez EverDash.',
   'Cannot reach EverDash. Check the connection and retry.':
     'Nie można połączyć się z EverDash. Sprawdź połączenie i spróbuj ponownie.',
+  'Could not log out this tablet.': 'Nie udało się wylogować tabletu.',
   'Cancel pairing': 'Anuluj parowanie',
   'Clear night': 'Bezchmurna noc',
   'Close settings': 'Zamknij ustawienia',
@@ -117,6 +118,7 @@ export const polish = {
   'EverDash returned an invalid response.': 'EverDash zwrócił nieprawidłową odpowiedź.',
   'This device is not paired or authorized.': 'To urządzenie nie jest sparowane ani autoryzowane.',
   'This request is not allowed.': 'To żądanie jest niedozwolone.',
+  'Unpair this tablet': 'Rozłącz ten tablet',
   'Invalid Home Assistant configuration.': 'Nieprawidłowa konfiguracja Home Assistant.',
   'Invalid Home Assistant entity catalog.': 'Nieprawidłowy katalog encji Home Assistant.',
   'Invalid Home Assistant entity response.': 'Nieprawidłowa odpowiedź encji Home Assistant.',

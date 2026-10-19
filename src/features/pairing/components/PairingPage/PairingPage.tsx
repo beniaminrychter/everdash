@@ -41,7 +41,7 @@ export function PairingPage({ mode, message, onRetry }: PairingPageProps) {
               ? t('Give this tablet a new purpose.')
               : t('Home Assistant access required')}
           </h1>
-          {mode === 'tablet' && <PairingPanel mode="tablet" />}
+          {mode === 'tablet' && <PairingPanel mode="tablet" canLogout={false} />}
           {mode === 'management' && (
             <p role="alert">
               {t('Open EverDash inside Home Assistant while signed in to an authorized account.')}

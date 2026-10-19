@@ -30,6 +30,7 @@ interface Props {
   revision: string;
   dashboardDocument: DashboardDocument;
   onConfigPublished: (snapshot: RuntimeSnapshot) => void;
+  sessionAuthorized: boolean;
 }
 export function App({
   config,
@@ -37,6 +38,7 @@ export function App({
   revision,
   dashboardDocument,
   onConfigPublished,
+  sessionAuthorized,
 }: Props) {
   usePreventZoom();
   const dashboard = useDashboard(config);
@@ -192,6 +194,7 @@ export function App({
             configRevision={revision}
             dashboardDocument={dashboardDocument}
             onConfigPublished={onConfigPublished}
+            canLogout={sessionAuthorized && mode === 'direct'}
           />
           <ConnectedDataSources
             view={page}

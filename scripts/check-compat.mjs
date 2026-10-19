@@ -11,6 +11,7 @@ for (const name of legacy) {
 }
 const worker = readFileSync('dist/sw.js', 'utf-8');
 parse(worker, { ecmaVersion: 5 });
+assert.match(worker, /var PREFIX = 'everdash-'/);
 const html = readFileSync('dist/index.html', 'utf-8');
 assert.match(html, /nomodule/);
 assert.match(html, /apple-mobile-web-app-capable/);
@@ -28,11 +29,13 @@ for (const name of assets.filter((assetName) => assetName.endsWith('.css'))) {
   });
 }
 const precache = JSON.parse(worker.match(/var FILES = (\[.*?\]);/)[1]);
+assert.ok(precache.every((path) => !/\bapi\b|device|config/i.test(path)));
 for (const path of precache.filter((cachedPath) => cachedPath !== './')) {
   readFileSync(`dist/${path.slice(2)}`);
 }
 assert.ok(precache.some((path) => path.includes('legacy')));
 const manifest = JSON.parse(readFileSync('dist/manifest.json', 'utf-8'));
+assert.equal(manifest.name, 'EverDash');
 assert.equal(manifest.display, 'standalone');
 console.log(
   `PASS: ${legacy.length} ES5 legacy bundles, ES5 worker, CSS audit, Apple metadata, manifest and ${precache.length} local precache entries.`,

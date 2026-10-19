@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'preact/hooks';
 import { useI18n } from '../../../../shared/i18n/index';
 import type { Translator } from '../../../../shared/i18n/index';
+import { clearOfflineRuntimeConfig } from '../../../../shared/config/runtime-cache';
 import type { DeviceInfo } from '../../data/contracts';
 import styles from './PairingPanel.module.css';
 
@@ -14,6 +15,7 @@ interface PairingRequest {
 
 interface PairingPanelProps {
   mode: PairingMode;
+  canLogout: boolean;
 }
 
 async function callApi<T>(
@@ -61,7 +63,7 @@ async function callApi<T>(
   });
 }
 
-function DevicePairing({ t }: { t: Translator }) {
+function DevicePairing({ t, canLogout }: { t: Translator; canLogout: boolean }) {
   const [pairing, setPairing] = useState<PairingRequest | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
@@ -83,6 +85,22 @@ function DevicePairing({ t }: { t: Translator }) {
       setError(error instanceof Error ? error.message : t('Pairing could not start. Retry.'));
     }
     setBusy(false);
+  };
+
+  const logout = async () => {
+    if (!canLogout || busy) {
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      await callApi('POST', 'api/logout', {});
+      clearOfflineRuntimeConfig();
+      window.location.reload();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : t('Could not log out this tablet.'));
+      setBusy(false);
+    }
   };
 
   useEffect(() => {
@@ -151,6 +169,9 @@ function DevicePairing({ t }: { t: Translator }) {
           </button>
         )}
       </div>
+      <button type="button" onClick={logout} disabled={!canLogout || busy}>
+        {t('Unpair this tablet')}
+      </button>
       <output class={styles.status} aria-live="polite">
         {message}
       </output>
@@ -272,7 +293,11 @@ function ManagerPairing({ t }: { t: Translator }) {
   );
 }
 
-export function PairingPanel({ mode }: PairingPanelProps) {
+export function PairingPanel({ mode, canLogout }: PairingPanelProps) {
   const { t } = useI18n();
-  return mode === 'manager' ? <ManagerPairing t={t} /> : <DevicePairing t={t} />;
+  return mode === 'manager' ? (
+    <ManagerPairing t={t} />
+  ) : (
+    <DevicePairing t={t} canLogout={canLogout} />
+  );
 }

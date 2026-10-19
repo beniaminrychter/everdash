@@ -4,7 +4,8 @@ import { clearAppShell, reloadUrl } from '../src/app/hardReload';
 
 test('hard reload removes only this app’s scoped worker and caches', async () => {
   const scope = 'https://home.example/local/my-home/';
-  const own = `my-home-${encodeURIComponent(scope)}-old`;
+  const own = `everdash-${encodeURIComponent(scope)}-old`;
+  const legacyOwn = `my-home-${encodeURIComponent(scope)}-old`;
   const removed: string[] = [];
   let unregistered = 0;
   await clearAppShell(
@@ -26,13 +27,14 @@ test('hard reload removes only this app’s scoped worker and caches', async () 
       },
       keys: async () => [
         own,
+        legacyOwn,
         'another-app',
         'my-home-' + encodeURIComponent('https://home.example/other/') + '-old',
       ],
     },
   );
   assert.equal(unregistered, 1);
-  assert.deepEqual(removed, [own]);
+  assert.deepEqual(removed, [own, legacyOwn]);
 });
 
 test('hard reload never unregisters a parent worker or another script in the same scope', async () => {
