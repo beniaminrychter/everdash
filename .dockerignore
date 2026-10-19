@@ -1,0 +1,15 @@
+.git
+.github
+.superpowers
+.local
+node_modules
+dist
+dist-server
+test-results
+playwright-report
+tests
+*.log
+.env
+.env.*
+!.env.example
+home.config.ts

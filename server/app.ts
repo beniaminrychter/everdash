@@ -1,10 +1,12 @@
 import Fastify from 'fastify';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { ServerOptions } from 'node:https';
 import type { ConfigRepository } from './config/repository';
 import type { HomeAssistantTransport } from './home-assistant/client';
 import type { DeviceRepository } from './auth/devices';
 import type { DeviceSessions } from './auth/sessions';
 import type { PairingService } from './auth/pairing';
+import { isTrustedIngressPeer } from './auth/ingress';
 import { mapRouteError } from './http/errors';
 import { registerApiRoutes } from './http/routes';
 import { registerStaticFiles } from './http/static';
@@ -22,6 +24,8 @@ export interface ServerDependencies {
   homeAssistant: HomeAssistantTransport;
   staticDirectory?: string;
   logger?: boolean;
+  requireIngressPeer?: boolean;
+  httpsOptions?: ServerOptions;
 }
 
 export async function buildApp(
@@ -36,14 +40,31 @@ export async function buildApp(
         }
       : false,
     trustProxy: false,
+    ...(dependencies.httpsOptions ? { https: dependencies.httpsOptions } : {}),
   });
 
   app.addHook('onRequest', async (request, reply) => {
+    if (
+      listenerMode === 'management' &&
+      dependencies.requireIngressPeer &&
+      request.url !== '/health' &&
+      !isTrustedIngressPeer(request.raw.socket.remoteAddress)
+    ) {
+      reply
+        .code(403)
+        .send({ code: 'INGRESS_PEER_REQUIRED', message: 'Use Home Assistant Ingress.' });
+      return;
+    }
     if (request.url.startsWith('/api/')) {
       reply.header('Cache-Control', 'no-store');
       reply.header('X-Content-Type-Options', 'nosniff');
       reply.header('Referrer-Policy', 'no-referrer');
     }
+  });
+
+  app.get('/health', async (_request, reply) => {
+    reply.header('Cache-Control', 'no-store');
+    return { status: 'ok' };
   });
 
   // Fastify registers its error handler through this required callback API.

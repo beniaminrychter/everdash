@@ -6,12 +6,16 @@ import { DeviceRepository } from './auth/devices';
 import { PairingService } from './auth/pairing';
 import { createAuthorizer, DeviceSessions } from './auth/sessions';
 import type { FastifyRequest } from 'fastify';
+import type { ServerOptions } from 'node:https';
+import { pathToFileURL } from 'node:url';
 
 export interface RuntimeOptions {
   dataDirectory?: string;
   staticDirectory?: string;
   supervisorToken?: string;
   publicUrl?: string;
+  httpsOptions?: ServerOptions;
+  requireIngressPeer?: boolean;
 }
 
 export async function createEverDashApps(options: RuntimeOptions = {}) {
@@ -19,7 +23,7 @@ export async function createEverDashApps(options: RuntimeOptions = {}) {
   if (!token) {
     throw new Error('SUPERVISOR_TOKEN is required by the EverDash server.');
   }
-  const dataDirectory = options.dataDirectory ?? '/data';
+  const dataDirectory = options.dataDirectory ?? process.env.EVERDASH_DATA_DIR ?? '/data';
   const config = new ConfigRepository({ directory: dataDirectory });
   const devices = new DeviceRepository({ directory: dataDirectory });
   const pairing = new PairingService({ devices });
@@ -72,8 +76,25 @@ export async function createEverDashApps(options: RuntimeOptions = {}) {
     expectedOrigin,
     logger: true,
     staticDirectory: options.staticDirectory ?? resolve('dist'),
+    requireIngressPeer: options.requireIngressPeer ?? false,
   };
   const management = await buildApp(shared, 'management');
-  const direct = await buildApp(shared, 'direct');
+  const direct = await buildApp({ ...shared, httpsOptions: options.httpsOptions }, 'direct');
   return { config, devices, direct, management };
+}
+
+async function startFromCommandLine() {
+  try {
+    const { startEverDash } = await import('./http/listeners');
+    await startEverDash();
+  } catch (error) {
+    process.stderr.write(
+      `EverDash failed to start: ${error instanceof Error ? error.message : 'unknown error'}\n`,
+    );
+    process.exitCode = 1;
+  }
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  startFromCommandLine();
 }

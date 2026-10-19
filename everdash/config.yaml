@@ -1,0 +1,35 @@
+name: EverDash
+version: 0.1.0
+slug: everdash
+description: A Home Assistant dashboard that gives legacy tablets a new purpose.
+url: https://github.com/replace-with-owner/everdash
+image: ghcr.io/replace-with-owner/everdash:0.1.0
+arch:
+  - aarch64
+  - amd64
+startup: application
+boot: auto
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:tablet-dashboard
+panel_title: EverDash
+homeassistant_api: true
+hassio_role: default
+map:
+  - ssl:ro
+ports:
+  8443/tcp: 8443
+ports_description:
+  8443/tcp: Direct HTTPS dashboard (optional)
+watchdog: http://[HOST]:[PORT:8099]/health
+backup: cold
+options:
+  direct_enabled: false
+  public_url: ''
+  ssl_certificate: ''
+  ssl_key: ''
+schema:
+  direct_enabled: bool
+  public_url: str
+  ssl_certificate: str
+  ssl_key: str
