@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createSupervisorHomeAssistant } from '../server/home-assistant/client';
+import {
+  createHomeAssistantClient,
+  createSupervisorHomeAssistant,
+} from '../server/home-assistant/client';
 import { HomeAssistantUpstreamError } from '../server/home-assistant/errors';
 
 test('uses only the Supervisor API root and server-side bearer credential', async () => {
@@ -17,6 +20,40 @@ test('uses only the Supervisor API root and server-side bearer credential', asyn
   assert.deepEqual(await client.getState('light.ceiling'), [{ entity_id: 'light.ceiling' }]);
   assert.equal(requestUrl, 'http://supervisor/core/api/states/light.ceiling');
   assert.equal(authorization, 'Bearer server-only-test-token');
+});
+
+test('uses the configured Home Assistant API root with a server-side bearer credential', async () => {
+  let requestUrl = '';
+  let authorization = '';
+  const client = createHomeAssistantClient({
+    apiRoot: 'http://127.0.0.1:8123/api/',
+    token: 'local-server-only-test-token',
+    request: async (input, init) => {
+      requestUrl = String(input);
+      authorization = new Headers(init?.headers).get('Authorization') ?? '';
+      return Response.json({ entity_id: 'light.ceiling' });
+    },
+  });
+
+  assert.deepEqual(await client.getState('light.ceiling'), { entity_id: 'light.ceiling' });
+  assert.equal(requestUrl, 'http://127.0.0.1:8123/api/states/light.ceiling');
+  assert.equal(authorization, 'Bearer local-server-only-test-token');
+});
+
+test('rejects Home Assistant API roots that could redirect credentials', () => {
+  for (const apiRoot of [
+    'ftp://homeassistant.local/api/',
+    'http://user:password@homeassistant.local/api/',
+    'http://homeassistant.local/other/api/',
+    'http://homeassistant.local/api/?next=elsewhere',
+    'http://homeassistant.local/api/#fragment',
+  ]) {
+    assert.throws(
+      () => createHomeAssistantClient({ apiRoot, token: 'fixture-token' }),
+      /valid Home Assistant API root/,
+      apiRoot,
+    );
+  }
 });
 
 test('requests weather forecasts with Home Assistant return_response semantics', async () => {
@@ -54,6 +91,18 @@ test('preserves Home Assistant 401, 403 and 404 meanings', async () => {
       return true;
     });
   }
+});
+
+test('reports credential failures without assuming Home Assistant is running under Supervisor', async () => {
+  const client = createHomeAssistantClient({
+    apiRoot: 'http://127.0.0.1:8123/api/',
+    token: 'fixture-token',
+    request: async () => new Response('denied', { status: 401 }),
+  });
+
+  await assert.rejects(client.getStates(), {
+    message: 'Home Assistant rejected the server credential.',
+  });
 });
 
 test('maps upstream timeout and malformed JSON without retrying writes', async () => {

@@ -63,7 +63,25 @@ const emptyDocument: DashboardDocument = {
   schemaVersion: 1,
   views: [{ id: 'home', title: 'Home', cards: [], badges: [] }],
 };
-const previewNonce = window.crypto.randomUUID();
+
+function createPreviewNonce() {
+  const cryptoApi = window.crypto;
+  if (typeof cryptoApi.randomUUID === 'function') {
+    return cryptoApi.randomUUID();
+  }
+
+  const bytes = new Uint8Array(16);
+  if (typeof cryptoApi.getRandomValues === 'function') {
+    cryptoApi.getRandomValues(bytes);
+  } else {
+    bytes.forEach((_, index) => {
+      bytes[index] = Math.floor(Math.random() * 256);
+    });
+  }
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+const previewNonce = createPreviewNonce();
 const cardKinds: CardConfig['type'][] = ['light', 'outlet', 'climate', 'weather', 'pstryk'];
 
 function serialize(document: DashboardDocument) {

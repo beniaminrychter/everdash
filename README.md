@@ -32,30 +32,58 @@ Third-party dependency and asset information is in [THIRD_PARTY_NOTICES.md](THIR
 
 ## Run from source
 
-Requires Node.js 22.12+ and npm.
+Requires Node.js 22.12+, npm, and Docker with Docker Compose. The local test setup runs Home Assistant Core on port 8123 and EverDash directly from this checkout. It keeps Home Assistant data in `.local/homeassistant/` and EverDash data in `.local/everdash/`; these paths are ignored by Git and excluded from the production Docker build context.
+
+This Compose setup is a development fixture on macOS using Docker Desktop. Home Assistant's standard macOS installation instructions use Home Assistant OS in a virtual machine; the Core container here is for exercising EverDash's real HTTP API, not a full Home Assistant OS installation.
 
 ```sh
 npm ci
+npm run local:ha:up
 ```
 
-The browser app never receives a Home Assistant token. In production, Home Assistant supplies a server-only `SUPERVISOR_TOKEN` and persistent `/data` directory. Local development uses the example dashboard and does not connect to a real Home Assistant instance by default. Never put HA credentials in frontend build variables.
+Wait for Home Assistant to finish its first startup, then open [http://127.0.0.1:8123/](http://127.0.0.1:8123/) and complete onboarding. Add an integration or test entities so EverDash has entities to discover. In your Home Assistant user profile, open **Security → Long-lived access tokens → Create token**, then copy the token; Home Assistant will not show it again. See the [Home Assistant Container installation guide](https://www.home-assistant.io/installation/linux/) and [authentication documentation](https://www.home-assistant.io/docs/authentication/).
+
+Create a private local environment file and paste the token there:
 
 ```sh
-npm run dev
+cp local.env.example .env.local
+chmod 600 .env.local
 ```
 
-Development runs at `http://localhost:5173`. Use the **production build on the old iPad**:
+Edit `.env.local` and replace `EVERDASH_HA_TOKEN`. The defaults target Home Assistant at `http://127.0.0.1:8123`; optionally set `EVERDASH_LAN_HOST` to the Mac's LAN IP or hostname if automatic detection does not find the address that your iPad can reach. Do not commit or share `.env.local`. The browser never receives the token; it is used only by EverDash's local Node server. Local mode controls real Home Assistant entities, so use test devices or take care when invoking controls.
+
+Build the three production-compatible frontend bundles and start the local server:
+
+```sh
+npm run local:start
+```
+
+Open the admin builder at [http://127.0.0.1:8099/](http://127.0.0.1:8099/). This management listener accepts connections only from the Mac itself. Configure entities and save the dashboard. The **Tablet access** pane shows the LAN URL and QR code; open that URL on the iPad or another device on the same network, start pairing, and approve it in the admin workspace. For example, the tablet URL may look like `http://192.168.1.25:8095/`. Do not use `localhost` on the iPad: it would refer to the iPad itself.
+
+EverDash configuration and paired devices survive server restarts. Stop EverDash with **Ctrl+C**. Stop the Home Assistant container with:
+
+```sh
+npm run local:ha:down
+```
+
+The container data remains under `.local/homeassistant/` when stopped. To start it again, run `npm run local:ha:up`. To permanently erase the local Home Assistant instance and EverDash test state, stop the container and remove `.local/` yourself.
+
+If Home Assistant does not load, inspect it with `npm run local:ha:logs`. If port 8123 is already in use, change the host side of the Compose mapping (the left-hand number) and update `EVERDASH_HA_URL` in `.env.local` to match. If EverDash reports that 8099 or 8095 is occupied, stop the other process using that port. If the iPad cannot open the tablet URL, confirm both devices are on the same LAN, allow incoming connections to Node.js in the Mac firewall, and set `EVERDASH_LAN_HOST` to the Mac's reachable LAN address.
+
+This gives you a live local test loop for entity discovery, builder saves, dashboard reads and controls, pairing, and persistence without pushing or publishing. Home Assistant Container does not include Home Assistant apps/add-ons or Supervisor, so it cannot test EverDash's Home Assistant Ingress panel, add-on installation, or Supervisor-based address discovery. Those release checks still require Home Assistant OS or another Supervisor host. See [Home Assistant installation types](https://www.home-assistant.io/installation/) for the differences.
+
+For the fast frontend-only development server, run `npm run dev` and open `http://localhost:5173/`; it uses the example dashboard and does not connect to a live Home Assistant instance. The browser fixture suite remains the automated isolated test path. Use the production build on the old iPad:
 
 ```sh
 npm run build
 npm run preview -- --port 4173
 ```
 
-Open the printed LAN address on the iPad. `localhost` on the iPad refers to the iPad itself. For the packaged app, use the Home Assistant installation steps above.
+The printed LAN address opens the built tablet app. The local EverDash server launched by `npm run local:start` is the path for testing real Home Assistant API calls and device pairing.
 
 ## Home Assistant connection
 
-The server uses Home Assistant's fixed Supervisor API route. Browser requests go to same-origin EverDash endpoints, and server policy filters tablet reads and commands to entities in the saved dashboard configuration. The admin entity picker searches Home Assistant entities, while the tablet only receives configured data. Home Assistant credentials remain on the server.
+The add-on server uses Home Assistant's fixed Supervisor API route and server-provided `SUPERVISOR_TOKEN`. The local test server uses the URL and token in `.env.local`. In both cases, browser requests go to same-origin EverDash endpoints, server policy filters tablet reads and commands to entities in the saved dashboard configuration, and Home Assistant credentials remain on the server.
 
 The Codex Home Assistant connector is useful for inspecting devices during development. The deployed PWA uses the configured REST connection independently of Codex.
 

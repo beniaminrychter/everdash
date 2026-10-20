@@ -1,0 +1,9 @@
+services:
+  homeassistant:
+    container_name: everdash-homeassistant-local
+    image: ghcr.io/home-assistant/home-assistant:stable
+    restart: unless-stopped
+    ports:
+      - '8123:8123'
+    volumes:
+      - ./.local/homeassistant:/config

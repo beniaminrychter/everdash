@@ -4,7 +4,7 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   build: {
     lib: {
-      entry: resolve(import.meta.dirname, 'server/main.ts'),
+      entry: resolve(import.meta.dirname, 'server/entry.ts'),
       formats: ['es'],
       fileName: 'server',
     },

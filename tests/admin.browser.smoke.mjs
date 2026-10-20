@@ -146,7 +146,11 @@ try {
     }
   });
   page.on('pageerror', (error) => pageErrors.push(error.message));
+  await page.addInitScript(() => {
+    Object.defineProperty(window.crypto, 'randomUUID', { configurable: true, value: undefined });
+  });
   await page.goto(`http://127.0.0.1:${address.port}/`);
+  assert.equal(await page.evaluate(() => typeof window.crypto.randomUUID), 'undefined');
   await expect(page.getByRole('heading', { name: 'Dashboard builder' })).toBeVisible();
   await expect(page.getByText('http://homeassistant.local:8095/').first()).toBeVisible();
 

@@ -3,6 +3,7 @@ dist/
 dist-admin/
 dist-preview/
 dist-server/
+dist-local-server/
 test-results/
 playwright-report/
 .DS_Store

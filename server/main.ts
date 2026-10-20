@@ -1,14 +1,16 @@
 import { resolve } from 'node:path';
 import { ConfigRepository } from './config/repository';
 import { buildApp } from './app';
-import { createSupervisorHomeAssistant } from './home-assistant/client';
+import { createSupervisorHomeAssistant, createHomeAssistantClient } from './home-assistant/client';
 import { DeviceRepository } from './auth/devices';
 import { PairingService } from './auth/pairing';
 import { createAuthorizer, DeviceSessions, HTTP_DEVICE_COOKIE_NAME } from './auth/sessions';
 import type { FastifyRequest } from 'fastify';
 import type { ServerOptions } from 'node:https';
-import { pathToFileURL } from 'node:url';
 import { createSupervisorAccessReader } from './supervisor/access';
+import { createLocalAccessReader } from './local/access';
+import { createLocalManagementAuthorizer } from './auth/local';
+import type { NetworkInterfaceInfo } from 'node:os';
 
 export interface RuntimeOptions {
   dataDirectory?: string;
@@ -19,11 +21,14 @@ export interface RuntimeOptions {
   publicUrl?: string;
   httpsOptions?: ServerOptions;
   requireIngressPeer?: boolean;
+  logger?: boolean;
+  localHomeAssistant?: { origin: string; token: string; hostOverride?: string };
+  localNetworkInterfaces?: NodeJS.Dict<NetworkInterfaceInfo[]>;
 }
 
 export async function createEverDashApps(options: RuntimeOptions = {}) {
   const token = options.supervisorToken ?? process.env.SUPERVISOR_TOKEN;
-  if (!token) {
+  if (!options.localHomeAssistant && !token) {
     throw new Error('SUPERVISOR_TOKEN is required by the EverDash server.');
   }
   const dataDirectory = options.dataDirectory ?? process.env.EVERDASH_DATA_DIR ?? '/data';
@@ -31,10 +36,14 @@ export async function createEverDashApps(options: RuntimeOptions = {}) {
   const devices = new DeviceRepository({ directory: dataDirectory });
   const pairing = new PairingService({ devices });
   const deviceSessions = new DeviceSessions(devices);
-  const homeAssistant = createSupervisorHomeAssistant({ token });
+  const local = options.localHomeAssistant;
+  const homeAssistant = local
+    ? createHomeAssistantClient({ apiRoot: `${local.origin}/api/`, token: local.token })
+    : createSupervisorHomeAssistant({ token: token as string });
   const publicUrl = options.publicUrl ?? process.env.EVERDASH_PUBLIC_URL;
   const authorizeHttps = createAuthorizer(devices);
   const authorizeHttp = createAuthorizer(devices, HTTP_DEVICE_COOKIE_NAME);
+  const authorizeManagement = local ? createLocalManagementAuthorizer : authorizeHttps;
   const expectedOrigin = (request: FastifyRequest, mode: 'management' | 'direct') => {
     if (mode === 'direct') {
       if (!publicUrl) {
@@ -87,14 +96,19 @@ export async function createEverDashApps(options: RuntimeOptions = {}) {
     pairing,
     homeAssistant,
     expectedOrigin,
-    logger: true,
+    logger: options.logger ?? true,
     requireIngressPeer: options.requireIngressPeer ?? false,
-    getAccessInfo: createSupervisorAccessReader(token),
+    getAccessInfo: local
+      ? createLocalAccessReader({
+          hostOverride: local.hostOverride,
+          networkInterfaces: options.localNetworkInterfaces,
+        })
+      : createSupervisorAccessReader(token as string),
   };
   const management = await buildApp(
     {
       ...shared,
-      authorize: authorizeHttps,
+      authorize: authorizeManagement,
       staticDirectory: options.adminStaticDirectory ?? resolve('dist-admin'),
       previewDirectory: options.previewDirectory ?? resolve('dist-preview'),
     },
@@ -121,20 +135,4 @@ export async function createEverDashApps(options: RuntimeOptions = {}) {
     'direct',
   );
   return { config, devices, direct, directHttp, management };
-}
-
-async function startFromCommandLine() {
-  try {
-    const { startEverDash } = await import('./http/listeners');
-    await startEverDash();
-  } catch (error) {
-    process.stderr.write(
-      `EverDash failed to start: ${error instanceof Error ? error.message : 'unknown error'}\n`,
-    );
-    process.exitCode = 1;
-  }
-}
-
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  startFromCommandLine();
 }

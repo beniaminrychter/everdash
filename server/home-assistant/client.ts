@@ -21,6 +21,12 @@ export interface SupervisorHomeAssistantOptions {
   request?: typeof fetch;
 }
 
+export interface HomeAssistantClientOptions {
+  apiRoot: string;
+  token: string;
+  request?: typeof fetch;
+}
+
 async function readBoundedResponse(response: Response): Promise<string> {
   if (!response.body) {
     return '';
@@ -59,7 +65,7 @@ async function readBoundedResponse(response: Response): Promise<string> {
 
 function responseError(status: number, headers: IncomingHttpHeaders): HomeAssistantUpstreamError {
   const messages: Record<number, [string, string]> = {
-    401: ['Home Assistant rejected the Supervisor credential.', 'HA_UNAUTHORIZED'],
+    401: ['Home Assistant rejected the server credential.', 'HA_UNAUTHORIZED'],
     403: ['Home Assistant denied the request.', 'HA_FORBIDDEN'],
     404: ['The configured Home Assistant entity or service was not found.', 'HA_NOT_FOUND'],
   };
@@ -74,9 +80,32 @@ function responseError(status: number, headers: IncomingHttpHeaders): HomeAssist
   );
 }
 
-export function createSupervisorHomeAssistant(
-  options: SupervisorHomeAssistantOptions,
+function validateApiRoot(apiRoot: string): string {
+  let url: URL;
+  try {
+    url = new URL(apiRoot);
+  } catch {
+    throw new Error('A valid Home Assistant API root is required.');
+  }
+  if (
+    !['http:', 'https:'].includes(url.protocol) ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash ||
+    /[?#]/.test(apiRoot) ||
+    !['/api/', '/core/api/'].includes(url.pathname) ||
+    !apiRoot.endsWith('/')
+  ) {
+    throw new Error('A valid Home Assistant API root is required.');
+  }
+  return url.href;
+}
+
+export function createHomeAssistantClient(
+  options: HomeAssistantClientOptions,
 ): HomeAssistantTransport {
+  const apiRoot = validateApiRoot(options.apiRoot);
   const request = options.request ?? fetch;
 
   async function call(
@@ -87,7 +116,7 @@ export function createSupervisorHomeAssistant(
   ): Promise<unknown> {
     let response: Response;
     try {
-      response = await request(new URL(path, API_ROOT), {
+      response = await request(new URL(path, apiRoot), {
         method,
         headers: {
           Authorization: `Bearer ${options.token}`,
@@ -108,7 +137,7 @@ export function createSupervisorHomeAssistant(
       throw new HomeAssistantUpstreamError(
         timeout
           ? 'Home Assistant did not respond within 10 seconds.'
-          : 'Cannot reach Home Assistant through Supervisor.',
+          : 'Cannot reach Home Assistant.',
         timeout ? 504 : 502,
         timeout ? 'HA_TIMEOUT' : 'HA_UNAVAILABLE',
       );
@@ -151,4 +180,10 @@ export function createSupervisorHomeAssistant(
       );
     },
   };
+}
+
+export function createSupervisorHomeAssistant(
+  options: SupervisorHomeAssistantOptions,
+): HomeAssistantTransport {
+  return createHomeAssistantClient({ apiRoot: API_ROOT, ...options });
 }
