@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.2
+
+- Inline the preview's JavaScript and styles so the editor canvas loads inside Home Assistant Ingress while retaining its sandbox.
+
 ## 0.2.1
 
 - Refine the Home Assistant dashboard builder with shadcn controls, toast feedback, and clearer card and badge actions.

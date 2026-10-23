@@ -153,7 +153,6 @@ const server = createServer(async (request, response) => {
     const body = await readFile(path);
     response.writeHead(200, {
       'Content-Type': contentTypes[extname(path)] ?? 'application/octet-stream',
-      ...(isPreview ? { 'Access-Control-Allow-Origin': '*' } : {}),
     });
     response.end(body);
   } catch {
@@ -183,6 +182,7 @@ try {
   });
   await page.goto(`http://127.0.0.1:${address.port}/`);
   await expect(page.getByRole('button', { name: 'Dashboard', exact: true })).toBeVisible();
+  await expect(page.getByText('Loading the tablet renderer…')).toHaveCount(0);
   await page.getByRole('button', { name: 'Devices' }).click();
   await expect(page.getByText('http://homeassistant.local:8095/')).toBeVisible();
   await expect(page.getByText('http://homeassistant.local:8095/')).toHaveCount(1);
