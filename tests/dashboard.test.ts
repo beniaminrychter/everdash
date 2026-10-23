@@ -58,6 +58,16 @@ test('sensor zero is valid while empty, non-numeric and unavailable readings nev
   );
 });
 
+test('ISO date sensor values display as a readable localized date and time', () => {
+  const value = sensorValue(
+    entity('sensor.sun_next_rising', 'Sun Next rising', '2026-10-24T05:28:00+00:00'),
+    'en-GB',
+  ).value;
+  assert.match(value, /24 Oct 2026/);
+  assert.match(value, /\d{1,2}:\d{2}/);
+  assert.doesNotMatch(value, /T|\+00:00/);
+});
+
 test('energy monitoring preserves negative/zero rates, normalizes MWh, and ignores stale schedule slots', () => {
   const now = Date.parse('2026-10-16T10:15:00+02:00');
   const buy = entity('sensor.buy', 'Pstryk Buy Price', '0', {

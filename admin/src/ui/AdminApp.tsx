@@ -1,32 +1,49 @@
 import {
-  ArrowDown,
-  ArrowUp,
+  Bed,
   Check,
   ChevronDown,
   CircleHelp,
   Cloud,
-  Copy,
-  ExternalLink,
-  GripVertical,
+  CloudRain,
+  CloudSun,
   Home,
+  Copy,
+  Coffee,
+  Clapperboard,
+  ExternalLink,
   Laptop,
-  MonitorCog,
+  MoreHorizontal,
+  LampDesk,
+  LampFloor,
+  Lightbulb,
+  Moon,
   Plus,
   RotateCcw,
   Save,
+  Share2,
   Settings2,
-  ShieldCheck,
-  Smartphone,
   Trash2,
+  Thermometer,
+  Plug,
+  Sofa,
+  Sun,
+  Sunrise,
+  UserRound,
   Upload,
   Wifi,
   X,
+  Zap,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { Dialog } from '@base-ui/react/dialog';
-import type { CardConfig, DashboardDocument, ViewConfig } from '../../../src/shared/config/types';
+import type {
+  BadgeConfig,
+  CardConfig,
+  DashboardDocument,
+  ViewConfig,
+} from '../../../src/shared/config/types';
 import type { IconName } from '../../../src/shared/ui/iconNames';
 import { validateDashboard } from '../../../src/shared/config/validate';
 import { iconNames } from '../../../src/shared/ui/iconNames';
@@ -34,10 +51,19 @@ import { Alert } from '../components/ui/alert';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../components/ui/collapsible';
 import { Combobox } from '../components/ui/combobox';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../components/ui/dropdown-menu';
 import { Field, FieldLabel } from '../components/ui/field';
 import { Input, Textarea } from '../components/ui/input';
+import { Select } from '../components/ui/select';
 import { Sheet } from '../components/ui/sheet';
+import { Toaster, toastManager } from '../components/ui/toast';
 import {
   Table,
   TableBody,
@@ -46,13 +72,31 @@ import {
   TableHeader,
   TableRow,
 } from '../components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Tabs, TabsContent } from '../components/ui/tabs';
 import { api } from '../lib/api';
 import type { AccessInfo, DeviceRecord, EntityOption, ManagedConfig } from '../lib/api';
-import { createCard, createView, moveItem } from '../builder';
+import {
+  createCard,
+  createConfiguredCard,
+  createView,
+  isCardEditorMessage,
+  moveItem,
+} from '../builder';
 
 type SelectedItem = { type: 'view' } | { type: 'card' | 'badge'; index: number };
-type AdminTab = 'builder' | 'preview' | 'json';
+type AdminTab = 'dashboard' | 'devices' | 'json';
+interface CardDraft {
+  mode: 'add' | 'edit';
+  viewId: string;
+  index: number;
+  value: CardConfig;
+}
+interface BadgeDraft {
+  mode: 'add' | 'edit';
+  viewId: string;
+  index: number;
+  value: BadgeConfig;
+}
 interface Confirmation {
   title: string;
   description: string;
@@ -63,7 +107,6 @@ const emptyDocument: DashboardDocument = {
   schemaVersion: 1,
   views: [{ id: 'home', title: 'Home', cards: [], badges: [] }],
 };
-
 function createPreviewNonce() {
   const cryptoApi = window.crypto;
   if (typeof cryptoApi.randomUUID === 'function') {
@@ -83,6 +126,32 @@ function createPreviewNonce() {
 
 const previewNonce = createPreviewNonce();
 const cardKinds: CardConfig['type'][] = ['light', 'outlet', 'climate', 'weather', 'pstryk'];
+const iconComponents = {
+  away: UserRound,
+  bed: Bed,
+  bulb: Lightbulb,
+  check: Check,
+  close: X,
+  cloud: Cloud,
+  coffee: Coffee,
+  'desk-lamp': LampDesk,
+  'floor-lamp': LampFloor,
+  home: Home,
+  laptop: Laptop,
+  moon: Moon,
+  more: Settings2,
+  movie: Clapperboard,
+  outlet: Plug,
+  pendant: Lightbulb,
+  plug: Plug,
+  rain: CloudRain,
+  share: Share2,
+  sliders: Settings2,
+  sofa: Sofa,
+  sun: Sun,
+  sunrise: Sunrise,
+  thermometer: Thermometer,
+} satisfies Record<IconName, typeof Home>;
 
 function serialize(document: DashboardDocument) {
   return JSON.stringify(document, null, 2);
@@ -187,14 +256,18 @@ function AdminApp() {
   const [revision, setRevision] = useState<string | null>(null);
   const [loadError, setLoadError] = useState('');
   const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState<AdminTab>('builder');
+  const [tab, setTab] = useState<AdminTab>('dashboard');
   const [viewId, setViewId] = useState('home');
+  const [draftGeneration, setDraftGeneration] = useState(0);
   const [selected, setSelected] = useState<SelectedItem>({ type: 'view' });
   const [inspectorOpen, setInspectorOpen] = useState(false);
-  const [newCardType, setNewCardType] = useState<CardConfig['type']>('light');
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [cardDraft, setCardDraft] = useState<CardDraft | null>(null);
+  const [badgeDraft, setBadgeDraft] = useState<BadgeDraft | null>(null);
+  const [viewDraft, setViewDraft] = useState<{ viewId: string; value: ViewConfig } | null>(null);
+  const [settingsDraft, setSettingsDraft] = useState<DashboardDocument | null>(null);
+  const [cardChooserOpen, setCardChooserOpen] = useState(false);
+  const [viewActionsOpen, setViewActionsOpen] = useState(false);
   const [jsonDraft, setJsonDraft] = useState(serialize(emptyDocument));
   const [jsonBaseline, setJsonBaseline] = useState(serialize(emptyDocument));
   const [jsonIssues, setJsonIssues] = useState<string[]>([]);
@@ -204,7 +277,6 @@ function AdminApp() {
   const [accessError, setAccessError] = useState('');
   const [pairCode, setPairCode] = useState('');
   const [deviceName, setDeviceName] = useState('iPad');
-  const [pairMessage, setPairMessage] = useState('');
   const [pairError, setPairError] = useState('');
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const [hostOverride, setHostOverride] = useState(() => {
@@ -216,26 +288,29 @@ function AdminApp() {
   });
 
   const dirty = serialize(document) !== baseline;
-  const currentView = document.views.find((view) => view.id === viewId) ?? document.views[0];
+  const currentView =
+    (viewDraft?.viewId === viewId ? viewDraft.value : undefined) ??
+    document.views.find((view) => view.id === viewId) ??
+    document.views[0];
   const cards = currentView?.cards ?? [];
+  const cardCount = cards.length;
   const badges = currentView?.badges ?? [];
-  const selectedCard = selected.type === 'card' ? cards[selected.index] : undefined;
-  const selectedBadge = selected.type === 'badge' ? badges[selected.index] : undefined;
-  const selectedBadgeIndex = selected.type === 'badge' ? selected.index : -1;
+  const selectedCard =
+    cardDraft?.value ?? (selected.type === 'card' ? cards[selected.index] : undefined);
+  const selectedBadge =
+    badgeDraft?.value ?? (selected.type === 'badge' ? badges[selected.index] : undefined);
   const jsonDirty = jsonDraft !== jsonBaseline;
 
-  const openInspectorIfNarrow = () => {
-    if (window.matchMedia('(max-width: 1100px)').matches) {
-      setInspectorOpen(true);
-    }
-  };
-
+  const replaceDocument = useCallback((next: DashboardDocument) => {
+    setDocument(next);
+    setDraftGeneration((previous) => previous + 1);
+  }, []);
   const loadConfig = useCallback(async () => {
     try {
       const result = await api.getConfig();
       setServer(result);
       setRevision(result.revision);
-      setDocument(result.config);
+      replaceDocument(result.config);
       setBaseline(serialize(result.config));
       setViewId(result.config.views[0]?.id ?? 'home');
       setLoadError('');
@@ -244,7 +319,7 @@ function AdminApp() {
         error instanceof Error ? error.message : 'Dashboard settings could not be loaded.',
       );
     }
-  }, []);
+  }, [replaceDocument]);
 
   const loadAccess = useCallback(async () => {
     try {
@@ -256,6 +331,12 @@ function AdminApp() {
       setAccessError(error instanceof Error ? error.message : 'Tablet access could not be loaded.');
     }
   }, []);
+
+  useEffect(() => {
+    if (!document.views.some((view) => view.id === viewId)) {
+      setViewId(document.views[0]?.id ?? 'home');
+    }
+  }, [document, viewId]);
 
   useEffect(() => {
     void loadConfig();
@@ -286,18 +367,34 @@ function AdminApp() {
 
   const changeDocument = (update: (previous: DashboardDocument) => DashboardDocument) => {
     setDocument((previous) => update(previous));
+    setDraftGeneration((previous) => previous + 1);
     setError('');
-    setNotice('');
   };
 
   const changeView = (update: (view: ViewConfig) => ViewConfig) => {
+    if (viewDraft) {
+      setViewDraft((previous) =>
+        previous ? { ...previous, value: update(previous.value) } : previous,
+      );
+      return;
+    }
     changeDocument((previous) => ({
       ...previous,
       views: previous.views.map((view) => (view.id === viewId ? update(view) : view)),
     }));
   };
 
+  const changeSettings = (update: (value: DashboardDocument) => DashboardDocument) => {
+    setSettingsDraft((previous) => update(previous ?? document));
+  };
+
   const changeCard = (update: (card: CardConfig) => CardConfig) => {
+    if (cardDraft) {
+      setCardDraft((previous) =>
+        previous ? { ...previous, value: update(previous.value) } : previous,
+      );
+      return;
+    }
     if (selected.type !== 'card' || !cards[selected.index]) {
       return;
     }
@@ -315,6 +412,12 @@ function AdminApp() {
       badge: NonNullable<ViewConfig['badges']>[number],
     ) => NonNullable<ViewConfig['badges']>[number],
   ) => {
+    if (badgeDraft) {
+      setBadgeDraft((previous) =>
+        previous ? { ...previous, value: update(previous.value) } : previous,
+      );
+      return;
+    }
     if (selected.type !== 'badge' || !badges[selected.index]) {
       return;
     }
@@ -327,23 +430,166 @@ function AdminApp() {
     }));
   };
 
-  const addCard = () => {
-    const next = [...cards, createCard(newCardType)];
-    const index = next.length - 1;
-    changeView((view) => ({ ...view, cards: next }));
-    setSelected({ type: 'card', index });
-    openInspectorIfNarrow();
+  const addCard = (type: CardConfig['type']) => {
+    const card = { ...createCard(type), entity: '' } as unknown as CardConfig;
+    setSelected({ type: 'card', index: -1 });
+    setCardDraft({ mode: 'add', viewId, index: cards.length, value: card });
+    setBadgeDraft(null);
+    setInspectorOpen(true);
   };
 
   const addBadge = () => {
-    const next = [
-      ...badges,
-      { type: 'temperature' as const, entity: 'sensor.select_entity' as `sensor.${string}` },
-    ];
-    const index = next.length - 1;
-    changeView((view) => ({ ...view, badges: next }));
+    setSelected({ type: 'badge', index: -1 });
+    setBadgeDraft({
+      mode: 'add',
+      viewId,
+      index: badges.length,
+      value: { type: 'temperature', entity: '' as `sensor.${string}` },
+    });
+    setCardDraft(null);
+    setInspectorOpen(true);
+  };
+
+  const beginCardEdit = (index: number) => {
+    const card = cards[index];
+    if (!card) {
+      return;
+    }
+    setSelected({ type: 'card', index });
+    setCardDraft({ mode: 'edit', viewId, index, value: { ...card } });
+    setBadgeDraft(null);
+    setInspectorOpen(true);
+  };
+
+  const beginBadgeEdit = (index: number) => {
+    const badge = badges[index];
+    if (!badge) {
+      return;
+    }
     setSelected({ type: 'badge', index });
-    openInspectorIfNarrow();
+    setBadgeDraft({ mode: 'edit', viewId, index, value: { ...badge } });
+    setCardDraft(null);
+    setInspectorOpen(true);
+  };
+
+  const commitCardDraft = () => {
+    if (!cardDraft || !currentView) {
+      return;
+    }
+    let value: CardConfig;
+    try {
+      value = {
+        ...cardDraft.value,
+        ...createConfiguredCard(cardDraft.value.type, cardDraft.value.entity),
+      } as CardConfig;
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : 'Choose a valid entity before adding the card.',
+      );
+      return;
+    }
+    const index = cardDraft.index;
+    const mode = cardDraft.mode;
+    const targetViewId = cardDraft.viewId;
+    changeDocument((previous) => ({
+      ...previous,
+      views: previous.views.map((view) => {
+        if (view.id !== targetViewId) {
+          return view;
+        }
+        const next = [...(view.cards ?? [])];
+        if (mode === 'add') {
+          next.splice(index, 0, value);
+        } else {
+          next[index] = value;
+        }
+        return { ...view, cards: next };
+      }),
+    }));
+    setCardDraft(null);
+    setInspectorOpen(false);
+  };
+
+  const commitBadgeDraft = () => {
+    if (!badgeDraft) {
+      return;
+    }
+    if (!/^sensor\.[a-z0-9_]+$/.test(badgeDraft.value.entity)) {
+      setError('Choose a valid temperature sensor before adding the badge.');
+      return;
+    }
+    const targetViewId = badgeDraft.viewId;
+    const index = badgeDraft.index;
+    const mode = badgeDraft.mode;
+    const value = badgeDraft.value;
+    changeDocument((previous) => ({
+      ...previous,
+      views: previous.views.map((view) => {
+        if (view.id !== targetViewId) {
+          return view;
+        }
+        const next = [...(view.badges ?? [])];
+        if (mode === 'add') {
+          next.splice(index, 0, value);
+        } else {
+          next[index] = value;
+        }
+        return { ...view, badges: next };
+      }),
+    }));
+    setBadgeDraft(null);
+    setInspectorOpen(false);
+  };
+
+  const cancelInspector = () => {
+    setCardDraft(null);
+    setBadgeDraft(null);
+    setViewDraft(null);
+    setSettingsDraft(null);
+    setInspectorOpen(false);
+  };
+
+  const openViewSettings = () => {
+    if (!currentView) {
+      return;
+    }
+    setSelected({ type: 'view' });
+    setViewDraft({ viewId, value: { ...currentView } });
+    setSettingsDraft({ ...document });
+    setCardDraft(null);
+    setBadgeDraft(null);
+    setInspectorOpen(true);
+  };
+
+  const commitViewDraft = () => {
+    if (viewDraft) {
+      const targetViewId = viewDraft.viewId;
+      const value = viewDraft.value;
+      changeDocument((previous) => ({
+        ...previous,
+        ...(settingsDraft
+          ? {
+              timeZone: settingsDraft.timeZone,
+              sun: settingsDraft.sun,
+              polling: settingsDraft.polling,
+            }
+          : {}),
+        views: previous.views.map((view) => (view.id === targetViewId ? value : view)),
+      }));
+    }
+    setViewDraft(null);
+    setSettingsDraft(null);
+    setInspectorOpen(false);
+  };
+
+  const commitInspector = () => {
+    if (cardDraft) {
+      commitCardDraft();
+    } else if (badgeDraft) {
+      commitBadgeDraft();
+    } else {
+      commitViewDraft();
+    }
   };
 
   const reorderCards = (source: number, target: number) => {
@@ -365,6 +611,87 @@ function AdminApp() {
     }
   };
 
+  const handlePreviewMessage = (value: unknown) => {
+    if (typeof value !== 'object' || value === null || !('type' in value)) {
+      return;
+    }
+    const message = value as Record<string, unknown>;
+    if (message.type === 'everdash.editor.view.select') {
+      if (
+        message.nonce === previewNonce &&
+        message.generation === draftGeneration &&
+        typeof message.viewId === 'string' &&
+        document.views.some((view) => view.id === message.viewId)
+      ) {
+        setViewId(message.viewId);
+      }
+      return;
+    }
+    if (message.type === 'everdash.editor.card.edit') {
+      if (isCardEditorMessage(value, previewNonce, draftGeneration, viewId, cardCount)) {
+        beginCardEdit(message.index as number);
+      }
+      return;
+    }
+    if (message.type === 'everdash.editor.card.move') {
+      if (isCardEditorMessage(value, previewNonce, draftGeneration, viewId, cardCount)) {
+        reorderCards(
+          message.index as number,
+          (message.index as number) + (message.offset as -1 | 1),
+        );
+      }
+      return;
+    }
+    if (message.type === 'everdash.editor.card.delete') {
+      if (isCardEditorMessage(value, previewNonce, draftGeneration, viewId, cardCount)) {
+        const index = message.index as number;
+        const label = cards[index]?.name || cards[index]?.entity || 'card';
+        setConfirmation({
+          title: `Delete ${label}?`,
+          description: 'This card will be removed from the dashboard draft.',
+          confirmLabel: 'Delete card',
+          action: () =>
+            changeView((view) => ({
+              ...view,
+              cards: (view.cards ?? []).filter((_card, cardIndex) => cardIndex !== index),
+            })),
+        });
+      }
+      return;
+    }
+    if (
+      message.type === 'everdash.editor.badge.edit' ||
+      message.type === 'everdash.editor.badge.delete'
+    ) {
+      const index = message.index;
+      if (
+        message.nonce !== previewNonce ||
+        message.generation !== draftGeneration ||
+        message.viewId !== viewId ||
+        !Number.isInteger(index) ||
+        (index as number) < 0 ||
+        (index as number) >= badges.length
+      ) {
+        return;
+      }
+      if (message.type === 'everdash.editor.badge.edit') {
+        beginBadgeEdit(index as number);
+      } else {
+        const label = badges[index as number]?.name || 'temperature badge';
+        setConfirmation({
+          title: `Delete ${label}?`,
+          description: 'This badge will be removed from the dashboard draft.',
+          confirmLabel: 'Delete badge',
+          action: () =>
+            changeView((view) => ({
+              ...view,
+              badges: (view.badges ?? []).filter((_badge, badgeIndex) => badgeIndex !== index),
+            })),
+        });
+      }
+    }
+  };
+
   const addView = () => {
     let id = `view-${Date.now().toString(36)}`;
     while (document.views.some((view) => view.id === id)) {
@@ -381,16 +708,14 @@ function AdminApp() {
   const save = async () => {
     setBusy(true);
     setError('');
-    setNotice('');
     try {
       const result = await api.saveConfig(revision, document);
       setRevision(result.revision);
-      setDocument(result.config);
+      replaceDocument(result.config);
       setBaseline(serialize(result.config));
       setServer((previous) =>
         previous ? { ...previous, configured: true, recovery: false } : previous,
       );
-      setNotice('Dashboard saved and applied to paired tablets.');
     } catch (error) {
       const issue = error as Error & {
         code?: string;
@@ -412,10 +737,14 @@ function AdminApp() {
   const loadPrevious = async () => {
     try {
       const result = await api.getPreviousConfig();
-      setDocument(result.config);
+      replaceDocument(result.config);
       setViewId(result.config.views[0]?.id ?? 'home');
       setSelected({ type: 'view' });
-      setNotice('Previous dashboard loaded into the draft. Save and apply to restore it.');
+      toastManager.add({
+        title: 'Previous dashboard loaded',
+        description: 'Save to restore it.',
+        type: 'info',
+      });
       setError('');
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Previous dashboard could not be loaded.');
@@ -429,10 +758,10 @@ function AdminApp() {
       confirmLabel: 'Discard changes',
       action: () => {
         const restored = JSON.parse(baseline) as DashboardDocument;
-        setDocument(restored);
+        replaceDocument(restored);
         setViewId(restored.views[0]?.id ?? 'home');
         setSelected({ type: 'view' });
-        setNotice('Unsaved changes discarded.');
+        toastManager.add({ title: 'Unsaved changes discarded', type: 'info' });
         setError('');
       },
     });
@@ -461,7 +790,7 @@ function AdminApp() {
         );
         return false;
       }
-      setDocument(result.document);
+      replaceDocument(result.document);
       setViewId(result.document.views[0]?.id ?? 'home');
       setSelected({ type: 'view' });
       const text = serialize(result.document);
@@ -469,9 +798,11 @@ function AdminApp() {
       setJsonBaseline(text);
       setJsonIssues([]);
       setError('');
-      setNotice(
-        'Validated JSON applied to the visual builder draft. Save and apply to publish it.',
-      );
+      toastManager.add({
+        title: 'Validated JSON applied',
+        description: 'Save to publish these changes.',
+        type: 'success',
+      });
       return true;
     } catch (error) {
       setJsonIssues([error instanceof Error ? error.message : 'Enter valid JSON.']);
@@ -523,11 +854,14 @@ function AdminApp() {
   const approvePairing = async (event: FormEvent) => {
     event.preventDefault();
     setPairError('');
-    setPairMessage('');
     try {
       await api.approvePairing(pairCode, deviceName);
       setPairCode('');
-      setPairMessage('Tablet approved. It will appear in the device list when pairing completes.');
+      toastManager.add({
+        title: 'Tablet approved',
+        description: 'It will appear in the device list when pairing completes.',
+        type: 'success',
+      });
       void loadAccess();
     } catch (error) {
       setPairError(error instanceof Error ? error.message : 'Pairing approval failed.');
@@ -592,118 +926,9 @@ function AdminApp() {
     }));
   };
 
-  const duplicateCard = (index: number) => {
-    const next = [...cards];
-    const current = cards[index];
-    if (!current) {
-      return;
-    }
-    next.splice(index + 1, 0, { ...current });
-    changeView((view) => ({ ...view, cards: next }));
-    setSelected({ type: 'card', index: index + 1 });
-  };
-
-  const deleteSelected = () => {
-    if (selected.type === 'card') {
-      const next = cards.filter((_card, index) => index !== selected.index);
-      changeView((view) => ({ ...view, cards: next }));
-      setSelected({ type: 'view' });
-      return;
-    }
-    if (selected.type === 'badge') {
-      const next = badges.filter((_badge, index) => index !== selected.index);
-      changeView((view) => ({ ...view, badges: next }));
-      setSelected({ type: 'view' });
-    }
-  };
-
-  const cardItem = (card: CardConfig, index: number) => {
-    const label = card.name || card.entity;
-    return (
-      <div
-        className={`list-item ${selected.type === 'card' && selected.index === index ? 'selected' : ''}`}
-        key={`card-${index}`}
-        draggable
-        onDragStart={() => setDragIndex(index)}
-        onDragOver={(event) => event.preventDefault()}
-        onDrop={(event) => {
-          event.preventDefault();
-          if (dragIndex !== null) {
-            reorderCards(dragIndex, index);
-          }
-          setDragIndex(null);
-        }}
-        onDragEnd={() => setDragIndex(null)}
-      >
-        <GripVertical size={16} aria-hidden="true" className="drag-handle" />
-        <button
-          type="button"
-          className="list-item-main"
-          onClick={() => {
-            setSelected({ type: 'card', index });
-            openInspectorIfNarrow();
-          }}
-          aria-label={`Edit ${card.type}: ${label}`}
-        >
-          <span>
-            <strong>{label}</strong>
-            <small>
-              {card.type} · {card.entity}
-            </small>
-          </span>
-        </button>
-        <div className="item-actions">
-          <button
-            type="button"
-            className="icon-action"
-            aria-label={`Move ${label} up`}
-            title="Move up"
-            disabled={index === 0}
-            onClick={() => reorderCards(index, index - 1)}
-          >
-            <ArrowUp size={14} />
-          </button>
-          <button
-            type="button"
-            className="icon-action"
-            aria-label={`Move ${label} down`}
-            title="Move down"
-            disabled={index === cards.length - 1}
-            onClick={() => reorderCards(index, index + 1)}
-          >
-            <ArrowDown size={14} />
-          </button>
-          <button
-            type="button"
-            className="icon-action hide-mobile"
-            aria-label={`Duplicate ${label}`}
-            title="Duplicate"
-            onClick={() => duplicateCard(index)}
-          >
-            <Copy size={14} />
-          </button>
-          <button
-            type="button"
-            className="icon-action hide-mobile"
-            aria-label={`Delete ${label}`}
-            title="Delete"
-            onClick={() => {
-              changeView((view) => ({
-                ...view,
-                cards: (view.cards ?? []).filter((_item, itemIndex) => itemIndex !== index),
-              }));
-              setSelected({ type: 'view' });
-            }}
-          >
-            <Trash2 size={14} />
-          </button>
-        </div>
-      </div>
-    );
-  };
-
   const renderInspector = () => {
     if (selected.type === 'view') {
+      const settings = settingsDraft ?? document;
       return currentView ? (
         <div className="form-stack">
           <Field>
@@ -719,45 +944,19 @@ function AdminApp() {
             page.
           </p>
           <hr className="section-divider" />
-          <h3 className="card-title">Temperature badges</h3>
-          {badges.map((badge, index) => (
-            <div
-              className={`list-item ${selectedBadgeIndex === index ? 'selected' : ''}`}
-              key={`badge-${index}`}
-            >
-              <button
-                type="button"
-                className="list-item-main"
-                aria-label={`Edit temperature badge: ${badge.name || badge.entity}`}
-                onClick={() => {
-                  setSelected({ type: 'badge', index });
-                  openInspectorIfNarrow();
-                }}
-              >
-                <span>
-                  <strong>{badge.name || badge.entity}</strong>
-                  <small>Temperature badge · {badge.entity}</small>
-                </span>
-              </button>
-            </div>
-          ))}
-          <Button variant="outline" size="sm" onClick={addBadge}>
-            <Plus size={14} /> Add temperature badge
-          </Button>
-          <hr className="section-divider" />
-          <details>
-            <summary className="status-line">
+          <Collapsible className="dashboard-settings-collapsible">
+            <CollapsibleTrigger className="status-line dashboard-settings-trigger">
               <Settings2 size={15} /> Dashboard settings <ChevronDown size={13} />
-            </summary>
-            <div className="form-stack" style={{ marginTop: 14 }}>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="form-stack dashboard-settings-content">
               <Field>
                 <FieldLabel htmlFor="timezone">Home timezone</FieldLabel>
                 <Input
                   id="timezone"
                   placeholder="Europe/Warsaw"
-                  value={document.timeZone ?? ''}
+                  value={settings.timeZone ?? ''}
                   onChange={(event) =>
-                    changeDocument((previous) => ({
+                    changeSettings((previous) => ({
                       ...previous,
                       timeZone: event.target.value || undefined,
                     }))
@@ -766,10 +965,10 @@ function AdminApp() {
               </Field>
               <EntityPicker
                 label="Sun entity"
-                value={document.sun ?? ''}
+                value={settings.sun ?? ''}
                 domain="sun"
                 onChange={(entity) =>
-                  changeDocument((previous) => ({
+                  changeSettings((previous) => ({
                     ...previous,
                     sun: entity ? (entity as `sun.${string}`) : undefined,
                   }))
@@ -781,9 +980,9 @@ function AdminApp() {
                   id="poll-controls"
                   type="number"
                   min="1000"
-                  value={document.polling?.controlsMs ?? ''}
+                  value={settings.polling?.controlsMs ?? ''}
                   onChange={(event) =>
-                    changeDocument((previous) => ({
+                    changeSettings((previous) => ({
                       ...previous,
                       polling: {
                         ...previous.polling,
@@ -817,9 +1016,9 @@ function AdminApp() {
                   id="poll-metadata"
                   type="number"
                   min="1000"
-                  value={document.polling?.metadataMs ?? ''}
+                  value={settings.polling?.metadataMs ?? ''}
                   onChange={(event) =>
-                    changeDocument((previous) => ({
+                    changeSettings((previous) => ({
                       ...previous,
                       polling: {
                         ...previous.polling,
@@ -829,8 +1028,8 @@ function AdminApp() {
                   }
                 />
               </Field>
-            </div>
-          </details>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
       ) : (
         <p className="helper">Choose a view to edit its settings.</p>
@@ -871,53 +1070,53 @@ function AdminApp() {
           {(card.type === 'light' || card.type === 'outlet') && (
             <Field>
               <FieldLabel htmlFor="card-icon">Icon</FieldLabel>
-              <select
-                className="native-select"
-                id="card-icon"
-                value={card.icon ?? ''}
-                onChange={(event) =>
-                  changeCard(
-                    (current) =>
-                      ({
-                        ...current,
-                        icon: (event.target.value || undefined) as IconName | undefined,
-                      }) as CardConfig,
-                  )
-                }
-              >
-                <option value="">Default icon</option>
-                {iconNames.map((icon) => (
-                  <option key={icon} value={icon}>
-                    {icon}
-                  </option>
-                ))}
-              </select>
+              <fieldset className="icon-picker">
+                <legend className="visually-hidden">Choose card icon</legend>
+                {iconNames.map((icon) => {
+                  const IconPreview = iconComponents[icon];
+                  return (
+                    <Button
+                      type="button"
+                      key={icon}
+                      variant="outline"
+                      size="icon"
+                      className="icon-choice"
+                      aria-label={icon}
+                      aria-pressed={card.icon === icon}
+                      onClick={() => changeCard((current) => ({ ...current, icon }) as CardConfig)}
+                    >
+                      <IconPreview size={19} aria-hidden="true" />
+                    </Button>
+                  );
+                })}
+              </fieldset>
             </Field>
           )}
           {card.type === 'climate' && (
             <Field>
               <FieldLabel htmlFor="climate-unit">Temperature unit</FieldLabel>
-              <select
+              <Select
+                ariaLabel="Temperature unit"
                 className="native-select"
-                id="climate-unit"
-                value={card.temperatureUnit ?? ''}
-                onChange={(event) =>
+                value={card.temperatureUnit ?? 'ha-default'}
+                onValueChange={(value) =>
                   changeCard(
                     (current) =>
                       ({
                         ...current,
-                        temperatureUnit: (event.target.value || undefined) as
+                        temperatureUnit: (value === 'ha-default' ? undefined : value) as
                           | '°C'
                           | '°F'
                           | undefined,
                       }) as CardConfig,
                   )
                 }
-              >
-                <option value="">Use Home Assistant unit</option>
-                <option value="°C">°C Celsius</option>
-                <option value="°F">°F Fahrenheit</option>
-              </select>
+                options={[
+                  { value: 'ha-default', label: 'Use Home Assistant unit' },
+                  { value: '°C', label: '°C Celsius' },
+                  { value: '°F', label: '°F Fahrenheit' },
+                ]}
+              />
             </Field>
           )}
           {pstryk && (
@@ -946,9 +1145,6 @@ function AdminApp() {
               ))}
             </>
           )}
-          <Button variant="destructive" size="sm" onClick={deleteSelected}>
-            <Trash2 size={14} /> Remove card
-          </Button>
         </div>
       );
     }
@@ -981,28 +1177,24 @@ function AdminApp() {
           </Field>
           <Field>
             <FieldLabel htmlFor="badge-icon">Icon</FieldLabel>
-            <select
-              className="native-select"
-              id="badge-icon"
-              value={selectedBadge.icon ?? ''}
-              onChange={(event) =>
-                changeBadge((badge) => ({
-                  ...badge,
-                  icon: (event.target.value || undefined) as typeof badge.icon,
-                }))
-              }
-            >
-              <option value="">Default icon</option>
-              {iconNames.map((icon) => (
-                <option key={icon} value={icon}>
-                  {icon}
-                </option>
-              ))}
-            </select>
+            <fieldset className="icon-picker">
+              <legend className="visually-hidden">Choose badge icon</legend>
+              {iconNames.map((icon) => {
+                const IconPreview = iconComponents[icon];
+                return (
+                  <button
+                    type="button"
+                    key={icon}
+                    aria-label={icon}
+                    aria-pressed={selectedBadge.icon === icon}
+                    onClick={() => changeBadge((badge) => ({ ...badge, icon }))}
+                  >
+                    <IconPreview size={19} aria-hidden="true" />
+                  </button>
+                );
+              })}
+            </fieldset>
           </Field>
-          <Button variant="destructive" size="sm" onClick={deleteSelected}>
-            <Trash2 size={14} /> Remove badge
-          </Button>
         </div>
       );
     }
@@ -1018,38 +1210,40 @@ function AdminApp() {
   };
 
   const renderAccess = () => (
-    <div className="access-grid">
-      <div className="form-stack">
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>Open EverDash on a tablet</CardTitle>
-              <CardDescription>
-                This local address opens the dashboard directly, outside the Home Assistant editor.
-              </CardDescription>
+    <div className="devices-page">
+      <header className="devices-heading">
+        <h1>Devices</h1>
+        <p>Connect tablets and manage which devices can open EverDash.</p>
+      </header>
+      <Card className="devices-panel">
+        <CardContent>
+          <section className="devices-section" aria-labelledby="devices-address-title">
+            <div className="devices-section-heading">
+              <div>
+                <h2 id="devices-address-title">Dashboard address</h2>
+                <p>Use this address on a tablet connected to your home network.</p>
+              </div>
             </div>
-            <Smartphone size={20} />
-          </CardHeader>
-          <CardContent>
             {accessUrl ? (
-              <div className="url-block">
-                <code>{accessUrl}</code>
-                <div className="url-actions">
+              <div className="device-address-layout">
+                <div className="device-address-copy">
+                  <code>{accessUrl}</code>
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => void navigator.clipboard?.writeText(accessUrl)}
                   >
-                    <Copy size={14} /> Copy
+                    <Copy size={14} /> Copy address
                   </Button>
-                  <a
-                    className="button button-sm button-outline"
-                    href={accessUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    <ExternalLink size={14} /> Open
-                  </a>
+                </div>
+                <div className="device-qr">
+                  <QRCodeSVG
+                    value={accessUrl}
+                    level="M"
+                    includeMargin
+                    size={132}
+                    aria-label="QR code for dashboard address"
+                  />
                 </div>
               </div>
             ) : (
@@ -1059,57 +1253,36 @@ function AdminApp() {
                   'Home Assistant has not reported an active LAN port mapping for EverDash.'}
               </Alert>
             )}
-            {access?.addresses.length ? (
-              <div className="form-stack" style={{ marginTop: 13 }}>
-                <span className="helper">Detected Home Assistant addresses</span>
-                {access.addresses.map((address) => (
-                  <div className="url-block" key={address}>
-                    <code>
-                      {access.httpPort ? `http://${address}:${access.httpPort}/` : address}
-                    </code>
-                    {access.httpPort && (
-                      <Button size="sm" variant="ghost" onClick={() => setHost(address)}>
-                        Use this address
-                      </Button>
-                    )}
-                  </div>
-                ))}
+            <details className="device-advanced">
+              <summary>Address settings</summary>
+              <Field>
+                <FieldLabel htmlFor="host-override">Tablet host override</FieldLabel>
+                <Input
+                  id="host-override"
+                  placeholder="homeassistant.local or 192.168.1.20"
+                  value={hostOverride}
+                  onChange={(event) => setHost(event.target.value)}
+                />
+                <span className="helper">
+                  Saved in this Home Assistant browser. Enter a local hostname or IP; the mapped
+                  port is added automatically.
+                </span>
+              </Field>
+              {access?.httpsPort && (
+                <p className="footer-note">
+                  Trusted HTTPS dashboard is also available on port {access.httpsPort}.
+                </p>
+              )}
+            </details>
+          </section>
+          <section className="devices-section" aria-labelledby="devices-pair-title">
+            <div className="devices-section-heading">
+              <div>
+                <h2 id="devices-pair-title">Pair a tablet</h2>
+                <p>Start pairing on the tablet, then approve its code here.</p>
               </div>
-            ) : null}
-            <hr className="section-divider" />
-            <Field>
-              <FieldLabel htmlFor="host-override">Tablet host override</FieldLabel>
-              <Input
-                id="host-override"
-                placeholder="homeassistant.local or 192.168.1.20"
-                value={hostOverride}
-                onChange={(event) => setHost(event.target.value)}
-              />
-              <span className="helper">
-                Saved in this Home Assistant browser. Enter a local hostname or IP; the mapped port
-                is added automatically.
-              </span>
-            </Field>
-            {access?.httpsPort && (
-              <p className="footer-note">
-                Trusted HTTPS dashboard is also available on port {access.httpsPort}.
-              </p>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>Register a tablet</CardTitle>
-              <CardDescription>
-                On the iPad, open the address above and start pairing. Enter its code here to
-                approve it.
-              </CardDescription>
             </div>
-            <ShieldCheck size={20} />
-          </CardHeader>
-          <CardContent>
-            <form className="form-row" onSubmit={(event) => void approvePairing(event)}>
+            <form className="device-pair-form" onSubmit={(event) => void approvePairing(event)}>
               <Field>
                 <FieldLabel htmlFor="pair-code">Pairing code</FieldLabel>
                 <Input
@@ -1133,34 +1306,25 @@ function AdminApp() {
                 />
               </Field>
               <Button type="submit" disabled={pairCode.trim().length < 8 || !deviceName.trim()}>
-                <Check size={15} /> Approve tablet
+                <Check size={15} /> Pair tablet
               </Button>
             </form>
-            {pairMessage && (
-              <p className="status-line" style={{ marginTop: 10 }}>
-                <Check size={14} /> {pairMessage}
-              </p>
-            )}
             {pairError && (
               <p role="alert" className="inline-error" style={{ marginTop: 10 }}>
                 {pairError}
               </p>
             )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>Registered tablets</CardTitle>
-              <CardDescription>
-                Access refreshes automatically while this page is open.
-              </CardDescription>
+          </section>
+          <section className="devices-section" aria-labelledby="devices-registered-title">
+            <div className="devices-section-heading devices-registered-heading">
+              <div>
+                <h2 id="devices-registered-title">Paired tablets</h2>
+                <p>Remove a device to require pairing again.</p>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => void loadAccess()}>
+                <RotateCcw size={14} /> Refresh
+              </Button>
             </div>
-            <Button variant="ghost" size="sm" onClick={() => void loadAccess()}>
-              <RotateCcw size={14} /> Refresh
-            </Button>
-          </CardHeader>
-          <CardContent>
             {devices.length ? (
               <Table>
                 <TableHead>
@@ -1212,74 +1376,34 @@ function AdminApp() {
             ) : (
               <p className="helper">No tablets have been paired yet.</p>
             )}
-          </CardContent>
-        </Card>
-      </div>
-      <div className="form-stack">
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>Scan to open</CardTitle>
-              <CardDescription>
-                Point the iPad camera at this QR code while connected to your home network.
-              </CardDescription>
-            </div>
-            <Laptop size={20} />
-          </CardHeader>
-          <CardContent>
-            {accessUrl ? (
-              <div className="qr-card">
-                <QRCodeSVG
-                  value={accessUrl}
-                  level="M"
-                  includeMargin
-                  aria-label={`QR code for ${accessUrl}`}
-                />
-                <code>{accessUrl}</code>
-              </div>
-            ) : (
-              <p className="helper">A QR code appears when the LAN address is available.</p>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>How the connection works</CardTitle>
-              <CardDescription>
-                EverDash keeps Home Assistant credentials on the server.
-              </CardDescription>
-            </div>
-            <Home size={20} />
-          </CardHeader>
-          <CardContent>
-            <div className="form-stack">
-              <p className="status-line">
-                <ShieldCheck size={15} /> Home Assistant login protects this builder.
-              </p>
-              <p className="status-line">
-                <Wifi size={15} /> Pairing gives the tablet its own revocable session.
-              </p>
-              <p className="status-line">
-                <MonitorCog size={15} /> The direct dashboard URL has no management controls.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          </section>
+        </CardContent>
+      </Card>
     </div>
   );
 
   if (loadError && !server) {
     return (
       <main className="admin-shell">
-        <Topbar />
+        <Topbar
+          tab={tab}
+          onTabChange={chooseTab}
+          dirty={dirty}
+          configured={false}
+          busy={busy}
+          onSave={() => void save()}
+          onDiscard={discard}
+          onSettings={openViewSettings}
+          onJson={() => chooseTab('json')}
+          onRestore={() => void loadPrevious()}
+          restoreAvailable={false}
+        />
         <div className="workspace">
           <Alert>
             <CircleHelp size={16} /> {loadError}
           </Alert>
           <p className="helper">
-            The visual editor can still create a new dashboard, or use the Advanced JSON tab to
+            The visual editor can still create a new dashboard, or use JSON import / export to
             import a valid configuration.
           </p>
         </div>
@@ -1289,34 +1413,21 @@ function AdminApp() {
 
   return (
     <div className="admin-shell">
-      <Topbar />
-      <main className="workspace">
-        <div className="page-heading">
-          <div>
-            <h1>Dashboard builder</h1>
-            <p>Choose what appears on your legacy tablet and arrange it by view.</p>
-          </div>
-          <div className="heading-actions">
-            <div className={`save-state ${dirty ? 'dirty' : ''}`} aria-live="polite">
-              {dirty ? (
-                <>
-                  <span className="status-dot pending" /> Unsaved changes
-                </>
-              ) : (
-                <>
-                  <span className="status-dot" />{' '}
-                  {server?.configured ? 'All changes saved' : 'Setup not saved yet'}
-                </>
-              )}
-            </div>
-            <Button onClick={() => void save()} disabled={!dirty || busy}>
-              <Save size={15} /> {busy ? 'Saving…' : 'Save and apply'}
-            </Button>
-            <Button variant="outline" disabled={!dirty || busy} onClick={discard}>
-              <RotateCcw size={14} /> Discard
-            </Button>
-          </div>
-        </div>
+      <Topbar
+        tab={tab}
+        onTabChange={chooseTab}
+        dirty={dirty}
+        configured={server?.configured ?? false}
+        busy={busy}
+        onSave={() => void save()}
+        onDiscard={discard}
+        onSettings={openViewSettings}
+        onJson={() => chooseTab('json')}
+        onRestore={() => void loadPrevious()}
+        restoreAvailable={server?.previousAvailable ?? false}
+      />
+      <Toaster />
+      <main className={`workspace ${tab === 'dashboard' ? 'dashboard-workspace' : ''}`}>
         {loadError && (
           <Alert>
             <CircleHelp size={16} /> {loadError} The editor is using a starter dashboard.
@@ -1329,208 +1440,109 @@ function AdminApp() {
               'Saved settings need recovery. Import a valid document or build a replacement, then save it.'}
           </Alert>
         )}
-        {server?.previousAvailable && (
-          <Alert className="alert-info">
-            <RotateCcw size={16} /> A previous dashboard is available.{' '}
-            <Button size="sm" variant="outline" onClick={() => void loadPrevious()}>
-              Load previous version
-            </Button>
-          </Alert>
-        )}
         {error && (
           <Alert>
             <CircleHelp size={16} /> {error}
           </Alert>
         )}
-        {notice && (
-          <Alert className="alert-info">
-            <Check size={16} /> {notice}
-          </Alert>
-        )}
         <Tabs value={tab} onValueChange={(value) => chooseTab(value as AdminTab)}>
-          <TabsList aria-label="EverDash workspace">
-            <TabsTrigger value="builder">
-              <Settings2 size={15} /> Builder
-            </TabsTrigger>
-            <TabsTrigger value="preview">
-              <MonitorCog size={15} /> Preview
-            </TabsTrigger>
-            <TabsTrigger value="json">
-              <span className="hide-mobile">Advanced </span>JSON
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="builder">
-            <div className="builder-grid">
-              <Card>
-                <CardHeader>
-                  <div>
-                    <CardTitle>Views</CardTitle>
-                    <CardDescription>Pages available on your tablet</CardDescription>
-                  </div>
+          <TabsContent value="dashboard">
+            <section className="dashboard-stage" aria-label="Dashboard canvas">
+              <div className="canvas-toolbar">
+                <div className="canvas-view-controls">
+                  <Select
+                    ariaLabel="Dashboard view"
+                    className="canvas-view-select"
+                    value={viewId}
+                    onValueChange={setViewId}
+                    options={document.views.map((view) => ({
+                      value: view.id,
+                      label: view.title,
+                    }))}
+                  />
                   <Button
+                    className="canvas-tool"
+                    variant="ghost"
                     size="icon"
-                    variant="outline"
-                    aria-label="Add view"
-                    title="Add view"
-                    onClick={addView}
+                    aria-label="Rename view"
+                    onClick={openViewSettings}
                   >
-                    <Plus size={16} />
+                    <Settings2 size={16} />
                   </Button>
-                </CardHeader>
-                <CardContent>
-                  <div className="list-stack">
-                    {document.views.map((view, index) => (
-                      <div
-                        className={`list-item ${view.id === viewId && selected.type === 'view' ? 'selected' : ''}`}
-                        key={view.id}
+                  <Button className="canvas-tool" variant="ghost" size="sm" onClick={addView}>
+                    <Plus size={15} /> Add view
+                  </Button>
+                  <DropdownMenu
+                    modal={false}
+                    open={viewActionsOpen}
+                    onOpenChange={setViewActionsOpen}
+                  >
+                    <DropdownMenuTrigger
+                      className="canvas-tool button button-ghost button-icon"
+                      aria-label="View actions"
+                    >
+                      <MoreHorizontal size={17} />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem
+                        disabled={document.views.findIndex((view) => view.id === viewId) === 0}
+                        onClick={() => {
+                          moveView(
+                            document.views.findIndex((view) => view.id === viewId),
+                            -1,
+                          );
+                          setViewActionsOpen(false);
+                        }}
                       >
-                        <button
-                          type="button"
-                          className="list-item-main"
-                          aria-label={`Select view ${view.title}`}
-                          onClick={() => {
-                            setViewId(view.id);
-                            setSelected({ type: 'view' });
-                          }}
-                        >
-                          <span>
-                            <strong>{view.title}</strong>
-                            <small>{view.id}</small>
-                          </span>
-                        </button>
-                        <div className="item-actions">
-                          <button
-                            className="icon-action"
-                            type="button"
-                            aria-label={`Move ${view.title} up`}
-                            disabled={index === 0}
-                            onClick={() => moveView(index, -1)}
-                          >
-                            <ArrowUp size={14} />
-                          </button>
-                          <button
-                            className="icon-action"
-                            type="button"
-                            aria-label={`Move ${view.title} down`}
-                            disabled={index === document.views.length - 1}
-                            onClick={() => moveView(index, 1)}
-                          >
-                            <ArrowDown size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  {document.views.length > 1 && (
-                    <Button className="view-delete" variant="ghost" size="sm" onClick={removeView}>
-                      <Trash2 size={14} /> Delete current view
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-              <Card>
-                <div className="view-heading">
-                  <div>
-                    <h2>{currentView?.title || 'View cards'}</h2>
-                    <p className="card-description">Drag to arrange, or use the move buttons.</p>
-                  </div>
-                  <Badge>{plural(cards.length, 'card')}</Badge>
+                        Move view earlier
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        disabled={
+                          document.views.findIndex((view) => view.id === viewId) ===
+                          document.views.length - 1
+                        }
+                        onClick={() => {
+                          moveView(
+                            document.views.findIndex((view) => view.id === viewId),
+                            1,
+                          );
+                          setViewActionsOpen(false);
+                        }}
+                      >
+                        Move view later
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        disabled={document.views.length < 2}
+                        onClick={() => {
+                          removeView();
+                          setViewActionsOpen(false);
+                        }}
+                      >
+                        Delete view
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-                <CardContent>
-                  <div className="list-stack">
-                    {cards.length ? (
-                      cards.map(cardItem)
-                    ) : (
-                      <div className="inspector-empty" style={{ minHeight: 110 }}>
-                        <div>
-                          <Cloud size={22} />
-                          <p>No cards yet. Add your first device or home information card.</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <div className="add-row">
-                    <select
-                      className="native-select"
-                      aria-label="New card type"
-                      value={newCardType}
-                      onChange={(event) => setNewCardType(event.target.value as CardConfig['type'])}
-                    >
-                      {cardKinds.map((kind) => (
-                        <option key={kind} value={kind}>
-                          {kind === 'pstryk'
-                            ? 'Pstryk energy'
-                            : kind[0]?.toUpperCase() + kind.slice(1)}
-                        </option>
-                      ))}
-                    </select>
-                    <Button onClick={addCard}>
-                      <Plus size={15} /> Add card
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="builder-inspector">
-                <CardHeader>
-                  <div>
-                    <CardTitle>
-                      {selected.type === 'view'
-                        ? 'View settings'
-                        : selected.type === 'badge'
-                          ? 'Badge inspector'
-                          : 'Card inspector'}
-                    </CardTitle>
-                    <CardDescription>Changes update the draft as you edit.</CardDescription>
-                  </div>
-                  {selected.type !== 'view' && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label="Close inspector"
-                      onClick={() => setSelected({ type: 'view' })}
-                    >
-                      <X size={15} />
-                    </Button>
-                  )}
-                </CardHeader>
-                <CardContent>{renderInspector()}</CardContent>
-              </Card>
-            </div>
-            <div className="json-actions">
-              <Button onClick={() => void save()} disabled={!dirty || busy}>
-                <Save size={15} /> {busy ? 'Saving…' : 'Save and apply'}
-              </Button>
-              <Button variant="outline" disabled={!dirty || busy} onClick={discard}>
-                <RotateCcw size={14} /> Discard changes
-              </Button>
-              <span className="helper">The tablet keeps its current automatic layout.</span>
-            </div>
-            <section style={{ marginTop: 26 }} aria-label="Tablet access">
-              {renderAccess()}
+                <Button className="canvas-tool" variant="ghost" size="sm" onClick={addBadge}>
+                  <Plus size={15} /> Temperature badge
+                </Button>
+              </div>
+              <PreviewFrame
+                document={document}
+                viewId={viewId}
+                generation={draftGeneration}
+                refreshToken={0}
+                active={tab === 'dashboard'}
+                onEditorMessage={handlePreviewMessage}
+              />
+              <div className="canvas-add-card">
+                <Button variant="outline" onClick={() => setCardChooserOpen(true)}>
+                  <Plus size={16} /> Add card
+                </Button>
+              </div>
             </section>
           </TabsContent>
-          <TabsContent value="preview">
-            <Card>
-              <CardHeader>
-                <div>
-                  <CardTitle>Tablet preview</CardTitle>
-                  <CardDescription>
-                    Uses the current unsaved builder draft and a read-only Home Assistant snapshot.
-                  </CardDescription>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => window.dispatchEvent(new Event('everdash-preview-refresh'))}
-                >
-                  <RotateCcw size={14} /> Refresh preview
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <PreviewFrame document={document} active={tab === 'preview'} />
-              </CardContent>
-            </Card>
-          </TabsContent>
+          <TabsContent value="devices">{renderAccess()}</TabsContent>
           <TabsContent value="json">
             <Card>
               <CardHeader>
@@ -1624,8 +1636,88 @@ function AdminApp() {
           </Dialog.Portal>
         </Dialog.Root>
       )}
-      <Sheet open={inspectorOpen} onOpenChange={setInspectorOpen} title="Inspector">
+      <Dialog.Root open={cardChooserOpen} onOpenChange={setCardChooserOpen}>
+        <Dialog.Portal>
+          <Dialog.Backdrop className="sheet-backdrop" />
+          <Dialog.Popup className="confirm-dialog card-chooser">
+            <Dialog.Title className="card-title">Add a card</Dialog.Title>
+            <p className="confirm-description">
+              Choose what to add to {currentView?.title || 'this view'}.
+            </p>
+            <div className="card-kind-grid">
+              {cardKinds.map((kind) => {
+                const IconChoice =
+                  kind === 'light'
+                    ? Lightbulb
+                    : kind === 'outlet'
+                      ? Plug
+                      : kind === 'climate'
+                        ? Thermometer
+                        : kind === 'weather'
+                          ? CloudSun
+                          : Zap;
+                return (
+                  <Button
+                    key={kind}
+                    type="button"
+                    variant="outline"
+                    className="card-kind-choice"
+                    onClick={() => {
+                      setCardChooserOpen(false);
+                      addCard(kind);
+                    }}
+                  >
+                    <IconChoice size={22} aria-hidden="true" />
+                    <span>
+                      {kind === 'pstryk' ? 'Pstryk energy' : kind[0].toUpperCase() + kind.slice(1)}
+                    </span>
+                  </Button>
+                );
+              })}
+            </div>
+            <div className="confirm-actions">
+              <Dialog.Close className="button button-outline">Cancel</Dialog.Close>
+            </div>
+          </Dialog.Popup>
+        </Dialog.Portal>
+      </Dialog.Root>
+      <Sheet
+        open={inspectorOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            cancelInspector();
+          }
+        }}
+        title={
+          cardDraft
+            ? cardDraft.mode === 'add'
+              ? 'Add card'
+              : 'Edit card'
+            : badgeDraft
+              ? badgeDraft.mode === 'add'
+                ? 'Add temperature badge'
+                : 'Edit temperature badge'
+              : 'View settings'
+        }
+        onBack={
+          cardDraft?.mode === 'add'
+            ? () => {
+                setCardDraft(null);
+                setInspectorOpen(false);
+                setCardChooserOpen(true);
+              }
+            : undefined
+        }
+      >
         <div className="form-stack">{renderInspector()}</div>
+        <div className="inspector-actions">
+          <Button variant="outline" onClick={cancelInspector}>
+            Cancel
+          </Button>
+          <Button onClick={commitInspector}>
+            {cardDraft?.mode === 'add' || badgeDraft?.mode === 'add' ? 'Add' : 'Done'}
+          </Button>
+        </div>
       </Sheet>
       {jsonExitTarget && (
         <Dialog.Root open onOpenChange={(open) => !open && confirmJsonExit(false)}>
@@ -1647,61 +1739,171 @@ function AdminApp() {
           </Dialog.Portal>
         </Dialog.Root>
       )}
-      <footer className="workspace footer-note">
-        EverDash keeps your schema version 1 document compatible with the existing iPad dashboard.
-      </footer>
     </div>
   );
 }
 
-function Topbar() {
+function Topbar({
+  tab,
+  onTabChange,
+  dirty,
+  configured,
+  busy,
+  onSave,
+  onDiscard,
+  onSettings,
+  onJson,
+  onRestore,
+  restoreAvailable,
+}: {
+  tab: AdminTab;
+  onTabChange: (tab: AdminTab) => void;
+  dirty: boolean;
+  configured: boolean;
+  busy: boolean;
+  onSave: () => void;
+  onDiscard: () => void;
+  onSettings: () => void;
+  onJson: () => void;
+  onRestore: () => void;
+  restoreAvailable: boolean;
+}) {
+  const [actionsOpen, setActionsOpen] = useState(false);
+
   return (
     <header className="topbar">
       <div className="brand">
-        <div className="brand-mark">
-          <Home size={20} />
-        </div>
         <div className="brand-copy">
           <strong>EverDash</strong>
-          <span>Home Assistant workspace</span>
         </div>
       </div>
-      <a
-        className="button button-ghost button-sm"
-        href="https://github.com/beniaminrychter/everdash"
-        target="_blank"
-        rel="noreferrer"
-      >
-        EverDash project <ExternalLink size={13} />
-      </a>
+      <nav className="editor-navigation" aria-label="EverDash sections">
+        <Button
+          variant="ghost"
+          className="navigation-button"
+          aria-current={tab === 'dashboard' ? 'page' : undefined}
+          onClick={() => onTabChange('dashboard')}
+        >
+          Dashboard
+        </Button>
+        <Button
+          variant="ghost"
+          className="navigation-button"
+          aria-current={tab === 'devices' ? 'page' : undefined}
+          onClick={() => onTabChange('devices')}
+        >
+          Devices
+        </Button>
+      </nav>
+      <div className="topbar-actions">
+        <span className={`save-state ${dirty ? 'dirty' : ''}`} aria-live="polite">
+          <span className={`status-dot ${dirty ? 'pending' : ''}`} />
+          {dirty ? 'Unsaved changes' : configured ? 'All changes saved' : 'Setup not saved yet'}
+        </span>
+        <Button onClick={onSave} disabled={!dirty || busy}>
+          <Save size={15} /> {busy ? 'Saving…' : 'Save'}
+        </Button>
+        <DropdownMenu modal={false} open={actionsOpen} onOpenChange={setActionsOpen}>
+          <DropdownMenuTrigger
+            className="button button-outline button-icon editor-overflow-trigger"
+            aria-label="More dashboard actions"
+          >
+            <MoreHorizontal size={18} />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              disabled={!dirty || busy}
+              onClick={() => {
+                setActionsOpen(false);
+                onDiscard();
+              }}
+            >
+              Discard changes
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                setActionsOpen(false);
+                onSettings();
+              }}
+            >
+              Dashboard settings
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                setActionsOpen(false);
+                onJson();
+              }}
+            >
+              JSON import / export
+            </DropdownMenuItem>
+            {restoreAvailable && (
+              <DropdownMenuItem
+                onClick={() => {
+                  setActionsOpen(false);
+                  onRestore();
+                }}
+              >
+                Restore previous version
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </header>
   );
 }
 
-function PreviewFrame({ document, active }: { document: DashboardDocument; active: boolean }) {
+function PreviewFrame({
+  document,
+  viewId,
+  generation,
+  refreshToken,
+  active,
+  onEditorMessage,
+}: {
+  document: DashboardDocument;
+  viewId: string;
+  generation: number;
+  refreshToken: number;
+  active: boolean;
+  onEditorMessage: (message: unknown) => void;
+}) {
   const [frameReady, setFrameReady] = useState(false);
   const [error, setError] = useState('');
   const [frame, setFrame] = useState<HTMLIFrameElement | null>(null);
+  const [frameHeight, setFrameHeight] = useState(720);
+  const requestSequence = useRef(0);
   const sendDraft = useCallback(async () => {
     if (!frame?.contentWindow || !frameReady || !active) {
       return;
     }
+    const sequence = ++requestSequence.current;
     try {
       const result = await api.preview(document);
+      if (sequence !== requestSequence.current) {
+        return;
+      }
       frame.contentWindow.postMessage(
         {
           type: 'everdash.preview',
           nonce: previewNonce,
           config: result.config,
           states: result.states,
+          forecasts: result.forecasts,
+          generation,
+          viewId,
+          refreshToken,
+          editor: true,
         },
         '*',
       );
       setError('');
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Preview data could not be loaded.');
+      if (sequence === requestSequence.current) {
+        setError(error instanceof Error ? error.message : 'Dashboard data could not be loaded.');
+      }
     }
-  }, [active, document, frame, frameReady]);
+  }, [active, document, frame, frameReady, generation, refreshToken, viewId]);
   useEffect(() => {
     if (frameReady && active) {
       void sendDraft();
@@ -1716,15 +1918,31 @@ function PreviewFrame({ document, active }: { document: DashboardDocument; activ
         return;
       }
       const data = event.data as { type?: unknown; nonce?: unknown };
-      if (data.type !== 'everdash.preview.ready' || data.nonce !== previewNonce) {
+      if (data.nonce !== previewNonce) {
         return;
       }
-      frame?.contentWindow?.postMessage({ type: 'everdash.preview.ack', nonce: previewNonce }, '*');
-      setFrameReady(true);
+      if (data.type === 'everdash.preview.ready') {
+        frame?.contentWindow?.postMessage(
+          { type: 'everdash.preview.ack', nonce: previewNonce },
+          '*',
+        );
+        setFrameReady(true);
+        return;
+      }
+      if (data.type === 'everdash.preview.size') {
+        const height = (data as { height?: unknown }).height;
+        if (typeof height === 'number' && Number.isFinite(height)) {
+          setFrameHeight(Math.max(400, Math.min(5000, height)));
+        }
+        return;
+      }
+      if (data.type?.toString().startsWith('everdash.editor.')) {
+        onEditorMessage(event.data);
+      }
     };
     window.addEventListener('message', receive);
     return () => window.removeEventListener('message', receive);
-  }, [frame]);
+  }, [frame, onEditorMessage]);
   useEffect(() => {
     const refresh = () => void sendDraft();
     window.addEventListener('everdash-preview-refresh', refresh);
@@ -1740,8 +1958,9 @@ function PreviewFrame({ document, active }: { document: DashboardDocument; activ
       )}
       <iframe
         ref={setFrame}
-        title="Read-only EverDash tablet preview"
+        title="EverDash dashboard editor canvas"
         className="preview-frame"
+        style={{ height: frameHeight }}
         src={`preview/?nonce=${encodeURIComponent(previewNonce)}&parentOrigin=${encodeURIComponent(window.location.origin)}`}
         sandbox="allow-scripts"
       />

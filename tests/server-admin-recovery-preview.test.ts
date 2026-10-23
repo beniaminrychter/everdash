@@ -49,7 +49,21 @@ test('management can replace damaged config through a validated recovery save', 
 
 test('preview endpoint validates the draft and returns only its configured states', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'everdash-preview-'));
-  let commands = 0;
+  let deviceCommands = 0;
+  const forecastRequests: unknown[] = [];
+  const previewDocument = {
+    schemaVersion: 1,
+    views: [
+      {
+        id: 'home',
+        title: 'Home',
+        cards: [
+          { type: 'light', entity: 'light.kitchen' },
+          { type: 'weather', entity: 'weather.home' },
+        ],
+      },
+    ],
+  };
   const app = await buildApp(
     {
       config: new ConfigRepository({ directory }),
@@ -60,9 +74,20 @@ test('preview endpoint validates the draft and returns only its configured state
         getStates: async () => [
           { entity_id: 'light.kitchen', state: 'on', attributes: { friendly_name: 'Kitchen' } },
           { entity_id: 'light.private', state: 'off', attributes: { friendly_name: 'Private' } },
+          { entity_id: 'weather.home', state: 'sunny', attributes: { friendly_name: 'Home' } },
         ],
-        callService: async () => {
-          commands++;
+        callService: async (domain, service, data) => {
+          if (domain === 'weather' && service === 'get_forecasts') {
+            forecastRequests.push(data);
+            return {
+              service_response: {
+                'weather.home': {
+                  forecast: [{ datetime: '2026-10-20T12:00:00Z', temperature: 18 }],
+                },
+              },
+            };
+          }
+          deviceCommands++;
           return null;
         },
       },
@@ -75,14 +100,18 @@ test('preview endpoint validates the draft and returns only its configured state
       method: 'POST',
       url: '/api/manage/preview',
       headers,
-      payload: { config: replacement },
+      payload: { config: previewDocument },
     });
     assert.equal(response.statusCode, 200);
     assert.deepEqual(
       response.json().states.map((item: { entity_id: string }) => item.entity_id),
-      ['light.kitchen'],
+      ['light.kitchen', 'weather.home'],
     );
-    assert.equal(commands, 0);
+    assert.deepEqual(response.json().forecasts, {
+      'weather.home': [{ datetime: '2026-10-20T12:00:00Z', temperature: 18 }],
+    });
+    assert.deepEqual(forecastRequests, [{ entity_id: 'weather.home', type: 'hourly' }]);
+    assert.equal(deviceCommands, 0);
     assert.equal(
       (
         await app.inject({

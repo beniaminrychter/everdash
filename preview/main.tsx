@@ -10,12 +10,14 @@ import { DashboardPicker } from '../src/features/dashboard/components/DashboardP
 import { parseEntities, resolveDashboard } from '../src/features/dashboard/data/discovery';
 import { SensorBadges } from '../src/features/sensors/components/SensorBadges/SensorBadges';
 import styles from './Preview.module.css';
-import '../src/app/App.module.css';
 
 interface PreviewSnapshot {
   config: DashboardDocument;
   states: unknown[];
+  forecasts: Record<string, readonly unknown[]>;
   now: number;
+  generation: number;
+  editor: boolean;
 }
 
 const previewNonce = new URLSearchParams(window.location.search).get('nonce');
@@ -39,6 +41,10 @@ function Preview() {
         nonce?: unknown;
         config?: unknown;
         states?: unknown;
+        forecasts?: unknown;
+        viewId?: unknown;
+        generation?: unknown;
+        editor?: unknown;
       };
       if (data.type === 'everdash.preview.ack' && data.nonce === previewNonce) {
         window.clearInterval(readyTimer);
@@ -47,14 +53,31 @@ function Preview() {
       if (
         data.type !== 'everdash.preview' ||
         data.nonce !== previewNonce ||
-        !Array.isArray(data.states)
+        !Array.isArray(data.states) ||
+        typeof data.generation !== 'number'
       ) {
         return;
       }
       const validation = validateDashboard(data.config);
       if (validation.ok) {
-        setSnapshot({ config: validation.document, states: data.states, now: Date.now() });
-        setSelectedView(validation.document.views[0]?.id ?? '');
+        const forecasts =
+          typeof data.forecasts === 'object' && data.forecasts !== null
+            ? (data.forecasts as Record<string, readonly unknown[]>)
+            : {};
+        setSnapshot({
+          config: validation.document,
+          states: data.states,
+          forecasts,
+          now: Date.now(),
+          generation: data.generation,
+          editor: data.editor === true,
+        });
+        setSelectedView(
+          typeof data.viewId === 'string' &&
+            validation.document.views.some((view) => view.id === data.viewId)
+            ? data.viewId
+            : (validation.document.views[0]?.id ?? ''),
+        );
       }
     };
     window.addEventListener('message', receive);
@@ -69,6 +92,25 @@ function Preview() {
       window.removeEventListener('message', receive);
     };
   }, []);
+
+  useEffect(() => {
+    if (!previewNonce || window.parent === window || !snapshot) {
+      return;
+    }
+    const reportHeight = () =>
+      window.parent.postMessage(
+        {
+          type: 'everdash.preview.size',
+          nonce: previewNonce,
+          height: document.documentElement.scrollHeight,
+        },
+        '*',
+      );
+    reportHeight();
+    const observer = new ResizeObserver(reportHeight);
+    observer.observe(document.documentElement);
+    return () => observer.disconnect();
+  }, [snapshot, selectedView]);
 
   const model = useMemo(() => {
     if (!snapshot) {
@@ -95,10 +137,11 @@ function Preview() {
     return { config: validation.config as AppConfig, resolved, readings, devices, climates };
   }, [snapshot]);
 
-  if (!model) {
+  const currentSnapshot = snapshot;
+  if (!model || !currentSnapshot) {
     return (
       <main class={styles.mainContent}>
-        <p>Open the Preview tab to load a read-only snapshot.</p>
+        <p>Open the dashboard builder to load its current view.</p>
       </main>
     );
   }
@@ -111,32 +154,64 @@ function Preview() {
       </main>
     );
   }
+  const postEditorAction = (
+    type: 'card.edit' | 'card.delete' | 'card.move' | 'badge.edit' | 'badge.delete' | 'view.select',
+    index?: number,
+    offset?: -1 | 1,
+    viewId?: string,
+  ) => {
+    window.parent.postMessage(
+      {
+        type: `everdash.editor.${type}`,
+        nonce: previewNonce,
+        generation: currentSnapshot.generation,
+        viewId: viewId ?? view.id,
+        ...(index === undefined ? {} : { index }),
+        ...(offset === undefined ? {} : { offset }),
+      },
+      '*',
+    );
+  };
 
   return (
     <LanguageProvider language="en">
       <main class={styles.mainContent}>
-        <header class={styles.dashboardHeader}>
-          <DashboardPicker
-            pages={model.config.views}
-            selected={view.id}
-            onSelect={setSelectedView}
-          />
-          <span aria-label="Read-only preview">Preview · read only</span>
-        </header>
-        <SensorBadges badges={view.badges} readings={model.readings} online />
+        {window.parent === window && (
+          <header class={styles.dashboardHeader}>
+            <DashboardPicker
+              pages={model.config.views}
+              selected={view.id}
+              onSelect={setSelectedView}
+            />
+            <span aria-label="Read-only preview">Preview · read only</span>
+          </header>
+        )}
+        <SensorBadges
+          badges={view.badges}
+          readings={model.readings}
+          online
+          editorMode={currentSnapshot.editor}
+          onEdit={(index) => currentSnapshot.editor && postEditorAction('badge.edit', index)}
+          onDelete={(index) => currentSnapshot.editor && postEditorAction('badge.delete', index)}
+        />
         <DashboardCards
           view={view}
           devices={model.devices}
           climates={model.climates}
           onClimateChange={() => undefined}
           readings={model.readings}
-          forecasts={{}}
+          forecasts={currentSnapshot.forecasts}
           online
-          now={snapshot?.now ?? 0}
+          now={currentSnapshot.now}
           timeZone={model.config.timeZone}
           onToggle={() => undefined}
           onDetails={() => undefined}
-          readOnly
+          editorMode={currentSnapshot.editor}
+          onEditorAction={(action, index, offset) =>
+            currentSnapshot.editor &&
+            postEditorAction(action === 'move' ? 'card.move' : `card.${action}`, index, offset)
+          }
+          readOnly={!currentSnapshot.editor}
         />
       </main>
     </LanguageProvider>

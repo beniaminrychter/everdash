@@ -8,15 +8,35 @@ const number = (value: unknown): number | null => {
   const result = Number(value);
   return Number.isFinite(result) ? result : null;
 };
+
+function formatTimestamp(value: string, locale: string) {
+  if (!/^\d{4}-\d{2}-\d{2}T/.test(value)) {
+    return null;
+  }
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) {
+    return null;
+  }
+  return new Date(timestamp).toLocaleString(locale, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 export function sensorValue(entity: Entity | undefined, locale = 'en-GB') {
   if (!hasState(entity)) {
     return { available: false, value: 'Unavailable', unit: '' };
   }
   const numeric = number(entity.state);
+  const timestamp = formatTimestamp(entity.state, locale);
   let value =
-    numeric === null
+    timestamp ??
+    (numeric === null
       ? entity.state.replace(/_/g, ' ')
-      : numeric.toLocaleString(locale, { maximumFractionDigits: 2 });
+      : numeric.toLocaleString(locale, { maximumFractionDigits: 2 }));
   if (
     numeric !== null &&
     (entity.attributes.device_class === 'temperature' ||

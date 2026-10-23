@@ -100,7 +100,11 @@ export const api = {
       body: JSON.stringify({}),
     }),
   preview: (config: DashboardDocument) =>
-    request<{ config: DashboardDocument; states: unknown[] }>('api/manage/preview', {
+    request<{
+      config: DashboardDocument;
+      states: unknown[];
+      forecasts: Record<string, readonly unknown[]>;
+    }>('api/manage/preview', {
       method: 'POST',
       body: JSON.stringify({ config }),
     }),

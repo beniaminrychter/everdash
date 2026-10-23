@@ -23,7 +23,85 @@ interface Props {
   onToggle: (id: string) => void;
   onDetails: (id: string) => void;
   readOnly?: boolean;
+  editorMode?: boolean;
+  onEditorAction?: (action: 'edit' | 'delete' | 'move', index: number, offset?: -1 | 1) => void;
 }
+
+function ActionIcon({ name }: { name: 'edit' | 'delete' | 'up' | 'down' }) {
+  return (
+    <svg
+      class={styles.actionIcon}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      {name === 'edit' ? (
+        <>
+          <path d="M12 20h9" />
+          <path d="m16.5 3.5 4 4L8 20H4v-4z" />
+        </>
+      ) : name === 'delete' ? (
+        <>
+          <path d="M3 6h18M8 6V4h8v2m3 0-1 15H6L5 6" />
+          <path d="M10 11v6m4-6v6" />
+        </>
+      ) : name === 'up' ? (
+        <path d="m6 14 6-6 6 6" />
+      ) : (
+        <path d="m6 10 6 6 6-6" />
+      )}
+    </svg>
+  );
+}
+
+function EditorFooter({
+  index,
+  count,
+  name,
+  onAction,
+}: {
+  index: number;
+  count: number;
+  name: string;
+  onAction?: (action: 'edit' | 'delete' | 'move', index: number, offset?: -1 | 1) => void;
+}) {
+  return (
+    <fieldset class={styles.editorFooter} aria-label={`${name} card actions`}>
+      <button type="button" onClick={() => onAction?.('edit', index)} aria-label={`Edit ${name}`}>
+        <ActionIcon name="edit" /> Edit
+      </button>
+      <button
+        type="button"
+        class={styles.deleteAction}
+        onClick={() => onAction?.('delete', index)}
+        aria-label={`Delete ${name}`}
+      >
+        <ActionIcon name="delete" /> Delete
+      </button>
+      <button
+        type="button"
+        onClick={() => onAction?.('move', index, -1)}
+        disabled={index === 0}
+        aria-label={`Move ${name} earlier`}
+      >
+        <ActionIcon name="up" />
+      </button>
+      <button
+        type="button"
+        onClick={() => onAction?.('move', index, 1)}
+        disabled={index === count - 1}
+        aria-label={`Move ${name} later`}
+      >
+        <ActionIcon name="down" />
+      </button>
+    </fieldset>
+  );
+}
+
 export function DashboardCards({
   view,
   devices,
@@ -37,6 +115,8 @@ export function DashboardCards({
   onToggle,
   onDetails,
   readOnly = false,
+  editorMode = false,
+  onEditorAction,
 }: Props) {
   const { t } = useI18n();
   const reading = (id: string | undefined) => (id ? readings[id] : undefined);
@@ -48,17 +128,27 @@ export function DashboardCards({
             <div class={styles.accessoryGrid} data-testid="accessory-grid">
               {group.cards.map((card, cardIndex) => {
                 const device = devices.find((candidate) => candidate.id === card.entity);
+                const index = view.cards.indexOf(card);
                 if (!device) {
                   return null;
                 }
                 return (
-                  <AccessoryCard
-                    key={cardIndex}
-                    device={{ ...device, icon: card.icon, name: card.name, room: view.title }}
-                    disabled={!online || readOnly}
-                    onToggle={onToggle}
-                    onDetails={onDetails}
-                  />
+                  <div class={editorMode ? styles.editorItem : undefined} key={cardIndex}>
+                    <AccessoryCard
+                      device={{ ...device, icon: card.icon, name: card.name, room: view.title }}
+                      disabled={!online || (readOnly && !editorMode)}
+                      onToggle={editorMode ? () => undefined : onToggle}
+                      onDetails={editorMode ? () => undefined : onDetails}
+                    />
+                    {editorMode && (
+                      <EditorFooter
+                        index={index}
+                        count={view.cards.length}
+                        name={card.name}
+                        onAction={onEditorAction}
+                      />
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -69,7 +159,7 @@ export function DashboardCards({
               const titleId = `widget-${encodeURIComponent(view.id)}-${groupIndex}-${cardIndex}`;
               return (
                 <div
-                  class={card.type === 'weather' ? styles.wide : undefined}
+                  class={`${card.type === 'weather' ? styles.wide : ''} ${editorMode ? styles.editorItem : ''}`}
                   key={cardIndex}
                   data-card={card.type}
                   data-card-entity={card.entity}
@@ -92,7 +182,7 @@ export function DashboardCards({
                       title={card.name}
                       titleId={titleId}
                       online={online}
-                      disabled={readOnly}
+                      disabled={readOnly && !editorMode}
                       climate={
                         climates.find((item) => item.entityId === card.entity) ||
                         createClimate({
@@ -101,9 +191,11 @@ export function DashboardCards({
                           temperatureUnit: card.temperatureUnit || '°C',
                         })
                       }
-                      onChange={(change, debounceMs) =>
-                        onClimateChange(card.entity, change, debounceMs)
-                      }
+                      onChange={(change, debounceMs) => {
+                        if (!editorMode) {
+                          onClimateChange(card.entity, change, debounceMs);
+                        }
+                      }}
                     />
                   ) : (
                     <WeatherCard
@@ -114,6 +206,14 @@ export function DashboardCards({
                       timeZone={timeZone}
                       online={online}
                       now={now}
+                    />
+                  )}
+                  {editorMode && (
+                    <EditorFooter
+                      index={view.cards.indexOf(card)}
+                      count={view.cards.length}
+                      name={card.name}
+                      onAction={onEditorAction}
                     />
                   )}
                 </div>

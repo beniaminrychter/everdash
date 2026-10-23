@@ -2,6 +2,39 @@ import type { CardConfig, DashboardDocument, ViewConfig } from '../../src/shared
 
 export type CardKind = CardConfig['type'];
 
+export interface CardEditorMessage {
+  type: `everdash.editor.card.${'edit' | 'delete' | 'move'}`;
+  nonce: string;
+  generation: number;
+  viewId: string;
+  index: number;
+  offset?: -1 | 1;
+}
+
+export function isCardEditorMessage(
+  value: unknown,
+  nonce: string,
+  generation: number,
+  viewId: string,
+  cardCount: number,
+): value is CardEditorMessage {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const message = value as Partial<CardEditorMessage>;
+  return (
+    typeof message.type === 'string' &&
+    /^everdash\.editor\.card\.(edit|delete|move)$/.test(message.type) &&
+    message.nonce === nonce &&
+    message.generation === generation &&
+    message.viewId === viewId &&
+    Number.isInteger(message.index) &&
+    message.index! >= 0 &&
+    message.index! < cardCount &&
+    (message.type !== 'everdash.editor.card.move' || message.offset === -1 || message.offset === 1)
+  );
+}
+
 export function moveItem<T>(items: readonly T[], index: number, offset: -1 | 1): T[] {
   const destination = index + offset;
   if (index < 0 || index >= items.length || destination < 0 || destination >= items.length) {
@@ -37,6 +70,14 @@ export function createCard(type: CardKind): CardConfig {
       throw new Error(`Unsupported card type: ${String(type)}`);
     }
   }
+}
+
+export function createConfiguredCard(type: CardKind, entity: string): CardConfig {
+  const domain = type === 'outlet' ? 'switch' : type === 'pstryk' ? 'sensor' : type;
+  if (!new RegExp(`^${domain}\\.[a-z0-9_]+$`).test(entity)) {
+    throw new Error(`Choose a valid ${domain} entity before adding the card.`);
+  }
+  return { ...createCard(type), entity } as CardConfig;
 }
 
 export function toDocument(value: DashboardDocument): DashboardDocument {

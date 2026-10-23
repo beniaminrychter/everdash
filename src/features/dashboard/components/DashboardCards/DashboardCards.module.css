@@ -35,3 +35,64 @@
 .wide {
   grid-column: 1 / -1;
 }
+
+.editorItem {
+  min-width: 0;
+}
+
+.editorFooter {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 3px 5px 0;
+  color: var(--muted);
+}
+
+.editorFooter button + button {
+  margin-left: 4px;
+}
+
+.editorFooter button {
+  display: inline-flex;
+  align-items: center;
+  min-width: 34px;
+  min-height: 34px;
+  border: 0;
+  border-radius: 7px;
+  padding: 5px 8px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+}
+
+.actionIcon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  margin-right: 6px;
+}
+
+.editorFooter button:hover:not(:disabled),
+.editorFooter button:focus-visible {
+  color: var(--text);
+  background: var(--surface-strong);
+}
+
+.editorFooter button:disabled {
+  opacity: 0.35;
+}
+
+.deleteAction {
+  margin-right: auto;
+}
+
+@media (pointer: coarse) {
+  .editorFooter button {
+    min-width: 40px;
+    min-height: 44px;
+  }
+}

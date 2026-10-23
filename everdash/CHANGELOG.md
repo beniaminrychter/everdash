@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1
+
+- Refine the Home Assistant dashboard builder with shadcn controls, toast feedback, and clearer card and badge actions.
+- Preserve tablet card rendering in the editor preview and improve weather and sensor reading updates.
+
 ## 0.2.0
 
 - Replace the Home Assistant JSON-first screen with a visual builder for views, cards, badges, and dashboard settings; keep validated JSON editing optional.
