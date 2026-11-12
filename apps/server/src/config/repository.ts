@@ -1,17 +1,6 @@
-import {
-  closeSync,
-  chmodSync,
-  existsSync,
-  fsyncSync,
-  mkdirSync,
-  openSync,
-  readFileSync,
-  renameSync,
-  rmSync,
-  statSync,
-  writeFileSync,
-} from 'node:fs';
-import { dirname, join } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { ensurePrivateDirectory, writeAtomicJson } from '../persistence/atomic-json';
 import type { DashboardDocument } from '../../../../packages/contracts/src/config/types';
 import { validateDashboard } from '../../../../packages/contracts/src/config/validate';
 import type { DashboardValidation } from '../../../../packages/contracts/src/config/validate';
@@ -225,11 +214,7 @@ export class ConfigRepository extends EventTarget {
   }
 
   private ensureDirectory() {
-    mkdirSync(this.options.directory, { recursive: true, mode: 0o700 });
-    if ((statSync(this.options.directory).mode & 0o077) !== 0) {
-      // Tighten a pre-existing directory that may have been created with broad permissions.
-      chmodSync(this.options.directory, 0o700);
-    }
+    ensurePrivateDirectory(this.options.directory);
   }
 
   private writeRecovery(document: DashboardDocument) {
@@ -242,31 +227,10 @@ export class ConfigRepository extends EventTarget {
   }
 
   private writeAtomic(path: string, document: DashboardDocument, faultPoint?: ConfigFaultPoint) {
-    const temporary = `${path}.${process.pid}.${Math.random().toString(16).slice(2)}.tmp`;
-    let fileDescriptor: number | undefined;
-    try {
-      const serialized = `${JSON.stringify(document, null, 2)}\n`;
-      fileDescriptor = openSync(temporary, 'wx', 0o600);
-      writeFileSync(fileDescriptor, serialized, 'utf8');
-      fsyncSync(fileDescriptor);
-      closeSync(fileDescriptor);
-      fileDescriptor = undefined;
-      if (faultPoint) {
-        this.options.fault?.(faultPoint);
-      }
-      renameSync(temporary, path);
-      const directoryDescriptor = openSync(dirname(path), 'r');
-      try {
-        fsyncSync(directoryDescriptor);
-      } finally {
-        closeSync(directoryDescriptor);
-      }
-    } catch (error) {
-      if (fileDescriptor !== undefined) {
-        closeSync(fileDescriptor);
-      }
-      rmSync(temporary, { force: true });
-      throw error;
-    }
+    writeAtomicJson(
+      path,
+      document,
+      faultPoint ? () => this.options.fault?.(faultPoint) : undefined,
+    );
   }
 }
