@@ -13,7 +13,7 @@ import {
 const input = {
   origin: 'https://ha.example',
   clientId: 'https://dash.example/',
-  redirectUri: 'https://dash.example/api/auth/callback',
+  redirectUri: 'https://dash.example/api/manage/auth/callback',
   intent: 'login' as const,
 };
 
@@ -73,13 +73,17 @@ test('admin sessions enforce absolute expiry, origin, generation and local logou
 
 test('cookies have scoped security attributes and reject ambiguous or unsafe values', () => {
   const tx = transactionCookie('abc_123', true);
+  const path = /(?:^|; )Path=([^;]+)/.exec(tx)?.[1];
+  assert.ok(path);
+  const callback = '/api/manage/auth/callback';
+  assert.ok(callback === path || callback.startsWith(`${path}/`));
   assert.match(
     tx,
-    /^everdash_oauth=abc_123; Path=\/api\/auth; HttpOnly; SameSite=Lax; Max-Age=600; Secure$/,
+    /^everdash_oauth=abc_123; Path=\/api\/manage\/auth; HttpOnly; SameSite=Lax; Max-Age=600; Secure$/,
   );
   assert.match(
     clearTransactionCookie(true),
-    /^everdash_oauth=; Path=\/api\/auth; HttpOnly; SameSite=Lax; Max-Age=0; Secure$/,
+    /^everdash_oauth=; Path=\/api\/manage\/auth; HttpOnly; SameSite=Lax; Max-Age=0; Secure$/,
   );
   assert.match(
     adminCookie('abc_123', false),

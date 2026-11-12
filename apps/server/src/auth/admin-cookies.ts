@@ -28,11 +28,11 @@ export function transactionCookie(value: string, secure: boolean): string {
   if (!value) {
     throw new Error('Invalid cookie value');
   }
-  return cookie(TRANSACTION_COOKIE, value, '/api/auth', 'Lax', secure, 600);
+  return cookie(TRANSACTION_COOKIE, value, '/api/manage/auth', 'Lax', secure, 600);
 }
 
 export function clearTransactionCookie(secure: boolean): string {
-  return cookie(TRANSACTION_COOKIE, '', '/api/auth', 'Lax', secure, 0);
+  return cookie(TRANSACTION_COOKIE, '', '/api/manage/auth', 'Lax', secure, 0);
 }
 
 export function adminCookie(value: string, secure: boolean): string {
