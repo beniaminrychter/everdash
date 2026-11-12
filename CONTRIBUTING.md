@@ -8,7 +8,7 @@ Thanks for helping make older screens useful again. Please open an issue to disc
 - Run `npm ci` and `npm run dev` for local development.
 - Keep the Safari 12 / iOS 12 target in mind for authored JavaScript, CSS, dependencies, and build output.
 - Keep entity IDs explicit. Do not add fabricated readings, hidden entity discovery, browser-side Home Assistant credentials, or automatic service calls.
-- Place feature components and styles together under their owning `src/features/` directory. Keep shared modules independent of feature code.
+- Place feature components and styles together under their owning `packages/dashboard/src/features/` directory. Keep shared modules independent of feature code.
 
 ## Validation
 

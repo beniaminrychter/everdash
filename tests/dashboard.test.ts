@@ -1,9 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { resolveDashboard, parseEntities } from '../src/features/dashboard/data/discovery';
-import { mapEnergy, powerKilowatts } from '../src/features/energy/data/readings';
-import { mapWeather, parseForecastResponse } from '../src/features/weather/data/forecast';
-import { sensorValue } from '../src/features/sensors/data/readings';
+import {
+  resolveDashboard,
+  parseEntities,
+} from '../packages/dashboard/src/features/dashboard/data/discovery';
+import { mapEnergy, powerKilowatts } from '../packages/dashboard/src/features/energy/data/readings';
+import {
+  mapWeather,
+  parseForecastResponse,
+} from '../packages/dashboard/src/features/weather/data/forecast';
+import { sensorValue } from '../packages/dashboard/src/features/sensors/data/readings';
 import config from './fixtures/dashboard';
 
 const entity = (

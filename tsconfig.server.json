@@ -11,5 +11,5 @@
     "verbatimModuleSyntax": true,
     "types": ["node"]
   },
-  "include": ["server/**/*.ts", "src/shared/config/**/*.ts", "src/shared/ui/iconNames.ts"]
+  "include": ["apps/server/src/**/*.ts", "packages/contracts/src/**/*.ts"]
 }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createSupervisorAccessReader } from '../server/supervisor/access';
+import { createSupervisorAccessReader } from '../apps/server/src/supervisor/access';
 
 test('Supervisor access discovery reports hostname, LAN addresses and active port mappings', async () => {
   const fixtures: Record<string, unknown> = {

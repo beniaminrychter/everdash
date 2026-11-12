@@ -5,9 +5,12 @@ import {
   mapClimate,
   climateCommand,
   stepTemperature,
-} from '../src/features/climate/data/model';
-import { ClimateStore } from '../src/features/climate/data/store';
-import type { ClimateCommand, ClimateApi } from '../src/shared/home-assistant/contracts';
+} from '../packages/dashboard/src/features/climate/data/model';
+import { ClimateStore } from '../packages/dashboard/src/features/climate/data/store';
+import type {
+  ClimateCommand,
+  ClimateApi,
+} from '../packages/contracts/src/home-assistant/contracts';
 
 const binding = {
   entityId: 'climate.ac' as const,

@@ -3,9 +3,9 @@ import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { parseAddOnOptions } from '../server/http/listeners';
-import { buildApp } from '../server/app';
-import { ConfigRepository } from '../server/config/repository';
+import { parseAddOnOptions } from '../apps/server/src/http/listeners';
+import { buildApp } from '../apps/server/src/app';
+import { ConfigRepository } from '../apps/server/src/config/repository';
 
 test('direct HTTPS stays disabled unless explicitly enabled with a valid public origin and TLS material', () => {
   assert.equal(parseAddOnOptions({ direct_enabled: false }).options.directEnabled, false);

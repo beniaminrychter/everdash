@@ -3,9 +3,9 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
-import { createLocalManagementAuthorizer } from '../server/auth/local';
-import { readLocalRuntimeConfig } from '../server/http/local';
-import { createEverDashApps } from '../server/main';
+import { createLocalManagementAuthorizer } from '../apps/server/src/auth/local';
+import { readLocalRuntimeConfig } from '../apps/server/src/http/local';
+import { createEverDashApps } from '../apps/server/src/main';
 
 function authorizeLocalPeer(remoteAddress: string, headers: Record<string, string>) {
   return createLocalManagementAuthorizer({

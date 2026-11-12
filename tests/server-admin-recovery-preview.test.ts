@@ -3,8 +3,8 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { buildApp } from '../server/app';
-import { ConfigRepository } from '../server/config/repository';
+import { buildApp } from '../apps/server/src/app';
+import { ConfigRepository } from '../apps/server/src/config/repository';
 
 const replacement = {
   schemaVersion: 1,

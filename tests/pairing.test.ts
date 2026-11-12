@@ -3,11 +3,11 @@ import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { getIngressUserId } from '../server/auth/ingress';
-import { PairingService } from '../server/auth/pairing';
-import { DeviceRepository } from '../server/auth/devices';
-import { DeviceSessions } from '../server/auth/sessions';
-import { SlidingWindowRateLimiter } from '../server/auth/rate-limit';
+import { getIngressUserId } from '../apps/server/src/auth/ingress';
+import { PairingService } from '../apps/server/src/auth/pairing';
+import { DeviceRepository } from '../apps/server/src/auth/devices';
+import { DeviceSessions } from '../apps/server/src/auth/sessions';
+import { SlidingWindowRateLimiter } from '../apps/server/src/auth/rate-limit';
 
 async function withRepository(
   run: (directory: string, repository: DeviceRepository) => Promise<void>,

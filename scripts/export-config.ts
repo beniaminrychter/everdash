@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { validateDashboard } from '../src/shared/config/validate';
+import { validateDashboard } from '../packages/contracts/src/config/validate';
 
 const sourcePath = resolve(process.argv[2] || '.local/home.config.ts');
 const outputPath = resolve(process.argv[3] || '.local/dashboard.json');

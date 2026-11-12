@@ -89,7 +89,7 @@ The Codex Home Assistant connector is useful for inspecting devices during devel
 
 ## App configuration
 
-The dashboard is stored as a versioned JSON document. Use the visual builder to create views, choose entities, edit card settings, and arrange their order. The **Preview** tab renders the current draft with a read-only Home Assistant snapshot. **Advanced JSON** supports validation, import, and export. Each entity ID remains explicit; the dashboard never guesses controls by friendly name. See [the generic example](examples/dashboard.json) and [JSON Schema](src/shared/config/schema.ts).
+The dashboard is stored as a versioned JSON document. Use the visual builder to create views, choose entities, edit card settings, and arrange their order. The **Preview** tab renders the current draft with a read-only Home Assistant snapshot. **Advanced JSON** supports validation, import, and export. Each entity ID remains explicit; the dashboard never guesses controls by friendly name. See [the generic example](examples/dashboard.json) and [JSON Schema](packages/contracts/src/config/schema.ts).
 
 To migrate a TypeScript dashboard configuration to the versioned JSON format, run:
 
@@ -99,13 +99,13 @@ npm run config:export
 
 Pass source and destination paths when needed: `npm run config:export -- /path/to/home.config.ts /path/to/dashboard.json`. Keep personal dashboards and exports out of the public repository.
 
-Dashboard configuration uses JSON Schema version 1. See the [generic dashboard example](examples/dashboard.json) and [schema](src/shared/config/schema.ts). A dashboard contains `views`; each view has a stable `id`, a `title`, and optionally ordered `badges` and `cards`. Entity IDs are explicit and must match their Home Assistant domains.
+Dashboard configuration uses JSON Schema version 1. See the [generic dashboard example](examples/dashboard.json) and [schema](packages/contracts/src/config/schema.ts). A dashboard contains `views`; each view has a stable `id`, a `title`, and optionally ordered `badges` and `cards`. Entity IDs are explicit and must match their Home Assistant domains.
 
 Supported cards are `light`, `outlet`, `pstryk`, `weather`, and `climate`. Temperature badges use `sensor.*`. Optional root fields are `timeZone`, `sun`, and polling intervals in milliseconds. The validator applies the existing polling and icon defaults, rejects unknown fields and invalid entity IDs, and returns field-level issues.
 
 ### Language
 
-Settings includes **English / Polski**. The choice is saved with dashboard and appearance preferences and survives normal and hard reloads. Existing saved preferences default to English. App labels, accessible names, weather conditions, status messages and errors are translated; configured dashboard/card/badge names and Home Assistant entity names remain as written. Polish uses decimal commas, with one decimal for temperatures and two for energy prices and usage. Translation strings live in `src/shared/i18n/messages.ts`; there is no translation runtime dependency.
+Settings includes **English / Polski**. The choice is saved with dashboard and appearance preferences and survives normal and hard reloads. Existing saved preferences default to English. App labels, accessible names, weather conditions, status messages and errors are translated; configured dashboard/card/badge names and Home Assistant entity names remain as written. Polish uses decimal commas, with one decimal for temperatures and two for energy prices and usage. Translation strings live in `packages/ui/src/i18n/messages.ts`; there is no translation runtime dependency.
 
 The Energy card’s graph button toggles a chart above current price and usage. Its bars are native buttons: select one by touch or keyboard to read the reported price and timestamp in the configured home timezone. Dense schedules scroll inside the chart. A refreshed schedule, closing the chart or going offline clears the selection.
 
@@ -161,20 +161,20 @@ Text selection, touch callouts and visible focus outlines are disabled across th
 | File | Responsibility |
 | --- | --- |
 | `examples/dashboard.json` | Generic starter dashboard using the runtime JSON schema |
-| `src/shared/config/` | JSON contracts, schema, defaults and validation |
-| `admin/` | React/shadcn Home Assistant workspace and visual builder |
+| `packages/contracts/src/config/` | JSON contracts, schema, defaults and validation |
+| `apps/admin/` | React/shadcn Home Assistant workspace and visual builder |
 | `preview/` | Same-origin read-only Preact tablet preview entry |
-| `src/features/dashboard/` | Dashboard composition, source resolution, observation polling and schedules |
-| `src/features/accessories/` | Accessory UI, capability/state mapping, commands and polling |
-| `src/features/climate/` | Climate UI, state/capabilities, optimistic command queue and polling |
-| `src/features/energy/`, `weather/`, `sensors/` | Domain-specific readings, formatting and components |
-| `src/features/settings/` | Settings UI, connected-source details and saved preferences |
-| `src/features/legacy-home/` | Preserved demo-home components, data, and persistence helpers |
-| `src/shared/home-assistant/` | REST client and transport contracts |
-| `src/shared/ui/` | Reusable interface primitives with adjacent CSS Modules |
-| `src/app/App.tsx` | Configured live page and modal composition |
-| `vite.config.ts`, `admin/vite.config.ts`, `vite.preview.config.ts` | Separate tablet, admin, and preview builds |
-| `public/` | Manifest and Home Screen icons |
+| `packages/dashboard/src/features/dashboard/` | Dashboard composition, source resolution, observation polling and schedules |
+| `packages/dashboard/src/features/accessories/` | Accessory UI, capability/state mapping, commands and polling |
+| `packages/dashboard/src/features/climate/` | Climate UI, state/capabilities, optimistic command queue and polling |
+| `packages/dashboard/src/features/energy/`, `weather/`, `sensors/` | Domain-specific readings, formatting and components |
+| `packages/dashboard/src/features/settings/` | Settings UI, connected-source details and saved preferences |
+| `packages/dashboard/src/features/legacy-home/` | Preserved demo-home components, data, and persistence helpers |
+| `packages/dashboard/src/shared/home-assistant/` | REST client and browser-side transport helpers; contracts live in `packages/contracts/src/home-assistant/` |
+| `packages/ui/src/ui/` | Reusable interface primitives with adjacent CSS Modules |
+| `apps/tablet/src/app/App.tsx` | Configured live page and modal composition |
+| `vite.config.ts`, `apps/admin/vite.config.ts`, `vite.preview.config.ts` | Separate tablet, admin, and preview builds |
+| `apps/tablet/public/` | Manifest and Home Screen icons |
 
 ## Quality tools and checks
 

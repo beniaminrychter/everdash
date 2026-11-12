@@ -3,8 +3,8 @@ import test from 'node:test';
 import {
   createHomeAssistantClient,
   createSupervisorHomeAssistant,
-} from '../server/home-assistant/client';
-import { HomeAssistantUpstreamError } from '../server/home-assistant/errors';
+} from '../apps/server/src/home-assistant/client';
+import { HomeAssistantUpstreamError } from '../apps/server/src/home-assistant/errors';
 
 test('uses only the Supervisor API root and server-side bearer credential', async () => {
   let requestUrl = '';

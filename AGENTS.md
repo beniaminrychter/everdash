@@ -8,22 +8,22 @@ The production target is iOS 12 and Safari 12. Keep the app usable on that hardw
 
 ## Source organization
 
-- `src/app/` owns application startup, top-level composition, browser registration, and app-wide hooks. Keep `App.tsx` focused on composition and wiring; move feature rendering and behavior into the owning feature.
-- `src/features/<feature>/components/` owns feature UI. Keep component logic and its CSS Module together, preferably in a component directory such as `components/AccessoryCard/AccessoryCard.tsx` and `AccessoryCard.module.css`.
-- `src/features/<feature>/data/` owns feature-specific models, stores, API-to-view mappings, and domain logic. Put feature hooks in a nearby `hooks/` directory when they are not part of a component.
-- `src/shared/` owns code used by multiple features: UI primitives, Home Assistant transport and transport contracts, cross-feature types, configuration, i18n, and shared low-level helpers. Shared modules must not import from `src/features/`.
-- `server/` owns Node.js persistence, authentication boundaries, Home Assistant transport policy, and HTTP serving. It may import browser-safe contracts from `src/shared/`, but never feature modules or frontend credentials.
+- `apps/tablet/src/app/` owns application startup, top-level composition, browser registration, and app-wide hooks. Keep `App.tsx` focused on composition and wiring; move feature rendering and behavior into the owning feature.
+- `packages/dashboard/src/features/<feature>/components/` owns feature UI. Keep component logic and its CSS Module together, preferably in a component directory such as `components/AccessoryCard/AccessoryCard.tsx` and `AccessoryCard.module.css`.
+- `packages/dashboard/src/features/<feature>/data/` owns feature-specific models, stores, API-to-view mappings, and domain logic. Put feature hooks in a nearby `hooks/` directory when they are not part of a component.
+- `packages/dashboard/src/shared/` owns cross-feature dashboard helpers and transport. `packages/contracts/src/` owns browser-safe configuration, Home Assistant contracts, and cross-boundary types. `packages/ui/src/` owns reusable UI primitives and i18n. Shared modules must not import from `packages/dashboard/src/features/`; contracts and UI must not import dashboard or server.
+- `apps/server/src/` owns Node.js persistence, authentication boundaries, Home Assistant transport policy, and HTTP serving. It may import browser-safe contracts from `packages/contracts/`, but never feature modules or frontend credentials.
 
-The runtime dashboard is versioned JSON validated by `src/shared/config/` and edited through Home Assistant management. Keep entity IDs explicit; do not silently substitute entities by friendly name or invent production readings. The visual selector may use Home Assistant's entity registry to help a person choose IDs, but the saved dashboard must retain each selected ID explicitly.
+The runtime dashboard is versioned JSON validated by `packages/contracts/src/config/` and edited through Home Assistant management. Keep entity IDs explicit; do not silently substitute entities by friendly name or invent production readings. The visual selector may use Home Assistant's entity registry to help a person choose IDs, but the saved dashboard must retain each selected ID explicitly.
 
 The Home Assistant app package lives in `everdash/`; repository and image owner placeholders must remain unreleased until replaced with real public coordinates. Never add a license file without the repository owner's explicit choice. Home Assistant credentials are server-only and must not enter frontend build variables, static files, or test fixtures outside isolated dummy values.
 
 ## Adding or changing a feature
 
-1. Give the feature a focused directory under `src/features/`. Keep its UI, styles, data mapping, state, and behavior under that feature's ownership.
+1. Give the feature a focused directory under `packages/dashboard/src/features/`. Keep its UI, styles, data mapping, state, and behavior under that feature's ownership.
 2. Put each component beside its CSS Module. Avoid files that combine several unrelated components or domain responsibilities. When a file grows to own distinct responsibilities, split those responsibilities into small neighboring modules.
-3. Keep feature-specific parsing and mapping with the feature that owns the data. Put a helper in `src/shared/` only when multiple features use the same behavior and it has no dependency on a feature.
-4. Keep `src/app/App.tsx` as the composition point: it may connect app-wide state and callbacks to features, but feature internals belong near their components and data modules.
+3. Keep feature-specific parsing and mapping with the feature that owns the data. Put a helper in `packages/dashboard/src/shared/` only when multiple features use the same behavior and it has no dependency on a feature.
+4. Keep `apps/tablet/src/app/App.tsx` as the composition point: it may connect app-wide state and callbacks to features, but feature internals belong near their components and data modules.
 5. Keep component props and store/API contracts narrow. Preserve existing Home Assistant polling, cancellation, command ordering, optimistic updates, unavailable states, saved preference keys, and translation behavior unless the task explicitly changes them.
 6. Preserve existing components, including currently unused ones. Remove obsolete non-component code only when references and behavior confirm it is no longer needed; update its consumers and fixtures in the same change.
 7. Update imports, documentation, and relevant existing fixtures when files move. Do not add runtime dependencies without a clear need.

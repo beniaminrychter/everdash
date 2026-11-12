@@ -3,7 +3,7 @@ import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { ConfigRepository } from '../server/config/repository';
+import { ConfigRepository } from '../apps/server/src/config/repository';
 
 const empty = {
   schemaVersion: 1,

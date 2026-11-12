@@ -47,7 +47,7 @@ function inside(x, y) {
   }
   return result;
 }
-mkdirSync('public/icons', { recursive: true });
+mkdirSync('apps/tablet/public/icons', { recursive: true });
 for (const [size, filename] of [
   [180, 'apple-touch-icon.png'],
   [192, 'icon-192.png'],
@@ -78,7 +78,7 @@ for (const [size, filename] of [
   header[8] = 8;
   header[9] = 2;
   writeFileSync(
-    `public/icons/${filename}`,
+    `apps/tablet/public/icons/${filename}`,
     Buffer.concat([
       Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
       chunk('IHDR', header),

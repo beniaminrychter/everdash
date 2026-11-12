@@ -10,14 +10,14 @@ export default defineConfig({
   overrides: [
     {
       files: [
-        'src/shared/ui/Modal/Modal.tsx',
-        'src/features/energy/components/EnergyCard/EnergyCard.tsx',
-        'src/features/energy/components/PriceChart.tsx',
+        'packages/ui/src/ui/Modal/Modal.tsx',
+        'packages/dashboard/src/features/energy/components/EnergyCard/EnergyCard.tsx',
+        'packages/dashboard/src/features/energy/components/PriceChart.tsx',
       ],
       rules: { 'jsx-a11y/prefer-tag-over-role': 'off' },
     },
     {
-      files: ['admin/src/ui/AdminApp.tsx'],
+      files: ['apps/admin/src/ui/AdminApp.tsx'],
       rules: {
         // This screen intentionally launches async loads from lifecycle effects,
         // and the lint React Compiler does not yet understand guarded finally blocks.

@@ -3,11 +3,11 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { DeviceRepository } from '../server/auth/devices';
-import { PairingService } from '../server/auth/pairing';
-import { createAuthorizer, DeviceSessions } from '../server/auth/sessions';
-import { ConfigRepository } from '../server/config/repository';
-import { buildApp } from '../server/app';
+import { DeviceRepository } from '../apps/server/src/auth/devices';
+import { PairingService } from '../apps/server/src/auth/pairing';
+import { createAuthorizer, DeviceSessions } from '../apps/server/src/auth/sessions';
+import { ConfigRepository } from '../apps/server/src/config/repository';
+import { buildApp } from '../apps/server/src/app';
 
 const document = { schemaVersion: 1, views: [{ id: 'home', title: 'Home', cards: [] }] };
 const expectedOrigin = 'https://dashboard.example';

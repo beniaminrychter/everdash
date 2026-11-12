@@ -1,14 +1,17 @@
 import { render } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
-import type { AppConfig, DashboardDocument } from '../src/shared/config/types';
-import { validateDashboard } from '../src/shared/config/validate';
-import { LanguageProvider } from '../src/shared/i18n/index';
-import { createDevice, mapState } from '../src/features/accessories/data/model';
-import { mapClimate, createClimate } from '../src/features/climate/data/model';
-import { DashboardCards } from '../src/features/dashboard/components/DashboardCards/DashboardCards';
-import { DashboardPicker } from '../src/features/dashboard/components/DashboardPicker/DashboardPicker';
-import { parseEntities, resolveDashboard } from '../src/features/dashboard/data/discovery';
-import { SensorBadges } from '../src/features/sensors/components/SensorBadges/SensorBadges';
+import type { AppConfig, DashboardDocument } from '../packages/contracts/src/config/types';
+import { validateDashboard } from '../packages/contracts/src/config/validate';
+import { LanguageProvider } from '../packages/ui/src/i18n/index';
+import { createDevice, mapState } from '../packages/dashboard/src/features/accessories/data/model';
+import { mapClimate, createClimate } from '../packages/dashboard/src/features/climate/data/model';
+import { DashboardCards } from '../packages/dashboard/src/features/dashboard/components/DashboardCards/DashboardCards';
+import { DashboardPicker } from '../packages/dashboard/src/features/dashboard/components/DashboardPicker/DashboardPicker';
+import {
+  parseEntities,
+  resolveDashboard,
+} from '../packages/dashboard/src/features/dashboard/data/discovery';
+import { SensorBadges } from '../packages/dashboard/src/features/sensors/components/SensorBadges/SensorBadges';
 import styles from './Preview.module.css';
 
 interface PreviewSnapshot {

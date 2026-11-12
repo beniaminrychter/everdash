@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { NetworkInterfaceInfo } from 'node:os';
-import { createLocalAccessReader } from '../server/local/access';
+import { createLocalAccessReader } from '../apps/server/src/local/access';
 
 const interfaceAddress = (address: string, family: 'IPv4' | 'IPv6' = 'IPv4') =>
   ({

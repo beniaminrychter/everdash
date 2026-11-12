@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { readLocalRuntimeConfig } from '../server/http/local.ts';
+import { readLocalRuntimeConfig } from '../apps/server/src/http/local.ts';
 
 const environmentFile = '.env.local';
 if (!existsSync(environmentFile)) {

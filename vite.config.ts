@@ -74,8 +74,11 @@ self.addEventListener('fetch', function (event) {
 }
 
 export default defineConfig({
+  root: resolve('apps/tablet'),
   base: './',
   build: {
+    outDir: resolve('dist'),
+    emptyOutDir: true,
     cssTarget: 'safari12',
     minify: 'terser',
     terserOptions: { format: { comments: false } },

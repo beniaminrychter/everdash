@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { defineConfig } from '../src/shared/config';
-import { resolveDashboard, groupCards } from '../src/features/dashboard/data/discovery';
+import { defineConfig } from '../packages/contracts/src/config';
+import {
+  resolveDashboard,
+  groupCards,
+} from '../packages/dashboard/src/features/dashboard/data/discovery';
 
 const config = () =>
   defineConfig({

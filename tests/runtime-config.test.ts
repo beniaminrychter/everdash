@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { validateDashboard } from '../src/shared/config/validate';
-import { dashboardSchema } from '../src/shared/config/schema';
-import { iconNames } from '../src/shared/ui/iconNames';
+import { validateDashboard } from '../packages/contracts/src/config/validate';
+import { dashboardSchema } from '../packages/contracts/src/config/schema';
+import { iconNames } from '../packages/contracts/src/iconNames';
 
 const valid = {
   schemaVersion: 1,

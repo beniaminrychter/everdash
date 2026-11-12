@@ -3,9 +3,9 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { ConfigRepository } from '../server/config/repository';
-import { buildApp } from '../server/app';
-import { HomeAssistantUpstreamError } from '../server/home-assistant/errors';
+import { ConfigRepository } from '../apps/server/src/config/repository';
+import { buildApp } from '../apps/server/src/app';
+import { HomeAssistantUpstreamError } from '../apps/server/src/home-assistant/errors';
 
 const document = {
   schemaVersion: 1,

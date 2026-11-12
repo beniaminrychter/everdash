@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { validateDashboard } from '../src/shared/config/validate';
-import { filterConfiguredStates, validateServiceCommand } from '../server/home-assistant/policy';
+import { validateDashboard } from '../packages/contracts/src/config/validate';
+import {
+  filterConfiguredStates,
+  validateServiceCommand,
+} from '../apps/server/src/home-assistant/policy';
 
 const config = {
   schemaVersion: 1,

@@ -6,7 +6,7 @@ import {
   createView,
   isCardEditorMessage,
   moveItem,
-} from '../admin/src/builder';
+} from '../apps/admin/src/builder';
 
 test('builder moves ordered items without changing their content', () => {
   const cards = [

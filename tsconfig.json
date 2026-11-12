@@ -15,7 +15,8 @@
     "types": ["vite/client"]
   },
   "include": [
-    "src",
+    "apps/tablet/src",
+    "packages",
     "preview",
     "tests/config.types.ts",
     "vite.config.ts",
