@@ -1,4 +1,5 @@
 import type { IncomingHttpHeaders } from 'node:http';
+import type { HouseholdCredentialProvider } from '../auth/credential-provider';
 import { HomeAssistantUpstreamError } from './errors';
 
 const API_ROOT = 'http://supervisor/core/api/';
@@ -21,11 +22,10 @@ export interface SupervisorHomeAssistantOptions {
   request?: typeof fetch;
 }
 
-export interface HomeAssistantClientOptions {
-  apiRoot: string;
-  token: string;
-  request?: typeof fetch;
-}
+export type HomeAssistantClientOptions = (
+  | { apiRoot: string; token: string; provider?: never }
+  | { provider: HouseholdCredentialProvider; apiRoot?: never; token?: never }
+) & { request?: typeof fetch };
 
 async function readBoundedResponse(response: Response): Promise<string> {
   if (!response.body) {
@@ -105,7 +105,7 @@ function validateApiRoot(apiRoot: string): string {
 export function createHomeAssistantClient(
   options: HomeAssistantClientOptions,
 ): HomeAssistantTransport {
-  const apiRoot = validateApiRoot(options.apiRoot);
+  const staticApiRoot = options.apiRoot ? validateApiRoot(options.apiRoot) : null;
   const request = options.request ?? fetch;
 
   async function call(
@@ -113,13 +113,26 @@ export function createHomeAssistantClient(
     path: string,
     data?: unknown,
     signal?: AbortSignal,
+    retried = false,
   ): Promise<unknown> {
+    const token = options.provider ? await options.provider.get() : null;
+    if (signal?.aborted) {
+      throw new HomeAssistantUpstreamError('Cannot reach Home Assistant.', 502, 'HA_UNAVAILABLE');
+    }
+    if (token && !options.provider?.isCurrent(token)) {
+      throw new HomeAssistantUpstreamError(
+        'Home Assistant connection changed.',
+        401,
+        'HA_CREDENTIAL_REPAIR',
+      );
+    }
+    const apiRoot = token ? validateApiRoot(`${token.origin}/api/`) : staticApiRoot!;
     let response: Response;
     try {
       response = await request(new URL(path, apiRoot), {
         method,
         headers: {
-          Authorization: `Bearer ${options.token}`,
+          Authorization: `Bearer ${token?.accessToken ?? options.token}`,
           Accept: 'application/json',
           ...(data === undefined ? {} : { 'Content-Type': 'application/json' }),
         },
@@ -142,6 +155,26 @@ export function createHomeAssistantClient(
         timeout ? 'HA_TIMEOUT' : 'HA_UNAVAILABLE',
       );
     }
+    if (token && !options.provider?.isCurrent(token)) {
+      await response.body?.cancel();
+      throw new HomeAssistantUpstreamError(
+        'Home Assistant connection changed.',
+        401,
+        'HA_CREDENTIAL_REPAIR',
+      );
+    }
+    if (response.status === 401 && token && options.provider && !retried) {
+      await response.body?.cancel();
+      options.provider.invalidate(token);
+      return call(method, path, data, signal, true);
+    }
+    if (response.status === 401 && token) {
+      throw new HomeAssistantUpstreamError(
+        'Home Assistant connection needs repair.',
+        401,
+        'HA_CREDENTIAL_REPAIR',
+      );
+    }
     if (!response.ok) {
       throw responseError(response.status, Object.fromEntries(response.headers.entries()));
     }
@@ -154,6 +187,13 @@ export function createHomeAssistantClient(
       );
     }
     const text = await readBoundedResponse(response);
+    if (token && !options.provider?.isCurrent(token)) {
+      throw new HomeAssistantUpstreamError(
+        'Home Assistant connection changed.',
+        401,
+        'HA_CREDENTIAL_REPAIR',
+      );
+    }
     try {
       return text ? JSON.parse(text) : null;
     } catch {
