@@ -198,7 +198,9 @@ try {
   await expect(page.getByRole('menuitem', { name: 'Move view earlier' })).toBeEnabled();
   await expect(page.getByRole('menuitem', { name: 'Move view later' })).toBeDisabled();
   await page.getByRole('menuitem', { name: 'Move view earlier' }).click();
-  await expect(page.getByRole('combobox', { name: 'Dashboard view' })).toContainText('New view');
+  await expect(
+    page.getByRole('combobox', { name: 'Dashboard view' }).locator('option:checked'),
+  ).toHaveText('New view');
   await expect(page.getByRole('button', { name: 'View actions' })).toHaveAttribute(
     'aria-expanded',
     'false',
@@ -216,6 +218,33 @@ try {
   await viewName.fill('Guest room');
   await page.getByRole('button', { name: 'Done' }).click();
   await page.getByRole('button', { name: 'Add card' }).click();
+  const primary = page.getByRole('button', { name: 'Save' }).first();
+  await expect(primary).toHaveCSS('color', 'rgb(255, 255, 255)');
+  await expect(primary).toHaveCSS('border-top-width', '1px');
+  const primaryContrast = await primary.evaluate((button) => {
+    const style = getComputedStyle(button);
+    // The browser evaluation must contain this helper for serialization.
+    // oxlint-disable-next-line unicorn/consistent-function-scoping
+    const luminance = (color) => {
+      const channels = color
+        .match(/\d+/g)
+        .slice(0, 3)
+        .map((value) => {
+          const channel = Number(value) / 255;
+          return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+        });
+      return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+    };
+    const values = [luminance(style.color), luminance(style.backgroundColor)].sort((a, b) => b - a);
+    return (values[0] + 0.05) / (values[1] + 0.05);
+  });
+  assert.ok(primaryContrast >= 4.5, `primary contrast ${primaryContrast} must be at least 4.5`);
+  const outline = page
+    .getByRole('dialog', { name: 'Add a card' })
+    .getByRole('button', { name: 'Cancel' });
+  await expect(outline).toHaveCSS('color', 'rgb(39, 49, 59)');
+  await expect(outline).toHaveCSS('border-top-width', '1px');
+  await expect(outline).toHaveCSS('border-top-color', 'rgb(223, 227, 232)');
   await page.getByRole('button', { name: 'Climate' }).click();
   await expect(page.getByRole('button', { name: 'Back' })).toBeVisible();
   await page.getByRole('button', { name: 'Back' }).click();
@@ -277,8 +306,14 @@ try {
   await page.getByRole('menuitem', { name: 'Delete view' }).click();
   const viewDeleteDialog = page.getByRole('dialog', { name: /Delete “Home”/ });
   await expect(viewDeleteDialog).toBeVisible();
+  const destructive = viewDeleteDialog.getByRole('button', { name: 'Delete view' });
+  await expect(destructive).toHaveCSS('color', 'rgb(161, 44, 56)');
+  await expect(destructive).toHaveCSS('border-top-width', '1px');
+  await expect(destructive).toHaveCSS('border-top-color', 'rgb(240, 204, 208)');
   await viewDeleteDialog.getByRole('button', { name: 'Delete view' }).click();
-  await expect(page.getByRole('combobox', { name: 'Dashboard view' })).toContainText('Guest room');
+  await expect(
+    page.getByRole('combobox', { name: 'Dashboard view' }).locator('option:checked'),
+  ).toHaveText('Guest room');
   await page.getByRole('button', { name: 'View actions' }).click();
   await expect(page.getByRole('menuitem', { name: 'Delete view' })).toBeDisabled();
 
@@ -311,8 +346,16 @@ try {
   const inspector = page.getByRole('dialog', { name: 'Edit card' });
   await expect(inspector).toBeVisible();
   await page.getByLabel('Display name override').fill('Cancelled rename');
+  const editingEntity = inspector.getByRole('combobox', { name: 'Home Assistant entity' });
+  await editingEntity.fill('Living Room');
+  await expect(inspector.getByRole('option', { name: /Living Room Climate/ })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(editingEntity).toHaveAttribute('aria-expanded', 'false');
+  await expect(inspector).toBeVisible();
+  await expect(page.getByLabel('Display name override')).toHaveValue('Cancelled rename');
   await page.keyboard.press('Escape');
   await expect(inspector).not.toBeVisible();
+  await expect(page.locator('iframe')).toBeFocused();
   await expect(preview.getByRole('button', { name: 'Edit Living Room Climate' })).toBeVisible();
 
   await preview.getByRole('button', { name: 'Delete Living Room Climate' }).click();
@@ -338,7 +381,8 @@ try {
           'single Save action publishes the schema-v1 draft',
           'dashboard settings are staged and discarded when cancelled',
           'JSON apply shows a toast and preserves its draft until save',
-          'card editing Sheet supports Escape at narrow viewport width',
+          'nested Escape preserves the inspector draft before dismissing and restoring focus',
+          'primary contrast and outline/destructive button styles',
           'card deletion is confirmed and cancellable',
           'shared tablet renderer canvas is isolated from device commands',
         ],

@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@everdash/contracts": "0.0.0"
+    "@everdash/contracts": "0.0.0",
+    "@everdash/ui": "0.0.0"
   }
 }

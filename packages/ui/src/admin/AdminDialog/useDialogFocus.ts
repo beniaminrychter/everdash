@@ -37,7 +37,7 @@ export function useDialogFocus(open: boolean, onClose: () => void) {
     (controls()[0] || panel.current)?.focus();
 
     const handleKey = (event: KeyboardEvent) => {
-      if (dialogs[dialogs.length - 1] !== token) {
+      if (event.defaultPrevented || dialogs[dialogs.length - 1] !== token) {
         return;
       }
       if (event.key === 'Escape') {

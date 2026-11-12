@@ -2,7 +2,7 @@
 
 [![Latest release](https://img.shields.io/github/v/release/beniaminrychter/everdash?display_name=tag&sort=semver)](https://github.com/beniaminrychter/everdash/releases/latest) ![Architectures: aarch64 and amd64](https://img.shields.io/badge/architectures-aarch64%20%7C%20amd64-blue) [![Checks](https://github.com/beniaminrychter/everdash/actions/workflows/checks.yml/badge.svg)](https://github.com/beniaminrychter/everdash/actions/workflows/checks.yml) [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a-Coffee-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/beniaminryu)
 
-EverDash gives legacy tablets new possibilities as Home Assistant dashboards. It pairs with Home Assistant, serves an iPad-friendly dashboard, and provides a visual builder for choosing entities and arranging views. The Home Assistant workspace uses React and shadcn/ui; the tablet remains a separate Preact app built for iOS 12 and Safari 12.
+EverDash gives legacy tablets new possibilities as Home Assistant dashboards. It pairs with Home Assistant, serves an iPad-friendly dashboard, and provides a visual builder for choosing entities and arranging views. The Home Assistant workspace and tablet use Preact; the tablet is built for iOS 12 and Safari 12.
 
 - Explicitly configured lights, outlets, climate controls, sensors, energy prices, and weather.
 - Multiple dashboard views, saved appearance and language preferences, and an offline app shell.
@@ -155,14 +155,14 @@ Text selection, touch callouts and visible focus outlines are disabled across th
 - Preact is restricted to major version 10. TSX targets Preact directly; React compatibility aliases and production devtools are disabled.
 - Vite's official legacy plugin emits an ES5 SystemJS fallback plus a modern bundle. IE11 is only a conservative syntax floor, not a supported product target.
 - Native XMLHttpRequest provides timeouts, cancellation, and authenticated requests on iOS 12 without a Fetch/AbortController polyfill. Runtime code uses APIs available in Safari 12; SystemJS is retained without IE-only core-js polyfills.
-- The tablet uses Preact, CSS Modules, and a Safari 12 CSS target. The admin workspace uses React, shadcn/ui Base UI primitives, and Tailwind; its files build separately and stay out of the tablet bundle and offline cache.
+- The tablet uses Preact, CSS Modules, and a Safari 12 CSS target. The admin workspace uses Preact, native primitives, and CSS Modules; its files build separately and stay out of the tablet bundle and offline cache.
 - The Ingress preview is a separate Preact entry that renders the tablet components in read-only mode and receives a validated draft plus configured entity snapshot through same-origin messaging.
 
 | File | Responsibility |
 | --- | --- |
 | `examples/dashboard.json` | Generic starter dashboard using the runtime JSON schema |
 | `packages/contracts/src/config/` | JSON contracts, schema, defaults and validation |
-| `apps/admin/` | React/shadcn Home Assistant workspace and visual builder |
+| `apps/admin/` | Preact Home Assistant workspace and visual builder |
 | `preview/` | Same-origin read-only Preact tablet preview entry |
 | `packages/dashboard/src/features/dashboard/` | Dashboard composition, source resolution, observation polling and schedules |
 | `packages/dashboard/src/features/accessories/` | Accessory UI, capability/state mapping, commands and polling |

@@ -95,7 +95,11 @@ export function Combobox({
     } else if (event.key === 'Enter' && open && filtered[activeIndex]) {
       event.preventDefault();
       select(filtered[activeIndex]);
-    } else if (event.key === 'Escape' || event.key === 'Tab') {
+    } else if (event.key === 'Escape' && open) {
+      event.preventDefault();
+      event.stopPropagation();
+      setOpen(false);
+    } else if (event.key === 'Tab') {
       setOpen(false);
     }
   };
