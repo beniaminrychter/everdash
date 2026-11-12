@@ -1,11 +1,10 @@
-import tailwindcss from '@tailwindcss/vite';
-import react from '@vitejs/plugin-react';
+import preactPreset from '@preact/preset-vite';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
   base: './',
   root: import.meta.dirname,
-  plugins: [react(), tailwindcss()],
+  plugins: [preactPreset({ devToolsEnabled: false, reactAliasesEnabled: false })],
   build: {
     outDir: '../../dist-admin',
     emptyOutDir: true,

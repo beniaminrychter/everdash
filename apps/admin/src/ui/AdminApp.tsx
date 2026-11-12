@@ -33,11 +33,11 @@ import {
   Wifi,
   X,
   Zap,
-} from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ChangeEvent, FormEvent } from 'react';
-import { Dialog } from '@base-ui/react/dialog';
+} from '../../../../packages/ui/src/admin/AdminIcons/AdminIcons';
+import { QRCodeSVG } from '../../../../packages/ui/src/admin/QRCode/QRCode';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import type { JSX } from 'preact';
+import { AdminDialog } from '../../../../packages/ui/src/admin/AdminDialog/AdminDialog';
 import type {
   BadgeConfig,
   CardConfig,
@@ -827,8 +827,9 @@ function AdminApp() {
     }
   };
 
-  const importJson = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const importJson = async (event: JSX.TargetedEvent<HTMLInputElement>) => {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
     if (!file) {
       return;
     }
@@ -838,7 +839,7 @@ function AdminApp() {
     } catch (error) {
       setJsonIssues([error instanceof Error ? error.message : 'JSON file could not be read.']);
     }
-    event.target.value = '';
+    input.value = '';
   };
 
   const exportJson = () => {
@@ -851,7 +852,7 @@ function AdminApp() {
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
-  const approvePairing = async (event: FormEvent) => {
+  const approvePairing = async (event: JSX.TargetedEvent<HTMLFormElement>) => {
     event.preventDefault();
     setPairError('');
     try {
@@ -936,7 +937,9 @@ function AdminApp() {
             <Input
               id="view-name"
               value={currentView.title}
-              onChange={(event) => changeView((view) => ({ ...view, title: event.target.value }))}
+              onInput={(event) =>
+                changeView((view) => ({ ...view, title: event.currentTarget.value }))
+              }
             />
           </Field>
           <p className="helper">
@@ -955,10 +958,10 @@ function AdminApp() {
                   id="timezone"
                   placeholder="Europe/Warsaw"
                   value={settings.timeZone ?? ''}
-                  onChange={(event) =>
+                  onInput={(event) =>
                     changeSettings((previous) => ({
                       ...previous,
-                      timeZone: event.target.value || undefined,
+                      timeZone: event.currentTarget.value || undefined,
                     }))
                   }
                 />
@@ -981,12 +984,14 @@ function AdminApp() {
                   type="number"
                   min="1000"
                   value={settings.polling?.controlsMs ?? ''}
-                  onChange={(event) =>
+                  onInput={(event) =>
                     changeSettings((previous) => ({
                       ...previous,
                       polling: {
                         ...previous.polling,
-                        controlsMs: event.target.value ? Number(event.target.value) : undefined,
+                        controlsMs: event.currentTarget.value
+                          ? Number(event.currentTarget.value)
+                          : undefined,
                       },
                     }))
                   }
@@ -999,12 +1004,14 @@ function AdminApp() {
                   type="number"
                   min="1000"
                   value={document.polling?.observationsMs ?? ''}
-                  onChange={(event) =>
+                  onInput={(event) =>
                     changeDocument((previous) => ({
                       ...previous,
                       polling: {
                         ...previous.polling,
-                        observationsMs: event.target.value ? Number(event.target.value) : undefined,
+                        observationsMs: event.currentTarget.value
+                          ? Number(event.currentTarget.value)
+                          : undefined,
                       },
                     }))
                   }
@@ -1017,12 +1024,14 @@ function AdminApp() {
                   type="number"
                   min="1000"
                   value={settings.polling?.metadataMs ?? ''}
-                  onChange={(event) =>
+                  onInput={(event) =>
                     changeSettings((previous) => ({
                       ...previous,
                       polling: {
                         ...previous.polling,
-                        metadataMs: event.target.value ? Number(event.target.value) : undefined,
+                        metadataMs: event.currentTarget.value
+                          ? Number(event.currentTarget.value)
+                          : undefined,
                       },
                     }))
                   }
@@ -1059,10 +1068,10 @@ function AdminApp() {
               id="card-name"
               placeholder="Use Home Assistant name"
               value={card.name ?? ''}
-              onChange={(event) =>
+              onInput={(event) =>
                 changeCard(
                   (current) =>
-                    ({ ...current, name: event.target.value || undefined }) as CardConfig,
+                    ({ ...current, name: event.currentTarget.value || undefined }) as CardConfig,
                 )
               }
             />
@@ -1094,7 +1103,7 @@ function AdminApp() {
           )}
           {card.type === 'climate' && (
             <Field>
-              <FieldLabel htmlFor="climate-unit">Temperature unit</FieldLabel>
+              <FieldLabel>Temperature unit</FieldLabel>
               <Select
                 ariaLabel="Temperature unit"
                 className="native-select"
@@ -1170,8 +1179,8 @@ function AdminApp() {
               id="badge-name"
               placeholder="Use Home Assistant name"
               value={selectedBadge.name ?? ''}
-              onChange={(event) =>
-                changeBadge((badge) => ({ ...badge, name: event.target.value || undefined }))
+              onInput={(event) =>
+                changeBadge((badge) => ({ ...badge, name: event.currentTarget.value || undefined }))
               }
             />
           </Field>
@@ -1261,7 +1270,7 @@ function AdminApp() {
                   id="host-override"
                   placeholder="homeassistant.local or 192.168.1.20"
                   value={hostOverride}
-                  onChange={(event) => setHost(event.target.value)}
+                  onInput={(event) => setHost(event.currentTarget.value)}
                 />
                 <span className="helper">
                   Saved in this Home Assistant browser. Enter a local hostname or IP; the mapped
@@ -1291,7 +1300,7 @@ function AdminApp() {
                   autoComplete="off"
                   maxLength={8}
                   value={pairCode}
-                  onChange={(event) => setPairCode(event.target.value.toUpperCase())}
+                  onInput={(event) => setPairCode(event.currentTarget.value.toUpperCase())}
                   placeholder="ABCD2345"
                 />
               </Field>
@@ -1301,7 +1310,7 @@ function AdminApp() {
                   id="device-name"
                   value={deviceName}
                   maxLength={80}
-                  onChange={(event) => setDeviceName(event.target.value)}
+                  onInput={(event) => setDeviceName(event.currentTarget.value)}
                   placeholder="Kitchen iPad"
                 />
               </Field>
@@ -1446,7 +1455,7 @@ function AdminApp() {
           </Alert>
         )}
         <Tabs value={tab} onValueChange={(value) => chooseTab(value as AdminTab)}>
-          <TabsContent value="dashboard">
+          <TabsContent value="dashboard" aria-label="Dashboard">
             <section className="dashboard-stage" aria-label="Dashboard canvas">
               <div className="canvas-toolbar">
                 <div className="canvas-view-controls">
@@ -1542,8 +1551,10 @@ function AdminApp() {
               </div>
             </section>
           </TabsContent>
-          <TabsContent value="devices">{renderAccess()}</TabsContent>
-          <TabsContent value="json">
+          <TabsContent value="devices" aria-label="Devices">
+            {renderAccess()}
+          </TabsContent>
+          <TabsContent value="json" aria-label="JSON">
             <Card>
               <CardHeader>
                 <div>
@@ -1561,10 +1572,10 @@ function AdminApp() {
                 </p>
                 <Textarea
                   aria-label="Dashboard JSON"
-                  spellCheck={false}
+                  spellcheck={false}
                   value={jsonDraft}
-                  onChange={(event) => {
-                    setJsonDraft(event.target.value);
+                  onInput={(event) => {
+                    setJsonDraft(event.currentTarget.value);
                     setJsonIssues([]);
                   }}
                 />
@@ -1612,75 +1623,73 @@ function AdminApp() {
         </Tabs>
       </main>
       {confirmation && (
-        <Dialog.Root open onOpenChange={(open) => !open && setConfirmation(null)}>
-          <Dialog.Portal>
-            <Dialog.Backdrop className="sheet-backdrop" />
-            <Dialog.Popup className="confirm-dialog">
-              <Dialog.Title className="card-title">{confirmation?.title}</Dialog.Title>
-              <Dialog.Description className="confirm-description">
-                {confirmation?.description}
-              </Dialog.Description>
-              <div className="confirm-actions">
-                <Dialog.Close className="button button-outline">Cancel</Dialog.Close>
-                <Button
-                  variant="destructive"
-                  onClick={async () => {
-                    await confirmation?.action();
-                    setConfirmation(null);
-                  }}
-                >
-                  {confirmation?.confirmLabel ?? 'Confirm'}
-                </Button>
-              </div>
-            </Dialog.Popup>
-          </Dialog.Portal>
-        </Dialog.Root>
+        <AdminDialog
+          open
+          onOpenChange={(open) => !open && setConfirmation(null)}
+          title={confirmation.title}
+          description={confirmation.description}
+          className="confirm-dialog"
+        >
+          <div className="confirm-actions">
+            <Button variant="outline" onClick={() => setConfirmation(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                await confirmation?.action();
+                setConfirmation(null);
+              }}
+            >
+              {confirmation?.confirmLabel ?? 'Confirm'}
+            </Button>
+          </div>
+        </AdminDialog>
       )}
-      <Dialog.Root open={cardChooserOpen} onOpenChange={setCardChooserOpen}>
-        <Dialog.Portal>
-          <Dialog.Backdrop className="sheet-backdrop" />
-          <Dialog.Popup className="confirm-dialog card-chooser">
-            <Dialog.Title className="card-title">Add a card</Dialog.Title>
-            <p className="confirm-description">
-              Choose what to add to {currentView?.title || 'this view'}.
-            </p>
-            <div className="card-kind-grid">
-              {cardKinds.map((kind) => {
-                const IconChoice =
-                  kind === 'light'
-                    ? Lightbulb
-                    : kind === 'outlet'
-                      ? Plug
-                      : kind === 'climate'
-                        ? Thermometer
-                        : kind === 'weather'
-                          ? CloudSun
-                          : Zap;
-                return (
-                  <Button
-                    key={kind}
-                    type="button"
-                    variant="outline"
-                    className="card-kind-choice"
-                    onClick={() => {
-                      setCardChooserOpen(false);
-                      addCard(kind);
-                    }}
-                  >
-                    <IconChoice size={22} aria-hidden="true" />
-                    <span>
-                      {kind === 'pstryk' ? 'Pstryk energy' : kind[0].toUpperCase() + kind.slice(1)}
-                    </span>
-                  </Button>
-                );
-              })}
-            </div>
-            <div className="confirm-actions">
-              <Dialog.Close className="button button-outline">Cancel</Dialog.Close>
-            </div>
-          </Dialog.Popup>
-        </Dialog.Portal>
-      </Dialog.Root>
+      <AdminDialog
+        open={cardChooserOpen}
+        onOpenChange={setCardChooserOpen}
+        title="Add a card"
+        description={`Choose what to add to ${currentView?.title || 'this view'}.`}
+        className="confirm-dialog card-chooser"
+      >
+        <div className="card-kind-grid">
+          {cardKinds.map((kind) => {
+            const IconChoice =
+              kind === 'light'
+                ? Lightbulb
+                : kind === 'outlet'
+                  ? Plug
+                  : kind === 'climate'
+                    ? Thermometer
+                    : kind === 'weather'
+                      ? CloudSun
+                      : Zap;
+            return (
+              <Button
+                key={kind}
+                type="button"
+                variant="outline"
+                className="card-kind-choice"
+                onClick={() => {
+                  setCardChooserOpen(false);
+                  addCard(kind);
+                }}
+              >
+                <IconChoice size={22} aria-hidden="true" />
+                <span>
+                  {kind === 'pstryk' ? 'Pstryk energy' : kind[0].toUpperCase() + kind.slice(1)}
+                </span>
+              </Button>
+            );
+          })}
+        </div>
+        <div className="confirm-actions">
+          <Button variant="outline" onClick={() => setCardChooserOpen(false)}>
+            Cancel
+          </Button>
+        </div>
+      </AdminDialog>
       <Sheet
         open={inspectorOpen}
         onOpenChange={(open) => {
@@ -1720,24 +1729,20 @@ function AdminApp() {
         </div>
       </Sheet>
       {jsonExitTarget && (
-        <Dialog.Root open onOpenChange={(open) => !open && confirmJsonExit(false)}>
-          <Dialog.Portal>
-            <Dialog.Backdrop className="sheet-backdrop" />
-            <Dialog.Popup className="confirm-dialog">
-              <Dialog.Title className="card-title">Unapplied JSON changes</Dialog.Title>
-              <Dialog.Description className="confirm-description">
-                Apply the JSON to the visual builder draft, or discard the raw edits before leaving
-                this tab.
-              </Dialog.Description>
-              <div className="confirm-actions">
-                <Button variant="outline" onClick={() => confirmJsonExit(false)}>
-                  Discard JSON
-                </Button>
-                <Button onClick={() => confirmJsonExit(true)}>Validate and apply</Button>
-              </div>
-            </Dialog.Popup>
-          </Dialog.Portal>
-        </Dialog.Root>
+        <AdminDialog
+          open
+          onOpenChange={(open) => !open && confirmJsonExit(false)}
+          title="Unapplied JSON changes"
+          description="Apply the JSON to the visual builder draft, or discard the raw edits before leaving this tab."
+          className="confirm-dialog"
+        >
+          <div className="confirm-actions">
+            <Button variant="outline" onClick={() => confirmJsonExit(false)}>
+              Discard JSON
+            </Button>
+            <Button onClick={() => confirmJsonExit(true)}>Validate and apply</Button>
+          </div>
+        </AdminDialog>
       )}
     </div>
   );

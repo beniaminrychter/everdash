@@ -189,6 +189,11 @@ try {
   await page.getByRole('button', { name: 'Dashboard', exact: true }).click();
 
   await page.getByRole('button', { name: 'Add view' }).click();
+  await page.getByRole('button', { name: 'View actions' }).focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(page.getByRole('menuitem', { name: 'Move view earlier' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'View actions' })).toBeFocused();
   await page.getByRole('button', { name: 'View actions' }).click();
   await expect(page.getByRole('menuitem', { name: 'Move view earlier' })).toBeEnabled();
   await expect(page.getByRole('menuitem', { name: 'Move view later' })).toBeDisabled();
@@ -220,8 +225,8 @@ try {
   await entityPicker.fill('Living Room');
   await expect(page.getByRole('option', { name: /Living Room Climate/ })).toBeVisible();
   await page.getByRole('option', { name: /Living Room Climate/ }).click();
-  await page.getByRole('combobox', { name: 'Temperature unit' }).click();
-  await page.getByRole('option', { name: '°F Fahrenheit' }).click();
+  await page.getByRole('combobox', { name: 'Temperature unit' }).selectOption('°F');
+  await expect(page.getByRole('combobox', { name: 'Temperature unit' })).toHaveValue('°F');
   await page.getByRole('button', { name: 'Add', exact: true }).click();
   const preview = page.frameLocator('iframe');
   await expect(preview.getByRole('button', { name: 'Edit Living Room Climate' })).toBeVisible();
@@ -267,8 +272,7 @@ try {
     name: 'Lounge temp',
   });
 
-  await page.getByRole('combobox', { name: 'Dashboard view' }).click();
-  await page.getByRole('option', { name: 'Home' }).click();
+  await page.getByRole('combobox', { name: 'Dashboard view' }).selectOption({ label: 'Home' });
   await page.getByRole('button', { name: 'View actions' }).click();
   await page.getByRole('menuitem', { name: 'Delete view' }).click();
   const viewDeleteDialog = page.getByRole('dialog', { name: /Delete “Home”/ });
@@ -297,8 +301,9 @@ try {
   await expect(jsonDialog).toBeVisible();
   await jsonDialog.getByRole('button', { name: 'Validate and apply' }).click();
   await expect(page.getByText('Validated JSON applied')).toBeVisible();
-  await page.getByRole('combobox', { name: 'Dashboard view' }).click();
-  await page.getByRole('option', { name: 'Guest room' }).click();
+  await page
+    .getByRole('combobox', { name: 'Dashboard view' })
+    .selectOption({ label: 'Guest room' });
   await expect(page.locator('iframe')).toBeVisible();
 
   await page.setViewportSize({ width: 1024, height: 768 });

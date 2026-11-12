@@ -148,7 +148,7 @@ export function TabsContent({ value, className, ...props }: ContentProps) {
   return (
     <div
       {...props}
-      aria-labelledby={tabId(tabs.id, value)}
+      aria-labelledby={props['aria-label'] ? undefined : tabId(tabs.id, value)}
       className={[styles.content, className].filter(Boolean).join(' ')}
       hidden={tabs.value !== value}
       id={panelId(tabs.id, value)}
