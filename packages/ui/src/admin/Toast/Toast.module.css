@@ -1,0 +1,44 @@
+.viewport {
+  position: fixed;
+  z-index: 1000;
+  right: 16px;
+  bottom: 16px;
+  left: 16px;
+  margin-left: auto;
+  max-width: 380px;
+  pointer-events: none;
+}
+.toast {
+  display: flex;
+  align-items: flex-start;
+  margin-top: 8px;
+  border: 1px solid var(--border, #d9dfe4);
+  border-radius: 8px;
+  padding: 12px;
+  color: var(--foreground, #20252e);
+  background: var(--card, #fff);
+  pointer-events: auto;
+}
+.copy {
+  flex: 1;
+  min-width: 0;
+}
+.kind {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.close {
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font-size: 22px;
+  cursor: pointer;
+}
+.close:focus {
+  outline: 2px solid var(--primary, #087f8c);
+  outline-offset: 2px;
+}

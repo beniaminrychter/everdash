@@ -1,0 +1,16 @@
+.select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid var(--border, #d9dfe4);
+  border-radius: 8px;
+  padding: 9px 10px;
+  color: var(--foreground, #20252e);
+  background: var(--card, #fff);
+  font: inherit;
+}
+.select:focus {
+  outline: 2px solid var(--primary, #087f8c);
+  outline-offset: 2px;
+}
