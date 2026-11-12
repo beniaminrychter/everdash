@@ -18,9 +18,22 @@ export function ensurePrivateDirectory(directory: string): void {
   }
 }
 
-export function writeAtomicJson(path: string, value: unknown, beforeRename?: () => void): void {
+export class AtomicJsonDurabilityError extends Error {
+  constructor() {
+    super('The file was replaced, but directory durability could not be confirmed.');
+    this.name = 'AtomicJsonDurabilityError';
+  }
+}
+
+export function writeAtomicJson(
+  path: string,
+  value: unknown,
+  beforeRename?: () => void,
+  beforeDirectorySync?: () => void,
+): void {
   const temporary = `${path}.${process.pid}.${Math.random().toString(16).slice(2)}.tmp`;
   let descriptor: number | undefined;
+  let renamed = false;
   try {
     descriptor = openSync(temporary, 'wx', 0o600);
     writeFileSync(descriptor, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
@@ -29,6 +42,8 @@ export function writeAtomicJson(path: string, value: unknown, beforeRename?: () 
     descriptor = undefined;
     beforeRename?.();
     renameSync(temporary, path);
+    renamed = true;
+    beforeDirectorySync?.();
     const directoryDescriptor = openSync(dirname(path), 'r');
     try {
       fsyncSync(directoryDescriptor);
@@ -38,6 +53,9 @@ export function writeAtomicJson(path: string, value: unknown, beforeRename?: () 
   } catch (error) {
     if (descriptor !== undefined) {
       closeSync(descriptor);
+    }
+    if (renamed) {
+      throw new AtomicJsonDurabilityError();
     }
     rmSync(temporary, { force: true });
     throw error;

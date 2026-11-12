@@ -1,7 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { ensurePrivateDirectory, writeAtomicJson } from '../persistence/atomic-json';
+import {
+  AtomicJsonDurabilityError,
+  ensurePrivateDirectory,
+  writeAtomicJson,
+} from '../persistence/atomic-json';
 import { parseHomeAssistantOrigin } from './origin';
 
 export interface ConnectorCredentials {
@@ -13,10 +17,11 @@ export interface ConnectorCredentials {
 export type ConnectorStatus =
   | { state: 'unconfigured' }
   | { state: 'repair-required' }
-  | { state: 'connected'; origin: string; generation: string };
+  | { state: 'connected'; origin: string; generation: string; durability?: 'uncertain' };
 export interface ConnectorRepositoryOptions {
   directory: string;
   beforeRename?: () => void;
+  beforeDirectorySync?: () => void;
 }
 export interface ConnectorInstall {
   origin: string;
@@ -24,9 +29,14 @@ export interface ConnectorInstall {
   clientId: string;
 }
 
+export type ConnectorInstallResult = ConnectorCredentials & {
+  durability: 'confirmed' | 'uncertain';
+};
+
 export class ConnectorRepository {
   private readonly path: string;
   private queue: Promise<void> = Promise.resolve();
+  private uncertainGeneration: string | null = null;
   constructor(private readonly options: ConnectorRepositoryOptions) {
     this.path = join(options.directory, 'connector.json');
   }
@@ -82,6 +92,9 @@ export class ConnectorRepository {
         state: 'connected',
         origin: result.credentials.origin,
         generation: result.credentials.generation,
+        ...(this.uncertainGeneration === result.credentials.generation
+          ? { durability: 'uncertain' as const }
+          : {}),
       };
     }
     return { state: result.state };
@@ -95,7 +108,7 @@ export class ConnectorRepository {
   install(
     input: ConnectorInstall,
     options: { replace?: boolean } = {},
-  ): Promise<ConnectorCredentials> {
+  ): Promise<ConnectorInstallResult> {
     const operation = this.queue.then(() => {
       const origin = parseHomeAssistantOrigin(input.origin);
       if (!input.refreshToken || !input.clientId) {
@@ -118,8 +131,22 @@ export class ConnectorRepository {
         generation: randomUUID(),
       };
       ensurePrivateDirectory(this.options.directory);
-      writeAtomicJson(this.path, next, this.options.beforeRename);
-      return next;
+      try {
+        writeAtomicJson(
+          this.path,
+          next,
+          this.options.beforeRename,
+          this.options.beforeDirectorySync,
+        );
+      } catch (error) {
+        if (!(error instanceof AtomicJsonDurabilityError)) {
+          throw error;
+        }
+        this.uncertainGeneration = next.generation;
+        return { ...next, durability: 'uncertain' as const };
+      }
+      this.uncertainGeneration = null;
+      return { ...next, durability: 'confirmed' as const };
     });
     this.queue = operation.then(
       () => undefined,

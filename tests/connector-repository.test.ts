@@ -117,3 +117,40 @@ test('corrupt connector fails closed with secret-safe diagnostic', async () => {
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test('post-rename sync failure reports installed grant with uncertain durability', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'connector-test-'));
+  let fail = false;
+  try {
+    const repo = new ConnectorRepository({
+      directory,
+      beforeDirectorySync: () => {
+        if (fail) {
+          throw new Error('dummy-sensitive-error');
+        }
+      },
+    });
+    const first = await repo.install(credential);
+    assert.equal(first.durability, 'confirmed');
+    fail = true;
+    const installed = await repo.install(
+      { ...credential, refreshToken: 'dummy-next' },
+      { replace: true },
+    );
+    assert.equal(installed.durability, 'uncertain');
+    assert.notEqual(installed.generation, first.generation);
+    assert.equal(repo.readCredentials()?.generation, installed.generation);
+    const restarted = new ConnectorRepository({ directory });
+    assert.equal(restarted.readCredentials()?.generation, installed.generation);
+    assert.equal(restarted.readCredentials()?.refreshToken, 'dummy-next');
+    assert.equal(JSON.stringify(repo.status()).includes('dummy-sensitive-error'), false);
+    assert.deepEqual(repo.status(), {
+      state: 'connected',
+      origin: installed.origin,
+      generation: installed.generation,
+      durability: 'uncertain',
+    });
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
