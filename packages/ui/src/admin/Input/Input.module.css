@@ -1,0 +1,32 @@
+.input,
+.textarea {
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid var(--border, #d9dfe4);
+  border-radius: 8px;
+  padding: 9px 10px;
+  color: var(--foreground, #20252e);
+  background: var(--card, #fff);
+  font-size: 13px;
+}
+.input {
+  min-height: 38px;
+}
+.textarea {
+  min-height: 260px;
+  resize: vertical;
+  font:
+    12px/1.55 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+}
+.input::placeholder,
+.textarea::placeholder {
+  color: #9aa3ad;
+}
+.input:focus,
+.textarea:focus {
+  outline: 2px solid var(--primary, #087f8c);
+  outline-offset: 2px;
+}
