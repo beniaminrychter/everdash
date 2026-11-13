@@ -17,6 +17,29 @@ export default defineConfig({
       rules: { 'jsx-a11y/prefer-tag-over-role': 'off' },
     },
     {
+      // Vendored shadcn/ui sources: keep them close to upstream.
+      files: ['apps/admin/src/components/ui/**', 'apps/admin/src/hooks/use-mobile.ts'],
+      rules: {
+        'eslint/no-use-before-define': 'off',
+        'jsx-a11y/prefer-tag-over-role': 'off',
+        'react/button-has-type': 'off',
+        'react/hook-use-state': 'off',
+        'react/purity': 'off',
+        'react/set-state-in-effect': 'off',
+        'unicorn/no-document-cookie': 'off',
+      },
+    },
+    {
+      // Legacy Preact admin files are excluded from the admin tsconfig, so
+      // the CSS Module resolver cannot follow their imports. Later tasks port them.
+      files: [
+        'apps/admin/src/legacy/**',
+        'apps/admin/src/features/access/**',
+        'apps/admin/src/ui/**',
+      ],
+      rules: { 'css-modules/css-module-file-not-found': 'off' },
+    },
+    {
       files: ['apps/admin/src/ui/AdminApp.tsx'],
       rules: {
         // This screen intentionally launches async loads from lifecycle effects,
