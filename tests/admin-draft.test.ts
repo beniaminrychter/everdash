@@ -221,7 +221,12 @@ test('generation increases on every document change', () => {
     { type: 'replace', document: structuredClone(fixture) },
     { type: 'discard' },
     { type: 'loaded', document: structuredClone(fixture), revision: 'r1' },
-    { type: 'saved', document: structuredClone(fixture), revision: 'r2' },
+    {
+      type: 'saved',
+      document: structuredClone(fixture),
+      sent: structuredClone(fixture),
+      revision: 'r2',
+    },
   ];
 
   for (const action of actions) {
@@ -242,6 +247,7 @@ test('saved keeps selection and view; loaded resets selection', () => {
   const saved = draftReducer(edited, {
     type: 'saved',
     document: edited.document,
+    sent: edited.document,
     revision: 'r2',
   });
 
@@ -294,4 +300,31 @@ test('draftIssues reports validation problems and is empty when valid', () => {
     card: { type: 'light', entity: 'nope' as 'light.x' },
   });
   assert.ok(draftIssues(broken).length > 0);
+});
+
+test('edits made during save survive', () => {
+  const sent = run(start(), { type: 'rename-view', title: 'Lobby' }).document;
+  const during = run(
+    { ...start(), document: sent, changes: 1 },
+    { type: 'rename-view', title: 'Lobby 2' },
+    { type: 'select', selection: { kind: 'card', index: 1 } },
+  );
+
+  const saved = draftReducer(during, {
+    type: 'saved',
+    document: structuredClone(sent),
+    sent,
+    revision: 'r2',
+  });
+
+  assert.equal(saved.document.views[0]!.title, 'Lobby 2');
+  assert.equal(saved.revision, 'r2');
+  assert.equal(isDirty(saved), true);
+  assert.deepEqual(saved.selection, { kind: 'card', index: 1 });
+  assert.equal(saved.changes, during.changes);
+  assert.equal(saved.generation, during.generation);
+
+  const reverted = draftReducer(saved, { type: 'rename-view', title: 'Lobby' });
+
+  assert.equal(isDirty(reverted), false);
 });

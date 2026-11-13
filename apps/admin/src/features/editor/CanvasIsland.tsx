@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { DashboardDocument } from '@everdash/contracts/config/types';
 import { mountDashboardCanvas } from '@everdash/dashboard/editor/mountDashboardCanvas';
 import type {
@@ -7,6 +7,7 @@ import type {
 } from '@everdash/dashboard/editor/mountDashboardCanvas';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { draftIssues, initialDraft } from '@/app/draft/draftReducer';
 import { api } from '@/lib/api';
 
@@ -19,10 +20,21 @@ interface CanvasIslandProps {
   onMessage: (message: unknown) => void;
 }
 
+interface CanvasMountProps {
+  snapshot: DashboardCanvasProps['snapshot'];
+  selectedView: string;
+  onMessage: (message: unknown) => void;
+}
+
 /** Owns the Preact root: mounts once, re-renders on props, unmounts with the component. */
-function CanvasMount({ props }: { props: DashboardCanvasProps }) {
+function CanvasMountView({ snapshot, selectedView, onMessage }: CanvasMountProps) {
   const container = useRef<HTMLDivElement>(null);
   const handle = useRef<CanvasHandle | null>(null);
+  const onMessageRef = useRef(onMessage);
+
+  useLayoutEffect(() => {
+    onMessageRef.current = onMessage;
+  });
 
   useLayoutEffect(() => {
     const element = container.current;
@@ -31,12 +43,18 @@ function CanvasMount({ props }: { props: DashboardCanvasProps }) {
       return;
     }
 
+    const props: DashboardCanvasProps = {
+      snapshot,
+      selectedView,
+      onAction: (action) => onMessageRef.current(action),
+    };
+
     if (handle.current) {
       handle.current.update(props);
     } else {
       handle.current = mountDashboardCanvas(element, props);
     }
-  });
+  }, [snapshot, selectedView]);
 
   useLayoutEffect(
     () => () => {
@@ -49,24 +67,18 @@ function CanvasMount({ props }: { props: DashboardCanvasProps }) {
   return <div ref={container} data-canvas-island className="contents" />;
 }
 
+const CanvasMount = memo(CanvasMountView);
+
 export function CanvasIsland({ document, viewId, generation, onMessage }: CanvasIslandProps) {
-  const onMessageRef = useRef(onMessage);
   const latestRequest = useRef(0);
-  const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
-  const [now, setNow] = useState(0);
-  const [failed, setFailed] = useState(false);
+  const [preview, setPreview] = useState<{ result: Snapshot; now: number } | null>(null);
+  // Failure belongs to one document, so editing (or retrying) clears it without an effect.
+  const [failedDocument, setFailedDocument] = useState<DashboardDocument | null>(null);
 
   // Reuses the draft's validation messages so the editor and canvas agree.
   const issues = useMemo(() => draftIssues(initialDraft(document)), [document]);
   const invalid = issues.length > 0;
-
-  useLayoutEffect(() => {
-    onMessageRef.current = onMessage;
-  });
-
-  const forwardAction = useCallback((action: Record<string, unknown>) => {
-    onMessageRef.current(action);
-  }, []);
+  const failed = failedDocument === document;
 
   const load = useCallback(() => {
     latestRequest.current += 1;
@@ -76,14 +88,13 @@ export function CanvasIsland({ document, viewId, generation, onMessage }: Canvas
       .preview(document)
       .then((result) => {
         if (request === latestRequest.current) {
-          setSnapshot(result);
-          setNow(Date.now());
-          setFailed(false);
+          setPreview({ result, now: Date.now() });
+          setFailedDocument(null);
         }
       })
       .catch(() => {
         if (request === latestRequest.current) {
-          setFailed(true);
+          setFailedDocument(document);
         }
       });
   }, [document]);
@@ -101,14 +112,22 @@ export function CanvasIsland({ document, viewId, generation, onMessage }: Canvas
     };
   }, [invalid, load]);
 
+  const snapshot = useMemo<DashboardCanvasProps['snapshot'] | null>(() => {
+    if (!preview) {
+      return null;
+    }
+
+    return { ...preview.result, config: document, now: preview.now, generation, editor: true };
+  }, [document, generation, preview]);
+
   if (invalid) {
     return (
       <Alert variant="destructive">
         <AlertTitle>This dashboard has problems</AlertTitle>
         <AlertDescription>
           <ul className="list-disc pl-4">
-            {issues.map((issue) => (
-              <li key={issue}>{issue}</li>
+            {issues.map((issue, index) => (
+              <li key={`${index}-${issue}`}>{issue}</li>
             ))}
           </ul>
         </AlertDescription>
@@ -122,20 +141,26 @@ export function CanvasIsland({ document, viewId, generation, onMessage }: Canvas
         <Alert variant="destructive">
           <AlertTitle>Dashboard data could not be loaded.</AlertTitle>
           <AlertDescription>
-            <Button variant="outline" size="sm" onClick={load}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setFailedDocument(null);
+                load();
+              }}
+            >
               Retry
             </Button>
           </AlertDescription>
         </Alert>
       )}
-      {snapshot && (
-        <CanvasMount
-          props={{
-            snapshot: { ...snapshot, config: document, now, generation, editor: true },
-            selectedView: viewId,
-            onAction: forwardAction,
-          }}
-        />
+      {snapshot && <CanvasMount snapshot={snapshot} selectedView={viewId} onMessage={onMessage} />}
+      {!snapshot && !failed && (
+        <output className="block space-y-3" aria-label="Loading preview">
+          <Skeleton className="h-10 w-2/3" />
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-40 w-full" />
+        </output>
       )}
     </>
   );

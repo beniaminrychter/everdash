@@ -27,7 +27,14 @@ export interface DraftState {
 }
 
 export type DraftAction =
-  | { type: 'loaded' | 'saved'; document: DashboardDocument; revision: string | null }
+  | { type: 'loaded'; document: DashboardDocument; revision: string | null }
+  | {
+      type: 'saved';
+      document: DashboardDocument;
+      /** The document the save request carried; edits made while it was pending differ from it. */
+      sent: DashboardDocument;
+      revision: string | null;
+    }
   | { type: 'discard' }
   | { type: 'replace'; document: DashboardDocument }
   | { type: 'select-view'; viewId: string }
@@ -280,6 +287,16 @@ export function draftReducer(state: DraftState, action: DraftAction): DraftState
     }
 
     case 'saved': {
+      if (serializeDocument(state.document) !== serializeDocument(action.sent)) {
+        // The user kept editing while the request was pending: keep those edits and
+        // treat the server copy as the new baseline, so they still count as unsaved.
+        return {
+          ...state,
+          baseline: serializeDocument(action.document),
+          revision: action.revision,
+        };
+      }
+
       // The saved document equals the draft, so the editing context stays put.
       return {
         ...state,

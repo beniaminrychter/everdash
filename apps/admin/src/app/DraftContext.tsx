@@ -91,9 +91,10 @@ export function DraftProvider({ children }: { children: ReactNode }) {
     setSaveError('');
 
     try {
-      const result = await api.saveConfig(state.revision, state.document);
+      const sent = state.document;
+      const result = await api.saveConfig(state.revision, sent);
 
-      dispatch({ type: 'saved', document: result.config, revision: result.revision });
+      dispatch({ type: 'saved', document: result.config, sent, revision: result.revision });
       // A save moves the old saved dashboard to "previous", but only if one existed.
       setPreviousAvailable(configured || previousAvailable);
       setConfigured(true);
