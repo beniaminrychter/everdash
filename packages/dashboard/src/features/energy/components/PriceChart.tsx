@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import type { EnergyReading } from '../data/readings';
-import { useI18n } from '../../../../../ui/src/i18n/index';
+import { useI18n } from '@everdash/ui/i18n/index';
 import { formatEnergyValue } from '../data/format';
 import styles from './PriceChart.module.css';
 

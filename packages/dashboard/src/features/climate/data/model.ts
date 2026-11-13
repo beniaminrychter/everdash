@@ -1,6 +1,6 @@
 import { isEntity } from '../../../shared/home-assistant/entities';
 import type { LiveDevice } from '../../accessories/data/model';
-import type { ClimateCommand } from '../../../../../contracts/src/home-assistant/contracts';
+import type { ClimateCommand } from '@everdash/contracts/home-assistant/contracts';
 
 export interface ClimateBinding {
   entityId: `climate.${string}`;

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'preact/hooks';
-import { useI18n } from '../../../../../../ui/src/i18n/index';
-import type { DashboardDocument } from '../../../../../../contracts/src/config/types';
-import type { ConfigIssue } from '../../../../../../contracts/src/config/validate';
-import { validateDashboard } from '../../../../../../contracts/src/config/validate';
+import { useI18n } from '@everdash/ui/i18n/index';
+import type { DashboardDocument } from '@everdash/contracts/config/types';
+import type { ConfigIssue } from '@everdash/contracts/config/validate';
+import { validateDashboard } from '@everdash/contracts/config/validate';
 import { configurationApi } from '../../data/api';
 import type { RuntimeSnapshot } from '../../data/api';
 import styles from './ConfigurationEditor.module.css';

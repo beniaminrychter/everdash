@@ -1,6 +1,6 @@
 import { HomeAssistantError } from '../../../shared/home-assistant/client';
-import type { ClimateApi } from '../../../../../contracts/src/home-assistant/contracts';
-import type { ActionFailure } from '../../../../../contracts/src/types/actionFailure';
+import type { ClimateApi } from '@everdash/contracts/home-assistant/contracts';
+import type { ActionFailure } from '@everdash/contracts/types/actionFailure';
 import { climateCommand, climateFields, createClimate, mapClimate } from './model';
 import type { ClimateBinding, ClimateChange, ClimateField, LiveClimate } from './model';
 

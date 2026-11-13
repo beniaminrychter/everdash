@@ -1,5 +1,5 @@
 import type { ComponentChildren } from 'preact';
-import type { IconName } from '../../../../contracts/src/iconNames';
+import type { IconName } from '@everdash/contracts/iconNames';
 import styles from './Icon.module.css';
 
 const shapes = {
@@ -141,7 +141,7 @@ const shapes = {
   ),
 } satisfies Record<IconName, ComponentChildren>;
 
-export type { IconName } from '../../../../contracts/src/iconNames';
+export type { IconName } from '@everdash/contracts/iconNames';
 
 interface IconProps {
   name: IconName;

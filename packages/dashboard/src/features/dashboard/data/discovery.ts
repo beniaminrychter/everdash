@@ -1,5 +1,5 @@
 import type { ClimateBinding } from '../../climate/data/model';
-import type { AppConfig } from '../../../../../contracts/src/config';
+import type { AppConfig } from '@everdash/contracts/config';
 import type { CardConfig } from '../../accessories/data/model';
 import { isEntity } from '../../../shared/home-assistant/entities';
 import type {

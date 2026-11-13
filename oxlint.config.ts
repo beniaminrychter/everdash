@@ -52,6 +52,10 @@ export default defineConfig({
             group: ['**/packages/*/src/**'],
             message: 'Import workspace packages as @everdash/<pkg>/…',
           },
+          {
+            group: ['../**/contracts/src/**', '../**/ui/src/**', '../**/dashboard/src/**'],
+            message: 'Import workspace packages as @everdash/<pkg>/…',
+          },
         ],
       },
     ],

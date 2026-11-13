@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
-import { LanguageProvider, createTranslator } from '../../../../../../ui/src/i18n/index';
-import type { Language } from '../../../../../../ui/src/i18n/index';
+import { LanguageProvider, createTranslator } from '@everdash/ui/i18n/index';
+import type { Language } from '@everdash/ui/i18n/index';
 import { PairingPanel } from '../PairingPanel/PairingPanel';
 import styles from './PairingPage.module.css';
 

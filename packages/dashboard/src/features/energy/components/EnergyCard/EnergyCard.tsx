@@ -3,8 +3,8 @@ import type { Entity } from '../../../../shared/home-assistant/entities';
 import { mapEnergy, powerKilowatts } from '../../data/readings';
 import { formatEnergyValue } from '../../data/format';
 import { PriceChart } from '../PriceChart';
-import { useI18n } from '../../../../../../ui/src/i18n/index';
-import { Widget } from '../../../../../../ui/src/ui/Widget/Widget';
+import { useI18n } from '@everdash/ui/i18n/index';
+import { Widget } from '@everdash/ui/ui/Widget/Widget';
 import styles from './EnergyCard.module.css';
 
 interface Props {

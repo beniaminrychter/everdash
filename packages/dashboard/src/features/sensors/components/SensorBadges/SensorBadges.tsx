@@ -1,7 +1,7 @@
-import { useI18n } from '../../../../../../ui/src/i18n/index';
+import { useI18n } from '@everdash/ui/i18n/index';
 import type { ResolvedView, EntityReadings } from '../../../dashboard/data/types';
 import { sensorValue } from '../../data/readings';
-import { Icon } from '../../../../../../ui/src/ui/Icon/Icon';
+import { Icon } from '@everdash/ui/ui/Icon/Icon';
 import styles from './SensorBadges.module.css';
 
 function BadgeActionIcon({ name }: { name: 'edit' | 'delete' }) {

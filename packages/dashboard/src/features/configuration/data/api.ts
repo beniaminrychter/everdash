@@ -1,5 +1,5 @@
-import type { DashboardDocument } from '../../../../../contracts/src/config/types';
-import type { ConfigIssue } from '../../../../../contracts/src/config/validate';
+import type { DashboardDocument } from '@everdash/contracts/config/types';
+import type { ConfigIssue } from '@everdash/contracts/config/validate';
 
 export interface RuntimeSnapshot {
   revision: string;

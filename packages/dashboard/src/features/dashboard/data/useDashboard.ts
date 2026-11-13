@@ -4,7 +4,7 @@ import type { HomeAssistantClientFactory } from '../../../shared/home-assistant/
 import { resolveDashboard } from './discovery';
 import { ObservationStore } from './store';
 import type { ObservationSnapshot } from './store';
-import type { AppConfig } from '../../../../../contracts/src/config';
+import type { AppConfig } from '@everdash/contracts/config';
 
 export function useDashboard(
   config: AppConfig,

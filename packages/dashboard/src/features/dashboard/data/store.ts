@@ -1,9 +1,9 @@
-import type { CatalogApi } from '../../../../../contracts/src/home-assistant/contracts';
+import type { CatalogApi } from '@everdash/contracts/home-assistant/contracts';
 import { HomeAssistantError } from '../../../shared/home-assistant/client';
 import { hasState } from '../../../shared/dashboard/readings';
 import { parseForecastResponse } from '../../weather/data/forecast';
 import { isEntity, parseEntities, resolveDashboard } from './discovery';
-import type { AppConfig } from '../../../../../contracts/src/config';
+import type { AppConfig } from '@everdash/contracts/config';
 import type { Entity, EntityReadings, ResolvedDashboard } from './types';
 
 export interface ObservationSnapshot {

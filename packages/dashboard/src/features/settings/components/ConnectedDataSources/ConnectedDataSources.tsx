@@ -1,4 +1,4 @@
-import { useI18n } from '../../../../../../ui/src/i18n';
+import { useI18n } from '@everdash/ui/i18n';
 import type { EntityReadings } from '../../../../shared/home-assistant/entities';
 import type { LiveClimate } from '../../../climate/data/model';
 import type { ResolvedView } from '../../../dashboard/data/types';

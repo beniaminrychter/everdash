@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { useI18n } from '../../../../../../ui/src/i18n/index';
+import { useI18n } from '@everdash/ui/i18n/index';
 import styles from './DashboardPicker.module.css';
 
 interface Props {

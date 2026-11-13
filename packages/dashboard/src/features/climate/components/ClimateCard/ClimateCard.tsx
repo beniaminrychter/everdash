@@ -1,8 +1,8 @@
-import { useI18n, translateText } from '../../../../../../ui/src/i18n/index';
+import { useI18n, translateText } from '@everdash/ui/i18n/index';
 import { stepTemperature } from '../../data/model';
 import type { ClimateChange, LiveClimate } from '../../data/model';
 import { formatTemperature } from '../../../../shared/dashboard/readings';
-import { Widget } from '../../../../../../ui/src/ui/Widget/Widget';
+import { Widget } from '@everdash/ui/ui/Widget/Widget';
 import styles from './ClimateCard.module.css';
 
 interface Props {

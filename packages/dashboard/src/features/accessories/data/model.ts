@@ -1,6 +1,6 @@
-import type { Device } from '../../../../../contracts/src/types/index';
-import type { ServiceCommand } from '../../../../../contracts/src/home-assistant/contracts';
-import type { IconName } from '../../../../../ui/src/ui/Icon/Icon';
+import type { Device } from '@everdash/contracts/types/index';
+import type { ServiceCommand } from '@everdash/contracts/home-assistant/contracts';
+import type { IconName } from '@everdash/ui/ui/Icon/Icon';
 
 export type CardConfig = {
   name: string;

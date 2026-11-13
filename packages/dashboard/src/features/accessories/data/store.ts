@@ -1,6 +1,6 @@
 import { HomeAssistantError } from '../../../shared/home-assistant/client';
-import type { HomeAssistantApi } from '../../../../../contracts/src/home-assistant/contracts';
-import type { ActionFailure } from '../../../../../contracts/src/types/actionFailure';
+import type { HomeAssistantApi } from '@everdash/contracts/home-assistant/contracts';
+import type { ActionFailure } from '@everdash/contracts/types/actionFailure';
 import { createCommand, createDevice, mapState } from './model';
 import type { DesiredState, LiveDevice, PageConfig } from './model';
 

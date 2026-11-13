@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'preact/hooks';
-import { useI18n } from '../../../../../../ui/src/i18n/index';
-import type { Translator } from '../../../../../../ui/src/i18n/index';
+import { useI18n } from '@everdash/ui/i18n/index';
+import type { Translator } from '@everdash/ui/i18n/index';
 import { clearOfflineRuntimeConfig } from '../../../../shared/config/runtime-cache';
 import type { DeviceInfo } from '../../data/contracts';
 import styles from './PairingPanel.module.css';

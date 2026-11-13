@@ -1,10 +1,10 @@
 import { useState } from 'preact/hooks';
-import { useI18n, translateMessage } from '../../../../../../ui/src/i18n/index';
-import type { Language } from '../../../../../../ui/src/i18n/index';
+import { useI18n, translateMessage } from '@everdash/ui/i18n/index';
+import type { Language } from '@everdash/ui/i18n/index';
 import type { Appearance } from '../../data/preferences';
 import { About } from '../About/About';
 import { ConfigurationEditor } from '../../../configuration/components/ConfigurationEditor/ConfigurationEditor';
-import type { DashboardDocument } from '../../../../../../contracts/src/config/types';
+import type { DashboardDocument } from '@everdash/contracts/config/types';
 import type { RuntimeSnapshot } from '../../../configuration/data/api';
 import styles from './Settings.module.css';
 

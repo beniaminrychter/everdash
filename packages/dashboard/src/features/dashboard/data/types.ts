@@ -1,8 +1,4 @@
-import type {
-  ConfiguredBadge,
-  ConfiguredCard,
-  ConfiguredView,
-} from '../../../../../contracts/src/config';
+import type { ConfiguredBadge, ConfiguredCard, ConfiguredView } from '@everdash/contracts/config';
 import type { ClimateBinding } from '../../climate/data/model';
 import type { CardConfig } from '../../accessories/data/model';
 

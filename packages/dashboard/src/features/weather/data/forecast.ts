@@ -2,7 +2,7 @@ import type { Entity } from '../../../shared/home-assistant/entities';
 import { hasState } from '../../../shared/dashboard/readings';
 import { isRecord } from '../../../shared/home-assistant/entities';
 import { parseScheduleTime } from '../../../shared/time/schedule';
-import type { IconName } from '../../../../../ui/src/ui/Icon/Icon';
+import type { IconName } from '@everdash/ui/ui/Icon/Icon';
 
 const number = (value: unknown): number | null => {
   if ((typeof value !== 'string' && typeof value !== 'number') || String(value).trim() === '') {

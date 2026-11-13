@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { useI18n } from '../../../../../../ui/src/i18n/index';
+import { useI18n } from '@everdash/ui/i18n/index';
 import { createClimate } from '../../../climate/data/model';
 import type { LiveClimate, ClimateChange } from '../../../climate/data/model';
 import { ClimateCard } from '../../../climate/components/ClimateCard/ClimateCard';

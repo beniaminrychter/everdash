@@ -1,7 +1,7 @@
-import { useI18n, translateText } from '../../../../../../ui/src/i18n/index';
-import type { Device } from '../../../../../../contracts/src/types/index';
-import { Icon } from '../../../../../../ui/src/ui/Icon/Icon';
-import type { IconName } from '../../../../../../ui/src/ui/Icon/Icon';
+import { useI18n, translateText } from '@everdash/ui/i18n/index';
+import type { Device } from '@everdash/contracts/types/index';
+import { Icon } from '@everdash/ui/ui/Icon/Icon';
+import type { IconName } from '@everdash/ui/ui/Icon/Icon';
 import { PowerToggle } from '../PowerToggle/PowerToggle';
 import styles from './LightControls.module.css';
 

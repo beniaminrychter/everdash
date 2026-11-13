@@ -1,4 +1,4 @@
-import type { Language } from '../../../../../ui/src/i18n/index';
+import type { Language } from '@everdash/ui/i18n/index';
 
 export type Appearance = 'auto' | 'dark' | 'light';
 export interface Preferences {

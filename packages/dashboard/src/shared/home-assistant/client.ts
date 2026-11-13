@@ -3,14 +3,14 @@ import type {
   ClimateApi,
   ClimateCommand,
   ServiceCommand,
-} from '../../../../contracts/src/home-assistant/contracts';
+} from '@everdash/contracts/home-assistant/contracts';
 
 export type {
   CatalogApi,
   ClimateApi,
   HomeAssistantApi,
   ServiceCommand,
-} from '../../../../contracts/src/home-assistant/contracts';
+} from '@everdash/contracts/home-assistant/contracts';
 
 export class HomeAssistantError extends Error {
   constructor(

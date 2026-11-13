@@ -1,9 +1,9 @@
-import { useI18n, translateText } from '../../../../../../ui/src/i18n/index';
+import { useI18n, translateText } from '@everdash/ui/i18n/index';
 import { formatTemperature } from '../../../../shared/dashboard/readings';
 import { mapWeather } from '../../data/forecast';
 import type { Entity } from '../../../../shared/home-assistant/entities';
-import { Widget } from '../../../../../../ui/src/ui/Widget/Widget';
-import { Icon } from '../../../../../../ui/src/ui/Icon/Icon';
+import { Widget } from '@everdash/ui/ui/Widget/Widget';
+import { Icon } from '@everdash/ui/ui/Icon/Icon';
 import styles from './WeatherCard.module.css';
 
 interface Props {
