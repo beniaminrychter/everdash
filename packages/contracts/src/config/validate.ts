@@ -1,5 +1,6 @@
+import { cardEntityDomain } from './cardDomains';
 import { defineConfig } from './normalize';
-import type { AppConfig, DashboardDocument, HomeConfig } from './types';
+import type { AppConfig, CardConfig, DashboardDocument, HomeConfig } from './types';
 import { iconNames } from '../iconNames';
 
 export interface ConfigIssue {
@@ -173,9 +174,12 @@ export function validateDashboard(input: unknown): DashboardValidation {
               return;
             }
             addUnknownKeys(card, cardKeys[card.type], cardPath, issues);
-            const domain =
-              card.type === 'outlet' ? 'switch' : card.type === 'pstryk' ? 'sensor' : card.type;
-            validateEntity(card.entity, domain, `${cardPath}.entity`, issues);
+            validateEntity(
+              card.entity,
+              cardEntityDomain(card.type as CardConfig['type']),
+              `${cardPath}.entity`,
+              issues,
+            );
             validateOptionalText(card.name, `${cardPath}.name`, issues);
             if (card.type === 'light' || card.type === 'outlet') {
               validateOptionalText(card.icon, `${cardPath}.icon`, issues);

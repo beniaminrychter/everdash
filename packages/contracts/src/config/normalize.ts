@@ -1,3 +1,4 @@
+import { cardEntityDomain } from './cardDomains';
 import type { AppConfig, BadgeConfig, CardConfig, HomeConfig } from './types';
 import type { IconName } from '../iconNames';
 
@@ -55,9 +56,7 @@ export function defineConfig(config: HomeConfig): AppConfig {
       return { ...badge, icon: badge.icon || icons.temperature };
     });
     const cards = (view.cards || []).map((card) => {
-      const domain =
-        card.type === 'outlet' ? 'switch' : card.type === 'pstryk' ? 'sensor' : card.type;
-      validateEntity(card.entity, domain);
+      validateEntity(card.entity, cardEntityDomain(card.type));
       if (card.type === 'pstryk') {
         for (const entity of [card.sellPrice, card.nextPrice, card.usage, card.schedule]) {
           if (entity !== undefined) {

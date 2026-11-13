@@ -1,3 +1,4 @@
+import { cardEntityDomain } from '@everdash/contracts/config/cardDomains';
 import type { CardConfig, DashboardDocument, ViewConfig } from '@everdash/contracts/config/types';
 
 export type CardKind = CardConfig['type'];
@@ -73,7 +74,7 @@ export function createCard(type: CardKind): CardConfig {
 }
 
 export function createConfiguredCard(type: CardKind, entity: string): CardConfig {
-  const domain = type === 'outlet' ? 'switch' : type === 'pstryk' ? 'sensor' : type;
+  const domain = cardEntityDomain(type);
   if (!new RegExp(`^${domain}\\.[a-z0-9_]+$`).test(entity)) {
     throw new Error(`Choose a valid ${domain} entity before adding the card.`);
   }

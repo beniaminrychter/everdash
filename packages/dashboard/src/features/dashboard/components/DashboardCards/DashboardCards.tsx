@@ -4,7 +4,7 @@ import { createClimate } from '../../../climate/data/model';
 import type { LiveClimate, ClimateChange } from '../../../climate/data/model';
 import { ClimateCard } from '../../../climate/components/ClimateCard/ClimateCard';
 import { groupCards } from '../../data/discovery';
-import type { EntityReadings, ResolvedView } from '../../data/types';
+import type { EntityReadings, ResolvedView, ResolvedWidget } from '../../data/types';
 import type { LiveDevice } from '../../../accessories/data/model';
 import { AccessoryCard } from '../../../accessories/components/AccessoryCard/AccessoryCard';
 import { EnergyCard } from '../../../energy/components/EnergyCard/EnergyCard';
@@ -151,6 +151,72 @@ export function DashboardCards({
   }, []);
   const { t } = useI18n();
   const reading = (id: string | undefined) => (id ? readings[id] : undefined);
+
+  const renderWidget = (card: ResolvedWidget, titleId: string) => {
+    switch (card.type) {
+      case 'pstryk': {
+        return (
+          <EnergyCard
+            title={card.defaultTitle ? undefined : card.name}
+            titleId={titleId}
+            buyEntity={reading(card.entity)}
+            sellEntity={reading(card.sellPrice)}
+            nextEntity={reading(card.nextPrice)}
+            scheduleEntity={reading(card.schedule)}
+            usageEntity={reading(card.usage)}
+            online={online}
+            now={now}
+            timeZone={timeZone}
+          />
+        );
+      }
+
+      case 'climate': {
+        return (
+          <ClimateCard
+            title={card.name}
+            titleId={titleId}
+            online={online}
+            disabled={readOnly && !editorMode}
+            climate={
+              climates.find((item) => item.entityId === card.entity) ||
+              createClimate({
+                entityId: card.entity,
+                name: card.name,
+                temperatureUnit: card.temperatureUnit || '°C',
+              })
+            }
+            onChange={(change, debounceMs) => {
+              if (!editorMode) {
+                onClimateChange(card.entity, change, debounceMs);
+              }
+            }}
+          />
+        );
+      }
+
+      case 'weather': {
+        return (
+          <WeatherCard
+            title={card.defaultTitle ? undefined : card.name}
+            titleId={titleId}
+            entity={reading(card.entity)}
+            forecast={forecasts[card.entity]}
+            timeZone={timeZone}
+            online={online}
+            now={now}
+          />
+        );
+      }
+
+      default: {
+        const unsupported: never = card;
+
+        return unsupported;
+      }
+    }
+  };
+
   return (
     <div
       ref={surface}
@@ -266,50 +332,7 @@ export function DashboardCards({
                   data-card={card.type}
                   data-card-entity={card.entity}
                 >
-                  {card.type === 'pstryk' ? (
-                    <EnergyCard
-                      title={card.defaultTitle ? undefined : card.name}
-                      titleId={titleId}
-                      buyEntity={reading(card.entity)}
-                      sellEntity={reading(card.sellPrice)}
-                      nextEntity={reading(card.nextPrice)}
-                      scheduleEntity={reading(card.schedule)}
-                      usageEntity={reading(card.usage)}
-                      online={online}
-                      now={now}
-                      timeZone={timeZone}
-                    />
-                  ) : card.type === 'climate' ? (
-                    <ClimateCard
-                      title={card.name}
-                      titleId={titleId}
-                      online={online}
-                      disabled={readOnly && !editorMode}
-                      climate={
-                        climates.find((item) => item.entityId === card.entity) ||
-                        createClimate({
-                          entityId: card.entity,
-                          name: card.name,
-                          temperatureUnit: card.temperatureUnit || '°C',
-                        })
-                      }
-                      onChange={(change, debounceMs) => {
-                        if (!editorMode) {
-                          onClimateChange(card.entity, change, debounceMs);
-                        }
-                      }}
-                    />
-                  ) : (
-                    <WeatherCard
-                      title={card.defaultTitle ? undefined : card.name}
-                      titleId={titleId}
-                      entity={reading(card.entity)}
-                      forecast={forecasts[card.entity]}
-                      timeZone={timeZone}
-                      online={online}
-                      now={now}
-                    />
-                  )}
+                  {renderWidget(card, titleId)}
                   {editorMode && (
                     <EditorFooter
                       index={index}

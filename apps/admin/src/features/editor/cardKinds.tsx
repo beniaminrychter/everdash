@@ -1,3 +1,4 @@
+import { cardEntityDomain } from '@everdash/contracts/config/cardDomains';
 import { CloudSunIcon, LightbulbIcon, PlugIcon, ThermometerIcon, ZapIcon } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { CardKind } from '@/app/draft/builder';
@@ -18,35 +19,35 @@ export const cardKinds: readonly CardKindInfo[] = [
     kind: 'light',
     label: 'Light',
     description: 'Switch and dim a light',
-    domain: 'light',
+    domain: cardEntityDomain('light'),
     icon: LightbulbIcon,
   },
   {
     kind: 'outlet',
     label: 'Outlet',
     description: 'Switch a smart plug',
-    domain: 'switch',
+    domain: cardEntityDomain('outlet'),
     icon: PlugIcon,
   },
   {
     kind: 'climate',
     label: 'Climate',
     description: 'Thermostat and heating',
-    domain: 'climate',
+    domain: cardEntityDomain('climate'),
     icon: ThermometerIcon,
   },
   {
     kind: 'weather',
     label: 'Weather',
     description: 'Current conditions and forecast',
-    domain: 'weather',
+    domain: cardEntityDomain('weather'),
     icon: CloudSunIcon,
   },
   {
     kind: 'pstryk',
     label: 'Pstryk energy',
     description: 'Energy prices and usage',
-    domain: 'sensor',
+    domain: cardEntityDomain('pstryk'),
     icon: ZapIcon,
   },
 ];
