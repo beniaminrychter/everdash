@@ -97,9 +97,8 @@ function AdminEntry() {
         {connected && (
           <small>
             To use a different Home Assistant, sign in and choose Disconnect under Tablet access. If
-            you cannot sign in, reset the saved connection with{' '}
-            <code>npm run reset-connection</code> (or <code>--reset-connection</code> on the
-            server).
+            you cannot sign in, reset the saved connection with <code>pnpm reset-connection</code>{' '}
+            (or <code>--reset-connection</code> on the server).
           </small>
         )}
       </form>

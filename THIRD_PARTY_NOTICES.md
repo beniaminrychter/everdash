@@ -1,6 +1,6 @@
 # Third-party software and asset inventory
 
-This inventory covers the server runtime and browser bundles for EverDash 0.2.0. The repository and image should be re-audited whenever dependencies or shipped assets change. Package names, versions, and license metadata are listed in `package-lock.json`; license texts are provided by the corresponding npm packages.
+This inventory covers the server runtime and browser bundles for EverDash 0.2.0. The repository and image should be re-audited whenever dependencies or shipped assets change. Package names, versions, and license metadata are listed in `pnpm-lock.yaml`; license texts are provided by the corresponding npm packages.
 
 | Use | Packages | License inventory |
 | --- | --- | --- |
