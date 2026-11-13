@@ -8,7 +8,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { buttonVariants } from '@/components/ui/button';
 
 interface UnappliedJsonDialogProps {
   open: boolean;
@@ -34,7 +33,7 @@ export function UnappliedJsonDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Keep editing</AlertDialogCancel>
-          <AlertDialogAction className={buttonVariants({ variant: 'outline' })} onClick={onDiscard}>
+          <AlertDialogAction variant="outline" onClick={onDiscard}>
             Discard JSON
           </AlertDialogAction>
           <AlertDialogAction onClick={onApply}>Validate and apply</AlertDialogAction>

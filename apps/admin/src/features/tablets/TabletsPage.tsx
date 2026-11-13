@@ -19,6 +19,7 @@ export function TabletsPage() {
   const dashboardUrl = `${window.location.origin}/`;
   const { status, devices, save } = useTabletAccess();
   const protectedNow = status === 'pin_required';
+  const statusUnknown = status === 'unavailable';
   // Null until the switch is touched, so it follows the saved PIN state.
   const [override, setOverride] = useState<boolean | null>(null);
   const enabled = override ?? protectedNow;
@@ -26,7 +27,16 @@ export function TabletsPage() {
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const canSave = !saving && (enabled ? pin.length >= minimumPinLength : protectedNow);
+  // With an unknown status, saving the switch off must stay possible so a PIN can be removed.
+  const canSave =
+    !saving && (enabled ? pin.length >= minimumPinLength : protectedNow || statusUnknown);
+  let protectionHint = 'Anyone who can reach this address can open the dashboard.';
+
+  if (protectedNow) {
+    protectionHint = 'Tablets ask for a PIN. Turn this off and save to remove it.';
+  } else if (statusUnknown) {
+    protectionHint = 'Unable to read the current PIN setting. Saving replaces it.';
+  }
 
   async function copyUrl() {
     try {
@@ -81,11 +91,7 @@ export function TabletsPage() {
           <div className="flex items-center justify-between gap-4 border-t pt-4">
             <div className="space-y-0.5">
               <Label htmlFor="pin-protection">PIN protection</Label>
-              <p className="text-muted-foreground text-xs">
-                {protectedNow
-                  ? 'Tablets ask for a PIN. Turn this off and save to remove it.'
-                  : 'Anyone who can reach this address can open the dashboard.'}
-              </p>
+              <p className="text-muted-foreground text-xs">{protectionHint}</p>
             </div>
             <Switch id="pin-protection" checked={enabled} onCheckedChange={setOverride} />
           </div>

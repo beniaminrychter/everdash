@@ -8,7 +8,8 @@ export interface PairedDevice {
   revokedAt: number | null;
 }
 
-type AccessStatus = 'open' | 'pin_required' | 'setup_required' | null;
+/** Null while loading; 'unavailable' when the status could not be read. */
+type AccessStatus = 'open' | 'pin_required' | 'setup_required' | 'unavailable' | null;
 
 async function readJson<T>(path: string): Promise<T | null> {
   try {
@@ -23,7 +24,7 @@ async function readJson<T>(path: string): Promise<T | null> {
 async function readStatus(): Promise<AccessStatus> {
   const result = await readJson<{ status: AccessStatus }>('/api/manage/access');
 
-  return result?.status ?? null;
+  return result?.status ?? 'unavailable';
 }
 
 export function useTabletAccess() {
