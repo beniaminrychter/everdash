@@ -67,7 +67,7 @@ import { Toaster, toastManager } from '../components/ui/toast';
 import { Tabs, TabsContent } from '../components/ui/tabs';
 import { api } from '../lib/api';
 import type { EntityOption, ManagedConfig } from '../lib/api';
-import { createCard, createConfiguredCard, createView, moveItem } from '../builder';
+import { createCard, createConfiguredCard, createView, moveItem } from '../app/draft/builder';
 
 type SelectedItem = { type: 'view' } | { type: 'card' | 'badge'; index: number };
 type AdminTab = 'dashboard' | 'devices' | 'json';
