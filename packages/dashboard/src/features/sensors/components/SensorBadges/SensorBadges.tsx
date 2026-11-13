@@ -36,6 +36,7 @@ export function SensorBadges({
   readings,
   online,
   editorMode = false,
+  selectedIndex,
   onEdit,
   onDelete,
 }: {
@@ -43,6 +44,8 @@ export function SensorBadges({
   readings: EntityReadings;
   online: boolean;
   editorMode?: boolean;
+  /** Editor only: index of the badge to outline as selected. */
+  selectedIndex?: number;
   onEdit?: (index: number) => void;
   onDelete?: (index: number) => void;
 }) {
@@ -53,7 +56,14 @@ export function SensorBadges({
         const entity = readings[badge.entity];
         const value = sensorValue(online ? entity : undefined, locale);
         return (
-          <div class={styles.item} key={badge.entity + badge.name}>
+          <div
+            class={
+              editorMode && selectedIndex === index
+                ? `${styles.item} ${styles.selectedItem}`
+                : styles.item
+            }
+            key={badge.entity + badge.name}
+          >
             <div
               class={styles.badge}
               data-sensor={badge.entity}

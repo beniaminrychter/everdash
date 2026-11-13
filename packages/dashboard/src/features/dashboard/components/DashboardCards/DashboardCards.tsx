@@ -26,6 +26,8 @@ interface Props {
   readOnly?: boolean;
   editorMode?: boolean;
   editorKeys?: readonly string[];
+  /** Editor only: index of the card to outline as selected. */
+  selectedIndex?: number;
   onEditorAction?: (action: 'edit' | 'delete' | 'move', index: number, offset?: number) => void;
 }
 
@@ -129,6 +131,7 @@ export function DashboardCards({
   readOnly = false,
   editorMode = false,
   editorKeys,
+  selectedIndex,
   onEditorAction,
 }: Props) {
   const surface = useRef<HTMLDivElement>(null);
@@ -204,7 +207,15 @@ export function DashboardCards({
                 }
                 return (
                   <div
-                    class={editorMode ? styles.editorItem : undefined}
+                    class={
+                      editorMode
+                        ? `${styles.editorItem}${
+                            selectedIndex === view.cards.indexOf(card)
+                              ? ` ${styles.selectedItem}`
+                              : ''
+                          }`
+                        : undefined
+                    }
                     key={editorKeys?.[view.cards.indexOf(card)] ?? cardIndex}
                     data-editor-index={view.cards.indexOf(card)}
                   >
@@ -244,7 +255,11 @@ export function DashboardCards({
               const titleId = `widget-${encodeURIComponent(view.id)}-${groupIndex}-${cardIndex}`;
               return (
                 <div
-                  class={`${card.type === 'weather' ? styles.wide : ''} ${editorMode ? styles.editorItem : ''}`}
+                  class={`${card.type === 'weather' ? styles.wide : ''} ${editorMode ? styles.editorItem : ''}${
+                    editorMode && selectedIndex === view.cards.indexOf(card)
+                      ? ` ${styles.selectedItem}`
+                      : ''
+                  }`}
                   key={editorKeys?.[view.cards.indexOf(card)] ?? cardIndex}
                   data-editor-index={view.cards.indexOf(card)}
                   data-card={card.type}

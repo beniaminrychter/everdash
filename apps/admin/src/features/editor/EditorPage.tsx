@@ -92,6 +92,11 @@ export function EditorPage() {
                 document={state.document}
                 viewId={state.viewId}
                 generation={state.generation}
+                selection={
+                  state.selection.kind === 'card' || state.selection.kind === 'badge'
+                    ? { kind: state.selection.kind, index: state.selection.index }
+                    : undefined
+                }
                 onMessage={handleMessage}
               />
             </div>

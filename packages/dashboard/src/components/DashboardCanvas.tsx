@@ -22,10 +22,17 @@ export interface CanvasSnapshot {
 export interface DashboardCanvasProps {
   snapshot: CanvasSnapshot;
   selectedView: string;
+  /** Editor only: the card or badge to outline. The tablet never passes it. */
+  selection?: { kind: 'card' | 'badge'; index: number };
   onAction: (action: Record<string, unknown>) => void;
 }
 
-export function DashboardCanvas({ snapshot, selectedView, onAction }: DashboardCanvasProps) {
+export function DashboardCanvas({
+  snapshot,
+  selectedView,
+  selection,
+  onAction,
+}: DashboardCanvasProps) {
   const model = useMemo(() => {
     if (!snapshot) {
       return null;
@@ -91,6 +98,7 @@ export function DashboardCanvas({ snapshot, selectedView, onAction }: DashboardC
           readings={model.readings}
           online
           editorMode={currentSnapshot.editor}
+          selectedIndex={selection?.kind === 'badge' ? selection.index : undefined}
           onEdit={(index) => currentSnapshot.editor && postEditorAction('badge.edit', index)}
           onDelete={(index) => currentSnapshot.editor && postEditorAction('badge.delete', index)}
         />
@@ -110,6 +118,7 @@ export function DashboardCanvas({ snapshot, selectedView, onAction }: DashboardC
           onToggle={() => undefined}
           onDetails={() => undefined}
           editorMode={currentSnapshot.editor}
+          selectedIndex={selection?.kind === 'card' ? selection.index : undefined}
           onEditorAction={(action, index, offset) =>
             currentSnapshot.editor &&
             postEditorAction(action === 'move' ? 'card.move' : `card.${action}`, index, offset)

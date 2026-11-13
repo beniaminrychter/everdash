@@ -17,17 +17,27 @@ interface CanvasIslandProps {
   document: DashboardDocument;
   viewId: string;
   generation: number;
+  /** The saved card or badge to outline. Pending items have no ring. */
+  selection?: { kind: 'card' | 'badge'; index: number };
   onMessage: (message: unknown) => void;
 }
 
 interface CanvasMountProps {
   snapshot: DashboardCanvasProps['snapshot'];
   selectedView: string;
+  selectionKind?: 'card' | 'badge';
+  selectionIndex?: number;
   onMessage: (message: unknown) => void;
 }
 
 /** Owns the Preact root: mounts once, re-renders on props, unmounts with the component. */
-function CanvasMountView({ snapshot, selectedView, onMessage }: CanvasMountProps) {
+function CanvasMountView({
+  snapshot,
+  selectedView,
+  selectionKind,
+  selectionIndex,
+  onMessage,
+}: CanvasMountProps) {
   const container = useRef<HTMLDivElement>(null);
   const handle = useRef<CanvasHandle | null>(null);
   const onMessageRef = useRef(onMessage);
@@ -46,6 +56,10 @@ function CanvasMountView({ snapshot, selectedView, onMessage }: CanvasMountProps
     const props: DashboardCanvasProps = {
       snapshot,
       selectedView,
+      selection:
+        selectionKind && selectionIndex !== undefined
+          ? { kind: selectionKind, index: selectionIndex }
+          : undefined,
       onAction: (action) => onMessageRef.current(action),
     };
 
@@ -54,7 +68,7 @@ function CanvasMountView({ snapshot, selectedView, onMessage }: CanvasMountProps
     } else {
       handle.current = mountDashboardCanvas(element, props);
     }
-  }, [snapshot, selectedView]);
+  }, [snapshot, selectedView, selectionKind, selectionIndex]);
 
   useLayoutEffect(
     () => () => {
@@ -69,7 +83,13 @@ function CanvasMountView({ snapshot, selectedView, onMessage }: CanvasMountProps
 
 const CanvasMount = memo(CanvasMountView);
 
-export function CanvasIsland({ document, viewId, generation, onMessage }: CanvasIslandProps) {
+export function CanvasIsland({
+  document,
+  viewId,
+  generation,
+  selection,
+  onMessage,
+}: CanvasIslandProps) {
   const latestRequest = useRef(0);
   const [preview, setPreview] = useState<{ result: Snapshot; now: number } | null>(null);
   // Failure belongs to one document, so editing (or retrying) clears it without an effect.
@@ -154,7 +174,15 @@ export function CanvasIsland({ document, viewId, generation, onMessage }: Canvas
           </AlertDescription>
         </Alert>
       )}
-      {snapshot && <CanvasMount snapshot={snapshot} selectedView={viewId} onMessage={onMessage} />}
+      {snapshot && (
+        <CanvasMount
+          snapshot={snapshot}
+          selectedView={viewId}
+          selectionKind={selection?.kind}
+          selectionIndex={selection?.index}
+          onMessage={onMessage}
+        />
+      )}
       {!snapshot && !failed && (
         <output className="block space-y-3" aria-label="Loading preview">
           <Skeleton className="h-10 w-2/3" />

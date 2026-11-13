@@ -40,6 +40,13 @@
   min-width: 0;
 }
 
+/* Editor only: marks the card shown in the inspector. */
+.selectedItem {
+  border-radius: 22px;
+  outline: 2px solid #2563eb;
+  outline-offset: 4px;
+}
+
 .editorFooter {
   display: flex;
   align-items: center;

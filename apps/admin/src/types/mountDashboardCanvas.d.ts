@@ -15,6 +15,8 @@ export interface CanvasSnapshot {
 export interface DashboardCanvasProps {
   snapshot: CanvasSnapshot;
   selectedView: string;
+  /** Editor only: the card or badge to outline. The tablet never passes it. */
+  selection?: { kind: 'card' | 'badge'; index: number };
   onAction: (action: Record<string, unknown>) => void;
 }
 

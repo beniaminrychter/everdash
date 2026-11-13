@@ -10,6 +10,12 @@
   align-items: flex-start;
   margin: 5px;
 }
+/* Editor only: marks the badge shown in the inspector. */
+.selectedItem {
+  border-radius: 22px;
+  outline: 2px solid #2563eb;
+  outline-offset: 3px;
+}
 .badge {
   display: flex;
   align-items: center;
