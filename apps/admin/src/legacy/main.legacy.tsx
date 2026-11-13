@@ -1,6 +1,6 @@
 import { render } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
-import { authErrorMessage, takeAuthErrorFromUrl } from './authErrors';
+import { authErrorMessage, takeAuthErrorFromUrl } from './features/sign-in/authErrors';
 import { AdminApp } from './ui/AdminApp';
 import type { AuthSessionResponse } from '@everdash/contracts/auth/oauth';
 import styles from './AdminEntry.module.css';

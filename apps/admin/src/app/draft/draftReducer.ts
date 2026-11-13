@@ -266,8 +266,7 @@ function createViewId(document: DashboardDocument): string {
 
 export function draftReducer(state: DraftState, action: DraftAction): DraftState {
   switch (action.type) {
-    case 'loaded':
-    case 'saved': {
+    case 'loaded': {
       return {
         ...state,
         document: action.document,
@@ -275,6 +274,19 @@ export function draftReducer(state: DraftState, action: DraftAction): DraftState
         revision: action.revision,
         viewId: resolveViewId(action.document, state.viewId),
         selection: viewSelection,
+        generation: state.generation + 1,
+        changes: 0,
+      };
+    }
+
+    case 'saved': {
+      // The saved document equals the draft, so the editing context stays put.
+      return {
+        ...state,
+        document: action.document,
+        baseline: serializeDocument(action.document),
+        revision: action.revision,
+        viewId: resolveViewId(action.document, state.viewId),
         generation: state.generation + 1,
         changes: 0,
       };

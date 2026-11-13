@@ -4,6 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
+    <script>
+      // Sole owner of the theme: sets .dark before first paint (no flash) and follows the system setting.
+      (function () {
+        var query = window.matchMedia('(prefers-color-scheme: dark)');
+        function apply() {
+          document.documentElement.classList.toggle('dark', query.matches);
+        }
+        apply();
+        query.addEventListener('change', apply);
+      })();
+    </script>
     <title>EverDash · Home Assistant</title>
   </head>
   <body>

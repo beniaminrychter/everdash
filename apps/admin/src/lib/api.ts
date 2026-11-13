@@ -1,3 +1,4 @@
+import type { AuthSessionResponse } from '@everdash/contracts/auth/oauth';
 import type { DashboardDocument } from '@everdash/contracts/config/types';
 
 export interface EntityOption {
@@ -20,6 +21,29 @@ export interface ManagedConfig {
   diagnostic?: string;
 }
 
+/** Thrown for any 401, so the app can return to sign-in from one place. */
+export class UnauthorizedError extends Error {
+  readonly status = 401;
+
+  constructor(message = 'Your session has expired. Sign in again.') {
+    super(message);
+    this.name = 'UnauthorizedError';
+  }
+}
+
+type UnauthorizedListener = () => void;
+
+const unauthorizedListeners = new Set<UnauthorizedListener>();
+
+/** Runs `listener` whenever any API call gets a 401. Returns an unsubscribe function. */
+export function onUnauthorized(listener: UnauthorizedListener): () => void {
+  unauthorizedListeners.add(listener);
+
+  return () => {
+    unauthorizedListeners.delete(listener);
+  };
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/${path.replace(/^\/+/, '')}`, {
     credentials: 'same-origin',
@@ -30,6 +54,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     },
     ...init,
   });
+  if (response.status === 401) {
+    const error = new UnauthorizedError();
+
+    for (const listener of unauthorizedListeners) {
+      listener();
+    }
+
+    throw error;
+  }
+
   const result = (await response.json()) as T & {
     message?: string;
     code?: string;
@@ -52,6 +86,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  getSession: () => request<AuthSessionResponse>('api/manage/auth/session'),
   getConfig: () => request<ManagedConfig>('api/manage/config'),
   getPreviousConfig: () => request<{ config: DashboardDocument }>('api/manage/config/previous'),
   saveConfig: (revision: string | null, config: DashboardDocument) =>

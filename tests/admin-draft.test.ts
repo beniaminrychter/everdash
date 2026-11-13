@@ -232,6 +232,35 @@ test('generation increases on every document change', () => {
   assert.equal(state.revision, 'r2');
 });
 
+test('saved keeps selection and view; loaded resets selection', () => {
+  const edited = run(
+    start(),
+    { type: 'rename-view', title: 'Lobby' },
+    { type: 'select', selection: { kind: 'card', index: 1 } },
+  );
+
+  const saved = draftReducer(edited, {
+    type: 'saved',
+    document: edited.document,
+    revision: 'r2',
+  });
+
+  assert.equal(saved.viewId, 'home');
+  assert.deepEqual(saved.selection, { kind: 'card', index: 1 });
+  assert.equal(saved.changes, 0);
+  assert.equal(saved.revision, 'r2');
+  assert.equal(isDirty(saved), false);
+  assert.ok(saved.generation > edited.generation);
+
+  const loaded = draftReducer(edited, {
+    type: 'loaded',
+    document: edited.document,
+    revision: 'r3',
+  });
+
+  assert.deepEqual(loaded.selection, { kind: 'view' });
+});
+
 test('editing back keeps changes above zero but is not dirty', () => {
   const state = run(
     start(),
