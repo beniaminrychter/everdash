@@ -25,6 +25,7 @@
     "packages",
     "preview",
     "tests/config.types.ts",
+    "tests/canvasBoundary.types.ts",
     "vite.config.ts",
     "vite.preview.config.ts",
     "tooling/aliases.ts",
