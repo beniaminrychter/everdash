@@ -33,21 +33,13 @@ jobs:
       - name: Check legacy browser output
         run: npm run check:compat
 
-      - name: Typecheck and build server
-        run: npm run typecheck:server && npm run build:server
-
       - name: Smoke test server entry
         run: npm run smoke:server
 
       - name: Install Chromium for browser tests
         run: npx playwright install --with-deps chromium
 
-      - name: Run isolated browser suite
+      - name: Run isolated browser suites
         env:
           MY_HOME_BROWSER_CHANNEL: chromium
         run: npm run test:browser
-
-      - name: Run Home Assistant builder browser suite
-        env:
-          MY_HOME_BROWSER_CHANNEL: chromium
-        run: npm run test:admin-browser

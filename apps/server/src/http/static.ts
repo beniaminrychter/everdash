@@ -17,7 +17,6 @@ const contentTypes: Record<string, string> = {
 export function registerStaticFiles(
   app: FastifyInstance,
   rootDirectory: string,
-  previewDirectory?: string,
   adminDirectory?: string,
 ) {
   const registerDirectory = (
@@ -79,9 +78,6 @@ export function registerStaticFiles(
     }
   };
 
-  if (previewDirectory) {
-    registerDirectory(previewDirectory, 'preview', 'index.html', true);
-  }
   if (adminDirectory) {
     registerDirectory(adminDirectory, 'admin');
   }

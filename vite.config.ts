@@ -83,8 +83,15 @@ self.addEventListener('fetch', function (event) {
   };
 }
 
+const api = process.env.EVERDASH_API_URL ?? 'http://127.0.0.1:8790';
+
 export default defineConfig({
   root: resolve('apps/tablet'),
+  server: {
+    port: 5173,
+    strictPort: true,
+    proxy: { '/api': { target: api } },
+  },
   base: './',
   build: {
     outDir: resolve('dist'),

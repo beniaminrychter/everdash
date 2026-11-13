@@ -15,7 +15,11 @@ EverDash gives legacy tablets new possibilities as Home Assistant dashboards. It
 docker compose up -d --build
 ```
 
-Open `http://YOUR-SERVER:8095/admin/`, enter your Home Assistant URL, and sign in with a Home Assistant administrator account. The URL must be reachable by your browser and the container. EverDash stores the refresh credential only on the server in its persistent `/data` volume.
+Compose starts both EverDash and the latest stable Home Assistant container. Home Assistant configuration is stored separately in the `homeassistant-config` volume; EverDash uses `everdash-data`. The Home Assistant image is pulled when starting the stack, and its timezone defaults to `Europe/Warsaw` (override with `TZ`).
+
+First open `http://YOUR-SERVER:8123/` and complete Home Assistant onboarding. Then open `http://YOUR-SERVER:8095/admin/`, enter `http://YOUR-SERVER-LAN-IP:8123`, and sign in with a Home Assistant administrator account. Use the server's LAN address: `localhost` inside EverDash refers to its own container, and the Docker service name `homeassistant` is not normally resolvable by your browser. EverDash stores the refresh credential only on the server in its persistent `/data` volume.
+
+This stack publishes ports 8123 and 8095 using bridge networking. Full LAN discovery and direct hardware integrations may require a Linux host-network deployment and explicit device mappings. Stop any separate Home Assistant container already publishing port 8123 before starting this stack.
 
 Configure views and cards in the visual editor. Under Tablet access, optionally save a four-to-six digit PIN. Open `http://YOUR-SERVER:8095/` on the tablet. No pairing is required. A PIN unlock lasts for the browser session; use Lock to end it explicitly. Browser session restoration may retain the unlock.
 
@@ -23,7 +27,33 @@ Initialize on a trusted LAN before external exposure. For HTTPS, put a trusted r
 
 The named Docker volume holds dashboard configuration, recovery files, connection credentials and access settings. Back it up before upgrading. Imported dashboards remain locked until an HA administrator saves an access choice. Existing device records are left untouched and unused.
 
-Development checks: `npm ci`, `npm run build`, `npm test`, `npm run test:browser`, and `npm run test:admin-browser`. Optional Home Assistant fixtures in `compose.local.yaml` are for development only.
+## Local development (no container)
+
+```sh
+npm ci
+npm run dev
+```
+
+`npm run dev` starts three processes with hot reload:
+
+| URL                            | What                                                        |
+| ------------------------------ | ----------------------------------------------------------- |
+| `http://localhost:5174/admin/` | Admin editor (Vite)                                         |
+| `http://localhost:5173/`       | Tablet dashboard (Vite)                                     |
+| `http://127.0.0.1:8790`        | EverDash server from TypeScript source, restarted on change |
+
+Both Vite servers proxy `/api` to the server. Data is kept in `.local/everdash` (git-ignored). The server runs on your machine, so sign in with `http://localhost:8123` when Home Assistant runs locally or in a container that publishes port 8123. Override `EVERDASH_PORT` or `EVERDASH_DATA_DIR` if needed.
+
+To run a production build without a container: `npm run build`, then `npm start` (port 8095, data in `.local/everdash`; set `EVERDASH_PORT` if a container already uses 8095).
+
+### Changing the Home Assistant instance
+
+In the admin, open **Tablet access → Home Assistant → Disconnect…**, then sign in to another instance. If you cannot sign in at all (for example the address changed), reset the connection from the server's shell:
+
+```sh
+node dist-server/server.js --reset-connection                                      # local build
+docker compose exec everdash node /app/dist-server/server.js --reset-connection    # Docker
+```
 
 ## Home Assistant connection
 
@@ -127,14 +157,18 @@ Ultracite runs Oxlint and Oxfmt with its core and React-compatible presets. Reac
 Oxfmt formats TSX, TypeScript, CSS, HTML, JSON, and Markdown. Configurations are `oxlint.config.ts`, `oxfmt.config.ts`, and `.editorconfig`. Generated assets, dependencies, browser reports, and npm's lockfile are excluded. Import sorting stays off to preserve stylesheet order. Quality tools add nothing to the browser bundle.
 
 ```sh
+npm run dev              # Server + tablet + admin with hot reload
+npm run build            # Typecheck, then tablet, admin, and server production bundles
+npm start                # Run the production build locally
 npm run lint             # Fail on warnings and errors
-npm run lint:fix         # Apply safe lint fixes
 npm run format           # Apply Ultracite safe fixes and format authored files
 npm run format:check     # Verify formatting
-npm run check            # Lint + formatting + both TypeScript projects + unit tests
-npm run build            # Tablet, admin, and server production bundles
+npm run typecheck        # Tablet, admin, and server TypeScript projects
+npm run check            # Lint + formatting + typecheck + unit tests
+npm test                 # Unit tests
 npm run check:compat     # After build: ES5 syntax, Safari CSS, PWA/cache inventory
-npm run test:browser     # Self-contained build/server + installed Chrome; no live devices
+npm run smoke:server     # After build: start the server bundle and probe it
+npm run test:browser     # Tablet and admin browser suites; isolated fixtures, no live devices
 ```
 
 The browser test uses a stable configuration in `tests/fixtures/dashboard.ts`, independent of the generic runtime JSON example. It builds into an OS temporary directory using dummy environment credentials and an isolated cross-origin HTTP API fixture. No preview server is needed, and the normal `dist/` and `.env` remain untouched. It verifies explicit entity bindings and metadata refresh, saved dashboard/appearance preferences, multiple views with shared controls and badge-only views, ordered widgets, HA sunrise/sunset, compact Pstryk/weather/temperature widgets, real browser HTTP requests, service payloads, inline AC temperature/mode/fan controls and failure rollback, automatic polling, capability-dependent controls, dimming, authentication/error recovery, unavailable entities, modal keyboard behavior, offline disabled controls, reconnect, four responsive widths, and forced SystemJS startup. Screenshots go to the OS temporary directory; set `MY_HOME_SCREENSHOT_DIR` to choose another path. Set `MY_HOME_BROWSER_CHANNEL=chromium` to use a previously installed bundled Chromium.

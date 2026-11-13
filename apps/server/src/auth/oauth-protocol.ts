@@ -150,6 +150,32 @@ export async function refreshGrant(
   );
 }
 
+/**
+ * Confirms that this server (not only the browser) can reach Home Assistant.
+ * An unauthenticated `/api/` request answers 401 on a real Home Assistant.
+ */
+export async function probeHomeAssistant(
+  origin: string,
+  options: OAuthTransportOptions = {},
+): Promise<void> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? 5_000);
+  try {
+    const response = await (options.fetch ?? fetch)(
+      new URL('/api/', parseHomeAssistantOrigin(origin)),
+      { method: 'GET', redirect: 'error', signal: controller.signal },
+    );
+    await response.body?.cancel();
+    if (response.status !== 401 && response.status !== 200) {
+      throw new Error('Unexpected Home Assistant response.');
+    }
+  } catch {
+    throw new Error('Home Assistant is unreachable.');
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function revokeGrant(
   origin: string,
   refreshToken: string,

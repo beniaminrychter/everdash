@@ -37,3 +37,10 @@
   color: #fff;
   cursor: pointer;
 }
+
+.login small {
+  display: block;
+  margin-top: 16px;
+  font-size: 13px;
+  color: #4a5561;
+}

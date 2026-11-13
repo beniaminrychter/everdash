@@ -1,5 +1,8 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import styles from '../../AdminEntry.module.css';
+import local from './AccessSettings.module.css';
+import { AdminDialog } from '../../../../../packages/ui/src/admin/AdminDialog/AdminDialog';
+import { Button } from '../../../../../packages/ui/src/admin/Button/Button';
 import { QRCodeSVG } from '../../../../../packages/ui/src/admin/QRCode/QRCode';
 
 async function logout() {
@@ -14,6 +17,39 @@ export function AccessSettings() {
   const dashboardUrl = `${window.location.origin}/`;
   const [pin, setPin] = useState('');
   const [message, setMessage] = useState('');
+  const [homeAssistant, setHomeAssistant] = useState('');
+  const [confirmDisconnect, setConfirmDisconnect] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/manage/auth/session', { credentials: 'same-origin' })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((session: { homeAssistantOrigin?: string } | null) => {
+        setHomeAssistant(session?.homeAssistantOrigin ?? '');
+      })
+      .catch(() => {
+        setHomeAssistant('');
+      });
+  }, []);
+
+  async function disconnect() {
+    setDisconnecting(true);
+    const response = await fetch('/api/manage/auth/disconnect', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'X-EverDash-Request': '1' },
+    }).catch(() => null);
+
+    if (response?.ok) {
+      window.location.assign('/admin/');
+      return;
+    }
+
+    setDisconnecting(false);
+    setConfirmDisconnect(false);
+    setMessage('Unable to disconnect Home Assistant.');
+  }
+
   async function save(event: Event) {
     event.preventDefault();
     const response = await fetch('/api/manage/access', {
@@ -41,44 +77,79 @@ export function AccessSettings() {
     }
   }
   return (
-    <section class={styles.login}>
-      <form onSubmit={save}>
-        <h1>Tablet access</h1>
-        <QRCodeSVG
-          value={dashboardUrl}
-          size={132}
-          level="M"
-          includeMargin
-          aria-label="Dashboard QR code"
-        />
-        <p>
-          <a href={dashboardUrl}>{dashboardUrl}</a>
-        </p>
-        <p>
-          Open <a href="/">the dashboard</a> on your tablet. No pairing is required.
-        </p>
-        <label>
-          New PIN (optional)
-          <input
-            type="password"
-            inputMode="numeric"
-            pattern="[0-9]{4,6}"
-            minLength={4}
-            maxLength={6}
-            value={pin}
-            onInput={(event) => setPin(event.currentTarget.value)}
+    <>
+      <section class={styles.login}>
+        <form onSubmit={save}>
+          <h1>Tablet access</h1>
+          <QRCodeSVG
+            value={dashboardUrl}
+            size={132}
+            level="M"
+            includeMargin
+            aria-label="Dashboard QR code"
           />
-        </label>
-        <p>Use 4–6 digits. Leave empty and save to remove PIN protection.</p>
-        <button type="submit">Save access</button>
-        {message && <output>{message}</output>}
-        <button type="button" onClick={reconnect}>
-          Reconnect Home Assistant
-        </button>
-        <button type="button" onClick={logout}>
-          Log out
-        </button>
-      </form>
-    </section>
+          <p>
+            <a href={dashboardUrl}>{dashboardUrl}</a>
+          </p>
+          <p>
+            Open <a href="/">the dashboard</a> on your tablet. No pairing is required.
+          </p>
+          <label>
+            New PIN (optional)
+            <input
+              type="password"
+              inputMode="numeric"
+              pattern="[0-9]{4,6}"
+              minLength={4}
+              maxLength={6}
+              value={pin}
+              onInput={(event) => setPin(event.currentTarget.value)}
+            />
+          </label>
+          <p>Use 4–6 digits. Leave empty and save to remove PIN protection.</p>
+          <button type="submit">Save access</button>
+          {message && <output>{message}</output>}
+          <div class={local.connection}>
+            <h2>Home Assistant</h2>
+            {homeAssistant && (
+              <p>
+                Connected to <code>{homeAssistant}</code>
+              </p>
+            )}
+            <button type="button" onClick={reconnect}>
+              Reconnect Home Assistant
+            </button>
+            <button type="button" class={local.danger} onClick={() => setConfirmDisconnect(true)}>
+              Disconnect…
+            </button>
+          </div>
+          <div class={local.footer}>
+            <button type="button" class={local.secondary} onClick={logout}>
+              Log out
+            </button>
+          </div>
+        </form>
+      </section>
+      <AdminDialog
+        open={confirmDisconnect}
+        onOpenChange={(open) => !disconnecting && setConfirmDisconnect(open)}
+        title="Disconnect Home Assistant?"
+        description="EverDash forgets this Home Assistant connection and signs you out. Your dashboard layout is kept. Then you can sign in to any Home Assistant instance. Tablets show no data until you connect again."
+        className="confirm-dialog"
+      >
+        <div className="confirm-actions">
+          <Button
+            variant="outline"
+            disabled={disconnecting}
+            onClick={() => setConfirmDisconnect(false)}
+          >
+            Cancel
+          </Button>
+          <Button variant="destructive" disabled={disconnecting} onClick={disconnect}>
+            {disconnecting ? 'Disconnecting…' : 'Disconnect'}
+          </Button>
+        </div>
+      </AdminDialog>
+    </>
   );
 }

@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
   authorizeUrl,
   exchangeCode,
+  probeHomeAssistant,
   refreshGrant,
   revokeGrant,
 } from '../apps/server/src/auth/oauth-protocol';
@@ -178,7 +179,33 @@ test('WebSocket rejects invalid frames, nonadmins, close, and timeout with clean
         result: { id: 'u', is_admin: false, is_owner: true },
       });
     }
-    await assert.rejects(result, /identity/i);
+    const expected =
+      outcome === 'nonadmin'
+        ? (error: Error & { code?: string }) => error.code === 'NOT_ADMIN'
+        : /identity/i;
+    await assert.rejects(result, expected);
     assert.equal(socket.closed, true, outcome);
   }
+});
+
+test('probe accepts Home Assistant API answers and rejects unreachable or foreign servers', async () => {
+  const urls: string[] = [];
+  const answer =
+    (status: number): typeof fetch =>
+    async (url) => {
+      urls.push(String(url));
+      return new Response(null, { status });
+    };
+  await probeHomeAssistant(origin, { fetch: answer(401) });
+  await probeHomeAssistant(origin, { fetch: answer(200) });
+  assert.deepEqual(urls, [`${origin}/api/`, `${origin}/api/`]);
+  await assert.rejects(probeHomeAssistant(origin, { fetch: answer(404) }), /unreachable/);
+  await assert.rejects(
+    probeHomeAssistant(origin, {
+      fetch: async () => {
+        throw new TypeError('fetch failed');
+      },
+    }),
+    /unreachable/,
+  );
 });

@@ -1,3 +1,4 @@
+import { OAuthFlowError } from './oauth-flow-error';
 import { parseHomeAssistantOrigin } from './origin';
 
 interface Socket {
@@ -21,7 +22,7 @@ export function verifyAdmin(
     let done = false;
     let phase = 0;
     const timeout: { timer?: ReturnType<typeof setTimeout> } = {};
-    function finish(id?: string) {
+    function finish(id?: string, error?: Error) {
       if (done) {
         return;
       }
@@ -35,7 +36,7 @@ export function verifyAdmin(
       if (id) {
         resolve({ id });
       } else {
-        reject(new Error('Home Assistant identity verification failed.'));
+        reject(error ?? new Error('Home Assistant identity verification failed.'));
       }
     }
     timeout.timer = setTimeout(() => finish(), options.timeoutMs ?? 10_000);
@@ -75,11 +76,17 @@ export function verifyAdmin(
             !Array.isArray(data.result)
           ) {
             const user = data.result as Record<string, unknown>;
-            finish(
-              typeof user.id === 'string' && user.id.trim() && user.is_admin === true
-                ? user.id
-                : undefined,
-            );
+            if (typeof user.id !== 'string' || !user.id.trim()) {
+              finish();
+              return;
+            }
+
+            if (user.is_admin !== true) {
+              finish(undefined, new OAuthFlowError('NOT_ADMIN'));
+              return;
+            }
+
+            finish(user.id);
           } else {
             finish();
           }

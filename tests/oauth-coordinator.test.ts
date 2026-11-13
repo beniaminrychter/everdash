@@ -18,10 +18,16 @@ function fixture(options: { beforeRename?: () => void; beforeDirectorySync?: () 
   const revoked: string[] = [];
   const exchanged: string[] = [];
   let admin = true;
+  let reachable = true;
   const flow = new OAuthCoordinator({
     repository,
     provider,
     sessions,
+    probe: async () => {
+      if (!reachable) {
+        throw new Error('unreachable');
+      }
+    },
     exchange: async (_origin, clientId, code) => {
       exchanged.push(clientId);
       if (code === 'fail') {
@@ -67,6 +73,9 @@ function fixture(options: { beforeRename?: () => void; beforeDirectorySync?: () 
     complete,
     setAdmin: (value: boolean) => {
       admin = value;
+    },
+    setReachable: (value: boolean) => {
+      reachable = value;
     },
     close: () => rmSync(directory, { recursive: true, force: true }),
   };
@@ -226,6 +235,7 @@ test('denial, expiry, exchange failure and session failure remain safe', async (
     provider: f.provider,
     transactions: new OAuthTransactions({ now: () => now }),
     sessions: new BrokenSessions(),
+    probe: async () => {},
     exchange: async () => ({ accessToken: 'access', refreshToken: 'retained', expiresIn: 3600 }),
     verify: async () => ({ id: 'admin' }),
     revoke: async (_origin, token) => {
@@ -255,4 +265,83 @@ test('denial, expiry, exchange failure and session failure remain safe', async (
   );
   assert.equal(f.repository.readCredentials()?.refreshToken, 'retained');
   assert.deepEqual(f.revoked, []);
+});
+
+test('reports unreachable Home Assistant before redirect and after a failed exchange', async (t) => {
+  const f = fixture();
+  t.after(f.close);
+  await f.flow.checkReachable(ha);
+  const tx = f.begin();
+  f.setReachable(false);
+  await assert.rejects(
+    f.flow.checkReachable(ha),
+    (error: Error & { code?: string }) => error.code === 'HA_UNREACHABLE',
+  );
+  await assert.rejects(
+    f.complete(tx, 'fail'),
+    (error: Error & { code?: string }) => error.code === 'HA_UNREACHABLE',
+  );
+  assert.equal(f.repository.status().state, 'unconfigured');
+});
+
+test('nonadmin identity keeps its specific code and revokes the grant', async (t) => {
+  const { OAuthFlowError } = await import('../apps/server/src/auth/oauth-flow-error');
+  const directory = mkdtempSync(join(tmpdir(), 'oauth-flow-'));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const repository = new ConnectorRepository({ directory });
+  const revoked: string[] = [];
+  const flow = new OAuthCoordinator({
+    repository,
+    provider: new HouseholdCredentialProvider({ repository }),
+    probe: async () => {},
+    exchange: async () => ({ accessToken: 'a', refreshToken: 'r', expiresIn: 3600 }),
+    verify: async () => {
+      throw new OAuthFlowError('NOT_ADMIN');
+    },
+    revoke: async (_origin, token) => {
+      revoked.push(token);
+    },
+  });
+  const started = flow.begin({
+    browserOrigin: browser,
+    homeAssistantOrigin: ha,
+    intent: 'login',
+    secure: false,
+  });
+  await assert.rejects(
+    flow.complete({
+      state: new URL(started.authorizationUrl).searchParams.get('state'),
+      binding: started.transactionCookie.split(';')[0].split('=')[1],
+      code: 'x',
+      callbackOrigin: browser,
+      secure: false,
+    }),
+    (error: Error & { code?: string }) => error.code === 'NOT_ADMIN',
+  );
+  assert.deepEqual(revoked, ['r']);
+  assert.equal(repository.status().state, 'unconfigured');
+});
+
+test('reset command forgets the connection and revokes its token', async (t) => {
+  const { resetConnection } = await import('../apps/server/src/auth/reset-connection');
+  const { writeFileSync } = await import('node:fs');
+  const directory = mkdtempSync(join(tmpdir(), 'oauth-reset-'));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const repository = new ConnectorRepository({ directory });
+  await repository.install({ origin: ha, clientId: browser, refreshToken: 'old' });
+  const revoked: string[] = [];
+  assert.deepEqual(
+    await resetConnection(directory, async (_origin, token) => {
+      revoked.push(token);
+    }),
+    { removed: ha, revoked: true },
+  );
+  assert.deepEqual(revoked, ['old']);
+  assert.equal(repository.status().state, 'unconfigured');
+  assert.deepEqual(await resetConnection(directory), { removed: null, revoked: false });
+
+  writeFileSync(join(directory, 'connector.json'), '{');
+  assert.equal(repository.status().state, 'repair-required');
+  await resetConnection(directory);
+  assert.equal(repository.status().state, 'unconfigured');
 });

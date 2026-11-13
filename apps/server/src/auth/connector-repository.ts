@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   AtomicJsonDurabilityError,
@@ -147,6 +147,32 @@ export class ConnectorRepository {
       }
       this.uncertainGeneration = null;
       return { ...next, durability: 'confirmed' as const };
+    });
+    this.queue = operation.then(
+      () => undefined,
+      () => undefined,
+    );
+    return operation;
+  }
+
+  /**
+   * Forgets the Home Assistant connection, including a corrupt one. Returns the
+   * removed credentials so the caller can revoke them; admin sessions bound to
+   * the old generation stop validating immediately.
+   */
+  remove(): Promise<ConnectorCredentials | null> {
+    const operation = this.queue.then(() => {
+      const current = this.load();
+      try {
+        unlinkSync(this.path);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+          throw error;
+        }
+      }
+
+      this.uncertainGeneration = null;
+      return current.state === 'connected' ? current.credentials : null;
     });
     this.queue = operation.then(
       () => undefined,

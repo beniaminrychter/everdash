@@ -13,7 +13,7 @@ import { OAuthTransactions } from './admin-state';
 import { verifyAdmin } from './admin-identity';
 import type { ConnectorRepository, ConnectorStatus } from './connector-repository';
 import type { HouseholdCredentialProvider } from './credential-provider';
-import { authorizeUrl, exchangeCode, revokeGrant } from './oauth-protocol';
+import { authorizeUrl, exchangeCode, probeHomeAssistant, revokeGrant } from './oauth-protocol';
 import type { OAuthGrant } from './oauth-protocol';
 import { parseHomeAssistantOrigin } from './origin';
 
@@ -25,6 +25,7 @@ export interface OAuthCoordinatorOptions {
   exchange?: typeof exchangeCode;
   verify?: typeof verifyAdmin;
   revoke?: typeof revokeGrant;
+  probe?: typeof probeHomeAssistant;
 }
 
 export class OAuthCoordinator {
@@ -34,6 +35,30 @@ export class OAuthCoordinator {
   constructor(private readonly options: OAuthCoordinatorOptions) {
     this.sessions = options.sessions ?? new AdminSessions();
     this.transactions = options.transactions ?? new OAuthTransactions();
+  }
+
+  /**
+   * Fails early when the server cannot reach the Home Assistant address the
+   * browser will be sent to, e.g. `localhost` from inside a container.
+   */
+  async checkReachable(homeAssistantOrigin?: string): Promise<void> {
+    const status = this.options.repository.status();
+    let origin: string;
+    try {
+      origin =
+        status.state === 'connected'
+          ? status.origin
+          : parseHomeAssistantOrigin(homeAssistantOrigin ?? '');
+    } catch {
+      // Malformed input is rejected by begin() with INVALID_REQUEST.
+      return;
+    }
+
+    try {
+      await (this.options.probe ?? probeHomeAssistant)(origin);
+    } catch {
+      throw new OAuthFlowError('HA_UNREACHABLE');
+    }
   }
 
   begin(input: {
@@ -157,6 +182,9 @@ export class OAuthCoordinator {
       if (error instanceof OAuthFlowError) {
         throw error;
       }
+      if (!grant) {
+        await this.checkReachable(tx.origin);
+      }
       throw new OAuthFlowError('AUTH_FAILED');
     }
   }
@@ -183,6 +211,31 @@ export class OAuthCoordinator {
       return null;
     }
     return this.sessions.read(session, status.origin, status.generation);
+  }
+
+  /** Forgets the connection so an administrator can connect another instance. */
+  async disconnect(session: string, secure: boolean): Promise<{ clearAdminCookie: string }> {
+    if (!this.readSession(session)) {
+      throw new OAuthFlowError('INVALID_REQUEST');
+    }
+
+    const operation = this.queue.then(() => this.options.repository.remove());
+    this.queue = operation.then(
+      () => undefined,
+      () => undefined,
+    );
+    const removed = await operation;
+    this.sessions.logout(session);
+
+    if (removed) {
+      try {
+        await (this.options.revoke ?? revokeGrant)(removed.origin, removed.refreshToken);
+      } catch {
+        // Revocation is best effort; the credential is already forgotten locally.
+      }
+    }
+
+    return { clearAdminCookie: clearAdminCookie(secure) };
   }
 
   logout(session: string, secure: boolean): { clearAdminCookie: string } {

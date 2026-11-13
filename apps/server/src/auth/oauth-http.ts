@@ -16,6 +16,12 @@ import { parseHomeAssistantOrigin } from './origin';
 
 const prefix = '/api/manage/auth';
 
+/**
+ * Home Assistant's login page appends `storeToken=true` when "Keep me logged
+ * in" is checked; it only affects HA's own frontend and is ignored here.
+ */
+const CALLBACK_KEYS = new Set(['state', 'code', 'error', 'storeToken']);
+
 /** Fastify applies forwarded values only when the connecting peer is trusted. */
 export function actualOrigin(request: FastifyRequest): string {
   const protocol = request.protocol;
@@ -92,6 +98,7 @@ export function registerOAuthRoutes(app: FastifyInstance, coordinator: OAuthCoor
       return reply;
     }
     try {
+      await coordinator.checkReachable(request.body.homeAssistantOrigin);
       const result = coordinator.begin({
         browserOrigin: origin,
         intent: request.body.intent,
@@ -102,7 +109,8 @@ export function registerOAuthRoutes(app: FastifyInstance, coordinator: OAuthCoor
         .header('Set-Cookie', result.transactionCookie)
         .send({ authorizationUrl: result.authorizationUrl });
     } catch (error) {
-      return reply.code(400).send({ error: errorCode(error) });
+      const code = errorCode(error);
+      return reply.code(code === 'HA_UNREACHABLE' ? 502 : 400).send({ error: code });
     }
   });
 
@@ -114,7 +122,7 @@ export function registerOAuthRoutes(app: FastifyInstance, coordinator: OAuthCoor
       const query = request.query as Record<string, unknown>;
       if (
         !query ||
-        Object.keys(query).some((key) => !['state', 'code', 'error'].includes(key)) ||
+        Object.keys(query).some((key) => !CALLBACK_KEYS.has(key)) ||
         typeof query.state !== 'string' ||
         (query.code !== undefined && typeof query.code !== 'string') ||
         (query.error !== undefined && typeof query.error !== 'string')
@@ -142,14 +150,29 @@ export function registerOAuthRoutes(app: FastifyInstance, coordinator: OAuthCoor
   app.get(`${prefix}/session`, async (request, reply) => {
     const cookie = readCookie(request.headers.cookie, ADMIN_COOKIE);
     const status = coordinator.status();
-    const result: AuthSessionResponse = {
-      authenticated: !!cookie && !!coordinator.readSession(cookie),
-      connection: status.state,
-    };
+    const authenticated = !!cookie && !!coordinator.readSession(cookie);
+    const result: AuthSessionResponse = { authenticated, connection: status.state };
+    // Not secret: /start already redirects any visitor to this address.
+    if (status.state === 'connected') {
+      result.homeAssistantOrigin = status.origin;
+    }
     if (status.state === 'connected' && status.durability === 'uncertain') {
       result.durability = 'uncertain';
     }
     return reply.send(result);
+  });
+
+  app.post(`${prefix}/disconnect`, async (request, reply) => {
+    const origin = mutationOrigin(request);
+    if (!origin) {
+      return reply.code(403).send({ error: 'FORBIDDEN' });
+    }
+    if (!requireAdmin(request, reply, coordinator)) {
+      return reply;
+    }
+    const cookie = readCookie(request.headers.cookie, ADMIN_COOKIE) ?? '';
+    const result = await coordinator.disconnect(cookie, origin.startsWith('https:'));
+    return reply.header('Set-Cookie', result.clearAdminCookie).send({ ok: true });
   });
 
   app.post(`${prefix}/logout`, async (request, reply) => {

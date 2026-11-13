@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, extname, resolve, sep } from 'node:path';
 
-const roots = { admin: resolve('dist-admin'), preview: resolve('dist-preview') };
+const adminRoot = resolve('dist-admin');
 const config = {
   schemaVersion: 1,
   views: [{ id: 'home', title: 'Home', cards: [], badges: [] }],
@@ -147,9 +147,8 @@ const server = createServer(async (request, response) => {
       sendJson(200, {});
       return;
     }
-    const isPreview = url.pathname === '/preview' || url.pathname.startsWith('/preview/');
-    const root = isPreview ? roots.preview : roots.admin;
-    const relative = isPreview ? url.pathname.replace(/^\/preview\/?/, '') : url.pathname.slice(1);
+    const root = adminRoot;
+    const relative = url.pathname.slice(1);
     const path = resolve(root, relative || 'index.html');
     if (path !== root && !path.startsWith(`${root}${sep}`)) {
       response.writeHead(404).end();

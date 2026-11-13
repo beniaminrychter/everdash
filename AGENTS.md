@@ -16,7 +16,7 @@ The production target is iOS 12 and Safari 12. Keep the app usable on that hardw
 
 The runtime dashboard is versioned JSON validated by `packages/contracts/src/config/` and edited through Home Assistant management. Keep entity IDs explicit; do not silently substitute entities by friendly name or invent production readings. The visual selector may use Home Assistant's entity registry to help a person choose IDs, but the saved dashboard must retain each selected ID explicitly.
 
-Production deployment uses the root Dockerfile and compose.yaml; legacy packaging in `everdash/` is retained for history and is unsupported; repository and image owner placeholders must remain unreleased until replaced with real public coordinates. Never add a license file without the repository owner's explicit choice. Home Assistant credentials are server-only and must not enter frontend build variables, static files, or test fixtures outside isolated dummy values.
+Production deployment uses the root Dockerfile and compose.yaml. The server has one runtime: the standalone server in `apps/server/src/standalone.ts` (Home Assistant OAuth for admins, optional PIN for tablets); the former Home Assistant add-on and long-lived-token runtimes were removed. Repository and image owner placeholders must remain unreleased until replaced with real public coordinates. Never add a license file without the repository owner's explicit choice. Home Assistant credentials are server-only and must not enter frontend build variables, static files, or test fixtures outside isolated dummy values.
 
 ## Adding or changing a feature
 
@@ -51,16 +51,17 @@ Use blank lines to separate distinct steps and make component logic easy to scan
 Use the repository scripts and the TypeScript configurations `oxlint.config.ts` and `oxfmt.config.ts`. Ultracite is the configured lint and safe-fix entry point; Oxfmt is the formatting checker. Import sorting is intentionally disabled.
 
 ```sh
+npm run dev             # Server (tsx watch) + tablet and admin Vite servers with /api proxy
 npm run format          # Apply Ultracite safe fixes and formatting
 npm run lint            # Check lint and formatting rules
 npm run format:check    # Verify Oxfmt formatting
-npm run typecheck       # Run TypeScript without emitting files
-npm run typecheck:server # Typecheck Node.js server modules
-npm run build           # Typecheck and create production bundles
-npm run build:server    # Bundle the server entry separately
+npm run typecheck       # Typecheck tablet, admin, and server projects
+npm run check           # lint + format:check + typecheck + unit tests
+npm run build           # Typecheck and create tablet, admin, and server bundles
 npm run check:compat    # Run after build; inspect fresh dist output for iOS/Safari compatibility
+npm run smoke:server    # Run after build; start the server bundle and probe it
 npm test                # Run the Node test suite
-npm run test:browser    # Run the browser smoke suite with its isolated fixtures
+npm run test:browser    # Run the tablet and admin browser suites with isolated fixtures
 ```
 
 After editing source, run `npm run format`, `npm run lint`, `npm run format:check`, and `npm run typecheck`. For production or browser-compatibility changes, also run `npm run build` followed by `npm run check:compat`; the compatibility script reads generated files from `dist/`, so run it against a fresh build. Run the relevant existing tests when the task calls for test verification. Do not add tests solely to satisfy a lint or formatting change.

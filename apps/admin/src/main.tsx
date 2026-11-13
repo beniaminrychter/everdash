@@ -1,6 +1,8 @@
 import { render } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
+import { authErrorMessage, takeAuthErrorFromUrl } from './authErrors';
 import { AdminApp } from './ui/AdminApp';
+import type { AuthSessionResponse } from '../../../packages/contracts/src/auth/oauth';
 import styles from './AdminEntry.module.css';
 import './index.css';
 
@@ -9,12 +11,9 @@ const root = document.querySelector('#root');
 function AdminEntry() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [connected, setConnected] = useState(false);
+  const [savedOrigin, setSavedOrigin] = useState('');
   const [origin, setOrigin] = useState('');
-  const [error, setError] = useState(() =>
-    new URLSearchParams(window.location.search).has('auth_error')
-      ? 'Home Assistant login failed. Please try again with an administrator account.'
-      : '',
-  );
+  const [error, setError] = useState(takeAuthErrorFromUrl);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -25,8 +24,9 @@ function AdminEntry() {
         }
         return response.json();
       })
-      .then((session: { authenticated: boolean; connection: string }) => {
+      .then((session: AuthSessionResponse) => {
         setConnected(session.connection !== 'unconfigured');
+        setSavedOrigin(session.homeAssistantOrigin ?? '');
         setAuthenticated(session.authenticated);
       })
       .catch(() => {
@@ -49,9 +49,9 @@ function AdminEntry() {
           ...(origin ? { homeAssistantOrigin: origin } : {}),
         }),
       });
-      const result = (await response.json()) as { authorizationUrl?: string };
+      const result = (await response.json()) as { authorizationUrl?: string; error?: string };
       if (!response.ok || !result.authorizationUrl) {
-        setError('Could not start Home Assistant login. Check the address and try again.');
+        setError(authErrorMessage(result.error ?? 'INVALID_REQUEST'));
         setBusy(false);
         return;
       }
@@ -73,6 +73,11 @@ function AdminEntry() {
       <form onSubmit={signIn}>
         <h1>EverDash</h1>
         <p>Sign in with a Home Assistant administrator account.</p>
+        {connected && savedOrigin && (
+          <p>
+            Home Assistant: <code>{savedOrigin}</code>
+          </p>
+        )}
         {!connected && (
           <label>
             Home Assistant URL
@@ -89,6 +94,14 @@ function AdminEntry() {
         <button type="submit" disabled={busy}>
           {busy ? 'Connecting…' : 'Continue with Home Assistant'}
         </button>
+        {connected && (
+          <small>
+            To use a different Home Assistant, sign in and choose Disconnect under Tablet access. If
+            you cannot sign in, reset the saved connection with{' '}
+            <code>npm run reset-connection</code> (or <code>--reset-connection</code> on the
+            server).
+          </small>
+        )}
       </form>
     </main>
   );

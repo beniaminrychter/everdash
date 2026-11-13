@@ -16,9 +16,15 @@ function fixture(trustProxy: boolean | string = false) {
   const repository = new ConnectorRepository({ directory });
   const provider = new HouseholdCredentialProvider({ repository });
   let admin = true;
+  let reachable = true;
   const coordinator = new OAuthCoordinator({
     repository,
     provider,
+    probe: async () => {
+      if (!reachable) {
+        throw new Error('unreachable');
+      }
+    },
     exchange: async (_origin, _client, code) => ({
       accessToken: `access-${code}`,
       refreshToken: `refresh-${code}`,
@@ -41,6 +47,9 @@ function fixture(trustProxy: boolean | string = false) {
     provider,
     setAdmin: (value: boolean) => {
       admin = value;
+    },
+    setReachable: (value: boolean) => {
+      reachable = value;
     },
     close: async () => {
       await app.close();
@@ -260,4 +269,85 @@ test('callback rejects another browser, origin, duplicate query and cookies', as
     assert.equal(response.headers['referrer-policy'], 'no-referrer');
   }
   assert.equal(f.repository.status().state, 'unconfigured');
+});
+
+test('start refuses a Home Assistant address the server cannot reach', async (t) => {
+  const f = fixture();
+  t.after(f.close);
+  f.setReachable(false);
+  const response = await start(f.app);
+  assert.equal(response.statusCode, 502);
+  assert.deepEqual(response.json(), { error: 'HA_UNREACHABLE' });
+  assert.equal(response.headers['set-cookie'], undefined);
+});
+
+test('callback accepts the storeToken flag Home Assistant appends after login', async (t) => {
+  const f = fixture();
+  t.after(f.close);
+  const tx = transaction(await start(f.app));
+  const callback = await f.app.inject({
+    method: 'GET',
+    url: `/api/manage/auth/callback?code=abc&state=${tx.state}&storeToken=true`,
+    headers: { host: headers.host, cookie: tx.cookie },
+  });
+  assert.equal(callback.headers.location, '/admin/');
+  assert.equal(f.repository.status().state, 'connected');
+});
+
+test('administrator can disconnect and then connect a different instance', async (t) => {
+  const f = fixture();
+  t.after(f.close);
+  const tx = transaction(await start(f.app));
+  const callback = await f.app.inject({
+    url: `/api/manage/auth/callback?state=${tx.state}&code=one`,
+    headers: { host: headers.host, cookie: tx.cookie },
+  });
+  const adminCookie = (callback.headers['set-cookie'] as string[])
+    .find((item) => item.startsWith('everdash_admin='))!
+    .split(';')[0];
+  const session = await f.app.inject({
+    url: '/api/manage/auth/session',
+    headers: { host: headers.host, cookie: adminCookie },
+  });
+  assert.equal(session.json().homeAssistantOrigin, 'http://ha:8123');
+  const anonymous = await f.app.inject({
+    url: '/api/manage/auth/session',
+    headers: { host: headers.host },
+  });
+  assert.equal(anonymous.json().homeAssistantOrigin, 'http://ha:8123');
+
+  const refused = await f.app.inject({
+    method: 'POST',
+    url: '/api/manage/auth/disconnect',
+    headers,
+  });
+  assert.equal(refused.statusCode, 401);
+  const forged = await f.app.inject({
+    method: 'POST',
+    url: '/api/manage/auth/disconnect',
+    headers: { host: headers.host, cookie: adminCookie },
+  });
+  assert.equal(forged.statusCode, 403);
+  assert.equal(f.repository.status().state, 'connected');
+
+  const disconnected = await f.app.inject({
+    method: 'POST',
+    url: '/api/manage/auth/disconnect',
+    headers: { ...headers, cookie: adminCookie },
+  });
+  assert.equal(disconnected.statusCode, 200);
+  assert.match(String(disconnected.headers['set-cookie']), /Max-Age=0/);
+  assert.equal(f.repository.status().state, 'unconfigured');
+  const after = await f.app.inject({
+    url: '/api/manage/auth/session',
+    headers: { host: headers.host, cookie: adminCookie },
+  });
+  assert.equal(after.json().authenticated, false);
+
+  const next = transaction(await start(f.app, { homeAssistantOrigin: 'http://other-ha:8123' }));
+  await f.app.inject({
+    url: `/api/manage/auth/callback?state=${next.state}&code=two`,
+    headers: { host: headers.host, cookie: next.cookie },
+  });
+  assert.equal(f.repository.readCredentials()?.origin, 'http://other-ha:8123');
 });
