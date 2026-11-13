@@ -1,10 +1,12 @@
+/* oxlint-disable no-use-before-define -- Dashboard bootstrap and retry callbacks are mutually recursive. */
+import { PinGate } from './PinGate';
 import { render } from 'preact';
 import { useCallback, useEffect, useState } from 'preact/hooks';
 import { App } from './App';
-import { readOfflineRuntimeConfig, useRuntimeConfig } from './hooks/useRuntimeConfig';
+import { useRuntimeConfig } from './hooks/useRuntimeConfig';
 import { registerWorker } from './registerWorker';
 import { removeReloadMarker } from './hardReload';
-import { PairingPage } from '../../../../packages/dashboard/src/features/pairing/components/PairingPage/PairingPage';
+import { StatusPage } from './StatusPage';
 import { validateDashboard } from '../../../../packages/contracts/src/config/validate';
 import type { RuntimeSnapshot } from '../../../../packages/dashboard/src/features/configuration/data/api';
 
@@ -22,13 +24,18 @@ function RuntimeApp({
   initial,
   mode,
   initiallyAuthorized = true,
+  pinEnabled = false,
 }: {
   initial: RuntimeSnapshot;
   mode: 'direct' | 'management';
   initiallyAuthorized?: boolean;
+  pinEnabled?: boolean;
 }) {
   const [accessLost, setAccessLost] = useState(false);
-  const handleUnauthorized = useCallback(() => setAccessLost(true), []);
+  const handleUnauthorized = useCallback(() => {
+    setAccessLost(true);
+    loadDashboard();
+  }, []);
   const { snapshot, publish, authorized } = useRuntimeConfig(
     initial,
     handleUnauthorized,
@@ -42,12 +49,12 @@ function RuntimeApp({
     }
   }, [initial]);
   if (accessLost) {
-    return <PairingPage mode={mode === 'direct' ? 'tablet' : 'management'} />;
+    return <p>Checking access…</p>;
   }
   const validated = validateDashboard(snapshot.config);
   if (!validated.ok) {
     return (
-      <PairingPage mode="error" message="EverDash received an invalid dashboard configuration." />
+      <StatusPage mode="error" message="EverDash received an invalid dashboard configuration." />
     );
   }
   return (
@@ -58,11 +65,12 @@ function RuntimeApp({
       mode={mode}
       onConfigPublished={publish}
       sessionAuthorized={authorized}
+      pinEnabled={pinEnabled}
     />
   );
 }
 
-function loadDashboard() {
+function loadAuthorizedDashboard(pinEnabled = false) {
   const xhr = new XMLHttpRequest();
   xhr.open('GET', 'api/bootstrap');
   xhr.timeout = 10_000;
@@ -73,7 +81,7 @@ function loadDashboard() {
       response = JSON.parse(xhr.responseText) as BootstrapResponse;
     } catch {
       render(
-        <PairingPage
+        <StatusPage
           mode="error"
           message="EverDash returned an invalid response."
           onRetry={loadDashboard}
@@ -82,12 +90,12 @@ function loadDashboard() {
       );
       return;
     }
-    if (xhr.status === 401 && response.mode === 'direct') {
-      render(<PairingPage mode="tablet" />, root);
+    if (xhr.status === 401 && 'code' in response && response.code === 'TABLET_ACCESS_REQUIRED') {
+      loadDashboard();
       return;
     }
     if (xhr.status === 401 && response.mode === 'management') {
-      render(<PairingPage mode="management" />, root);
+      render(<StatusPage mode="management" />, root);
       return;
     }
     if (xhr.status < 200 || xhr.status >= 300) {
@@ -95,13 +103,13 @@ function loadDashboard() {
         response && 'message' in response && typeof response.message === 'string'
           ? response.message
           : 'EverDash could not be reached. Check the connection and retry.';
-      render(<PairingPage mode="error" message={message} onRetry={loadDashboard} />, root);
+      render(<StatusPage mode="error" message={message} onRetry={loadDashboard} />, root);
       return;
     }
     const parsed = validateDashboard(response.config);
     if (!parsed.ok) {
       render(
-        <PairingPage
+        <StatusPage
           mode="error"
           message="EverDash received an invalid dashboard configuration."
           onRetry={loadDashboard}
@@ -115,6 +123,7 @@ function loadDashboard() {
       <RuntimeApp
         initial={{ revision: response.revision ?? 'unrevisioned', config: parsed.document }}
         mode={mode}
+        pinEnabled={pinEnabled}
       />,
       root,
     );
@@ -123,21 +132,11 @@ function loadDashboard() {
     }
   });
   xhr.addEventListener('error', () => {
-    const cached = readOfflineRuntimeConfig();
-    if (cached) {
-      render(<RuntimeApp initial={cached} mode="direct" initiallyAuthorized={false} />, root);
-      return;
-    }
-    render(<PairingPage mode="error" onRetry={loadDashboard} />, root);
+    render(<StatusPage mode="error" onRetry={loadDashboard} />, root);
   });
   xhr.addEventListener('timeout', () => {
-    const cached = readOfflineRuntimeConfig();
-    if (cached) {
-      render(<RuntimeApp initial={cached} mode="direct" initiallyAuthorized={false} />, root);
-      return;
-    }
     render(
-      <PairingPage
+      <StatusPage
         mode="error"
         message="EverDash did not respond in time. Try again."
         onRetry={loadDashboard}
@@ -148,4 +147,45 @@ function loadDashboard() {
   xhr.send();
 }
 
+function offline() {
+  render(<p>EverDash is offline. Reconnect and reload.</p>, root);
+}
+
+function loadDashboard() {
+  const request = new XMLHttpRequest();
+  request.open('GET', '/api/access');
+  request.timeout = 10000;
+  request.addEventListener('load', () => {
+    try {
+      const access = JSON.parse(request.responseText) as { status: string };
+      if (access.status === 'open' || access.status === 'unlocked') {
+        loadAuthorizedDashboard(access.status === 'unlocked');
+      } else {
+        render(
+          <PinGate setupRequired={access.status === 'setup_required'} onUnlock={loadDashboard} />,
+          root,
+        );
+      }
+    } catch {
+      render(<p>Cannot check dashboard access. Reload to retry.</p>, root);
+    }
+  });
+  request.addEventListener('error', offline);
+  request.addEventListener('timeout', offline);
+  request.send();
+}
+window.addEventListener('everdash-lock', () => {
+  render(<p>Locking…</p>, root);
+  try {
+    localStorage.removeItem('everdash:offline-config:v1');
+  } catch {
+    // Lock the server session even when browser storage is unavailable.
+  }
+  const request = new XMLHttpRequest();
+  request.open('POST', '/api/access/lock');
+  request.timeout = 10_000;
+  request.setRequestHeader('X-EverDash-Request', '1');
+  request.addEventListener('loadend', loadDashboard);
+  request.send();
+});
 loadDashboard();

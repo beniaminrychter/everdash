@@ -31,7 +31,7 @@
   background: var(--sheet);
   border: 1px solid var(--line);
   border-radius: 18px;
-  box-shadow: 0 12px 40px #0003;
+  box-shadow: none;
 }
 .options button {
   display: flex;

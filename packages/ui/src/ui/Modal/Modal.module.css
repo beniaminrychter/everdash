@@ -27,7 +27,7 @@
   color: var(--text);
   border-radius: 28px;
   padding: 27px 30px;
-  box-shadow: 0 24px 100px #0005;
+  box-shadow: none;
 }
 .sheet .roundButton {
   color: var(--muted);

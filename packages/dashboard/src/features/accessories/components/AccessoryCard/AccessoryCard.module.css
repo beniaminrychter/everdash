@@ -14,7 +14,7 @@
 .isOn {
   background: #f8f9fb;
   color: #18202b;
-  box-shadow: 0 3px 18px #00000008;
+  box-shadow: none;
 }
 .iconButton {
   display: flex;

@@ -11,16 +11,14 @@
   --off-icon: #ffd60a;
   --mint: #72dfb8;
   --background: #202b3a;
-  --surface: rgba(240, 244, 255, 0.1);
-  --surface-strong: rgba(240, 244, 255, 0.16);
+  --surface: #283444;
+  --surface-strong: #354458;
   --line: rgba(240, 244, 255, 0.1);
   --sheet: #303d50;
   --icon-bg: rgba(0, 0, 0, 0.12);
   --success: #72dfb8;
   --danger: #ff9c9c;
-  --wallpaper:
-    radial-gradient(ellipse at 12% 0%, #526e92 0%, transparent 62%),
-    radial-gradient(ellipse at 100% 80%, #655f71 0%, transparent 70%), #263346;
+  --wallpaper: var(--background);
 }
 :global(html[data-theme='light']) {
   --text: #1d2533;
@@ -29,16 +27,14 @@
   --mint: #126a49;
   --off-icon: #927000;
   --background: #e4eaf1;
-  --surface: rgba(255, 255, 255, 0.58);
-  --surface-strong: rgba(255, 255, 255, 0.8);
+  --surface: #ffffff;
+  --surface-strong: #eaf0f4;
   --line: rgba(255, 255, 255, 0.4);
   --sheet: #f8fafc;
   --icon-bg: rgba(0, 0, 0, 0.045);
   --success: #126a49;
   --danger: #b6313a;
-  --wallpaper:
-    radial-gradient(ellipse at 15% 0%, #bad7f4 0%, transparent 60%),
-    radial-gradient(ellipse at 100% 75%, #ded5df 0%, transparent 70%), #e4eaf1;
+  --wallpaper: var(--background);
 }
 :global(*) {
   box-sizing: border-box;
@@ -69,7 +65,8 @@
   background: none;
 }
 :global(:focus) {
-  outline: none;
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 :global(h2),
 :global(h3),

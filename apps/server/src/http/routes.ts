@@ -6,10 +6,25 @@ import { deviceCookie, expiredDeviceCookie, readDeviceCookie } from '../auth/ses
 import { filterConfiguredStates, validateServiceCommand } from '../home-assistant/policy';
 import { apiError } from './errors';
 import { requireMutationOrigin } from './security';
+import { requireAdmin } from '../auth/oauth-http';
+import { readCookie } from '../auth/admin-cookies';
 
-function requestSignal(request: FastifyRequest): AbortSignal {
+function requestSignal(request: FastifyRequest, reply: FastifyReply): AbortSignal {
   const controller = new AbortController();
-  request.raw.once('aborted', () => controller.abort());
+  const abort = () => controller.abort();
+  const cleanup = () => {
+    request.raw.removeListener('aborted', abort);
+    request.raw.socket.removeListener('close', abort);
+  };
+  request.raw.once('aborted', abort);
+  request.raw.socket.once('close', abort);
+  reply.raw.once('finish', cleanup);
+  reply.raw.once('close', () => {
+    if (!reply.raw.writableFinished) {
+      abort();
+    }
+    cleanup();
+  });
   return controller.signal;
 }
 
@@ -19,6 +34,17 @@ async function verifyAuthorized(
   dependencies: ServerDependencies,
   listenerMode: 'management' | 'direct',
 ): Promise<boolean> {
+  if (dependencies.oauth && listenerMode === 'management') {
+    return requireAdmin(request, reply, dependencies.oauth);
+  }
+  if (dependencies.oauth && listenerMode === 'direct') {
+    const access = dependencies.tabletAccess;
+    if (access && !access.authorized(readCookie(request.headers.cookie, 'everdash_tablet') ?? '')) {
+      reply.code(401).send(apiError('TABLET_ACCESS_REQUIRED', 'Tablet access is locked.'));
+      return false;
+    }
+    return true;
+  }
   if (!(await (dependencies.authorize?.(request, listenerMode) ?? false))) {
     reply.code(401).send({
       ...apiError('UNAUTHORIZED', 'Pair this device or open EverDash through Home Assistant.'),
@@ -40,9 +66,112 @@ export function registerApiRoutes(
 ) {
   const config = dependencies.config;
   const authorize = (request: FastifyRequest, reply: FastifyReply) =>
-    verifyAuthorized(request, reply, dependencies, listenerMode);
+    verifyAuthorized(
+      request,
+      reply,
+      dependencies,
+      dependencies.oauth && !request.url.startsWith('/api/manage/') ? 'direct' : listenerMode,
+    );
   const expectedOrigin = (request: FastifyRequest) =>
     dependencies.expectedOrigin?.(request, listenerMode) ?? null;
+
+  if (dependencies.tabletAccess) {
+    const access = dependencies.tabletAccess;
+    const failures = new Map<string, number[]>();
+    const pendingByAddress = new Map<string, number>();
+    let pending = 0;
+    app.get('/api/access', async (request, reply) =>
+      reply.send({
+        status:
+          access.status() === 'pin_required' &&
+          access.authorized(readCookie(request.headers.cookie, 'everdash_tablet') ?? '')
+            ? 'unlocked'
+            : access.status(),
+      }),
+    );
+    app.post<{ Body: { pin?: unknown } }>('/api/access/unlock', async (request, reply) => {
+      if (!(await requireMutationOrigin(request, reply, expectedOrigin))) {
+        return;
+      }
+      const now = Date.now();
+      for (const [key, values] of failures) {
+        const recent = values.filter((value) => now - value < 60_000);
+        if (recent.length) {
+          failures.set(key, recent);
+        } else {
+          failures.delete(key);
+        }
+      }
+      const address = `ip:${request.ip}`;
+      if (
+        (failures.get(address)?.length ?? 0) + (pendingByAddress.get(address) ?? 0) >= 5 ||
+        (failures.get('global')?.length ?? 0) + pending >= 50 ||
+        pending >= 4 ||
+        failures.size >= 1000
+      ) {
+        return reply
+          .header('Retry-After', '60')
+          .code(429)
+          .send(apiError('RATE_LIMITED', 'Try again later.'));
+      }
+      pending += 1;
+      pendingByAddress.set(address, (pendingByAddress.get(address) ?? 0) + 1);
+      let session: string | null;
+      try {
+        session = await access.unlock(
+          typeof request.body?.pin === 'string' ? request.body.pin : '',
+        );
+      } finally {
+        pending -= 1;
+        const remaining = (pendingByAddress.get(address) ?? 1) - 1;
+        if (remaining) {
+          pendingByAddress.set(address, remaining);
+        } else {
+          pendingByAddress.delete(address);
+        }
+      }
+      if (!session) {
+        failures.set(address, [...(failures.get(address) ?? []), now]);
+        failures.set('global', [...(failures.get('global') ?? []), now]);
+        return reply.code(401).send(apiError('INVALID_PIN', 'Invalid PIN.'));
+      }
+      const secure = request.protocol === 'https' ? '; Secure' : '';
+      return reply
+        .header(
+          'Set-Cookie',
+          `everdash_tablet=${session}; Path=/api; HttpOnly; SameSite=Strict${secure}`,
+        )
+        .send({ ok: true });
+    });
+    app.post('/api/access/lock', async (request, reply) => {
+      if (!(await requireMutationOrigin(request, reply, expectedOrigin))) {
+        return;
+      }
+      const secure = request.protocol === 'https' ? '; Secure' : '';
+      return reply
+        .header(
+          'Set-Cookie',
+          `everdash_tablet=; Path=/api; HttpOnly; SameSite=Strict; Max-Age=0${secure}`,
+        )
+        .send({ ok: true });
+    });
+    app.put<{ Body: { pin?: unknown } }>('/api/manage/access', async (request, reply) => {
+      if (
+        !(await verifyAuthorized(request, reply, dependencies, 'management')) ||
+        !(await requireMutationOrigin(request, reply, expectedOrigin))
+      ) {
+        return;
+      }
+      const pin = request.body?.pin;
+      if (pin !== null && (typeof pin !== 'string' || !/^[0-9]{4,6}$/.test(pin))) {
+        return reply
+          .code(400)
+          .send(apiError('INVALID_PIN', 'PIN must contain four to six digits.'));
+      }
+      await access.setPin(pin);
+      return { status: access.status() };
+    });
+  }
 
   app.post('/api/pairings', async (request, reply) => {
     if (listenerMode !== 'direct') {
@@ -127,6 +256,9 @@ export function registerApiRoutes(
       if (!(await verifyAuthorized(request, reply, dependencies, 'management'))) {
         return;
       }
+      if (dependencies.tabletAccess) {
+        return { status: dependencies.tabletAccess.status() };
+      }
       if (!dependencies.getAccessInfo) {
         return {
           hostName: null,
@@ -162,7 +294,7 @@ export function registerApiRoutes(
             .send(apiError('INVALID_ENTITY_QUERY', 'Entity search parameters are invalid.'));
           return;
         }
-        const raw = await dependencies.homeAssistant.getStates(requestSignal(request));
+        const raw = await dependencies.homeAssistant.getStates(requestSignal(request, reply));
         if (!Array.isArray(raw)) {
           reply
             .code(502)
@@ -243,7 +375,7 @@ export function registerApiRoutes(
           .send(apiError('CONFIG_INVALID', 'Dashboard validation failed.', validation.issues));
         return;
       }
-      const signal = requestSignal(request);
+      const signal = requestSignal(request, reply);
       const weatherEntities = Array.from(
         new Set(
           validation.config.views.flatMap((view) =>
@@ -385,41 +517,45 @@ export function registerApiRoutes(
       return dependencies.devices.list();
     });
 
-    app.post<{ Body: { code?: string; label?: string } }>(
-      '/api/manage/pairings/approve',
-      async (request, reply) => {
-        if (!(await authorize(request, reply))) {
-          return;
-        }
-        if (!(await requireMutationOrigin(request, reply, expectedOrigin))) {
-          return;
-        }
-        if (!dependencies.pairing) {
-          reply.code(503).send(apiError('PAIRING_UNAVAILABLE', 'Pairing is unavailable.'));
-          return;
-        }
-        const userId = getIngressUserId({
-          headers: request.headers,
-          socket: { remoteAddress: request.raw.socket.remoteAddress },
-        });
-        if (!userId) {
-          reply.code(401).send(apiError('UNAUTHORIZED', 'Open EverDash through Home Assistant.'));
-          return;
-        }
-        const { code, label } = request.body ?? {};
-        if (typeof code !== 'string' || typeof label !== 'string') {
-          reply
-            .code(400)
-            .send(
-              apiError('INVALID_PAIRING_REQUEST', 'A pairing code and device label are required.'),
-            );
-          return;
-        }
-        await dependencies.pairing.approve(userId, code, label);
-        return { approved: true };
-      },
-    );
-
+    if (!dependencies.oauth) {
+      app.post<{ Body: { code?: string; label?: string } }>(
+        '/api/manage/pairings/approve',
+        async (request, reply) => {
+          if (!(await authorize(request, reply))) {
+            return;
+          }
+          if (!(await requireMutationOrigin(request, reply, expectedOrigin))) {
+            return;
+          }
+          if (!dependencies.pairing) {
+            reply.code(503).send(apiError('PAIRING_UNAVAILABLE', 'Pairing is unavailable.'));
+            return;
+          }
+          const userId = getIngressUserId({
+            headers: request.headers,
+            socket: { remoteAddress: request.raw.socket.remoteAddress },
+          });
+          if (!userId) {
+            reply.code(401).send(apiError('UNAUTHORIZED', 'Open EverDash through Home Assistant.'));
+            return;
+          }
+          const { code, label } = request.body ?? {};
+          if (typeof code !== 'string' || typeof label !== 'string') {
+            reply
+              .code(400)
+              .send(
+                apiError(
+                  'INVALID_PAIRING_REQUEST',
+                  'A pairing code and device label are required.',
+                ),
+              );
+            return;
+          }
+          await dependencies.pairing.approve(userId, code, label);
+          return { approved: true };
+        },
+      );
+    }
     app.delete<{ Params: { id: string } }>('/api/manage/devices/:id', async (request, reply) => {
       if (!(await authorize(request, reply))) {
         return;
@@ -455,7 +591,7 @@ export function registerApiRoutes(
       return;
     }
     return {
-      mode: listenerMode,
+      mode: dependencies.oauth ? 'direct' : listenerMode,
       configured: config.isConfigured,
       revision: snapshot.revision,
       config: snapshot.config,
@@ -477,7 +613,7 @@ export function registerApiRoutes(
       return;
     }
     return filterConfiguredStates(
-      await dependencies.homeAssistant.getStates(requestSignal(request)),
+      await dependencies.homeAssistant.getStates(requestSignal(request, reply)),
       parsed.config,
     );
   });
@@ -505,7 +641,10 @@ export function registerApiRoutes(
         .send(apiError('ENTITY_NOT_CONFIGURED', 'Entity is not configured in this dashboard.'));
       return;
     }
-    return dependencies.homeAssistant.getState(request.params.entityId, requestSignal(request));
+    return dependencies.homeAssistant.getState(
+      request.params.entityId,
+      requestSignal(request, reply),
+    );
   });
 
   app.post<{ Params: { domain: string; service: string } }>(
@@ -537,7 +676,7 @@ export function registerApiRoutes(
         request.params.domain,
         request.params.service,
         data,
-        requestSignal(request),
+        requestSignal(request, reply),
       );
     },
   );

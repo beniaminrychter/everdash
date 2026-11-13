@@ -45,16 +45,26 @@ function offlineShell(): Plugin {
         resolve(directory, 'sw.js'),
         `/* Generated application shell cache. ES5 for iOS 12. */
 var PREFIX = 'everdash-' + encodeURIComponent(self.registration.scope) + '-';
-var CACHE = PREFIX + '${version}';
+var CACHE = PREFIX + 'standalone-${version}';
+var UPDATE = !!self.registration.active;
 var FILES = ${precache};
 var URLS = FILES.map(function (path) { return new URL(path, self.registration.scope).href; });
 self.addEventListener('install', function (event) {
+  self.skipWaiting();
   event.waitUntil(caches.open(CACHE).then(function (cache) { return cache.addAll(URLS); }));
 });
 self.addEventListener('activate', function (event) {
   event.waitUntil(caches.keys().then(function (keys) {
     return Promise.all(keys.filter(function (key) { return key.indexOf(PREFIX) === 0 && key !== CACHE; }).map(function (key) { return caches.delete(key); }));
-  }).then(function () { return self.clients.claim(); }));
+  }).then(function () { return self.clients.claim(); }).then(function () {
+    if (!UPDATE) { return; }
+    return self.clients.matchAll({ type: 'window' }).then(function (clients) {
+      return Promise.all(clients.map(function (client) {
+        var url = new URL(client.url);
+        if (url.pathname === new URL(self.registration.scope).pathname && typeof client.navigate === 'function') { return client.navigate(client.url); }
+      }));
+    });
+  }));
 });
 self.addEventListener('fetch', function (event) {
   var requestUrl = new URL(event.request.url);

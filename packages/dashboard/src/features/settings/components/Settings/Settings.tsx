@@ -3,7 +3,6 @@ import { useI18n, translateMessage } from '../../../../../../ui/src/i18n/index';
 import type { Language } from '../../../../../../ui/src/i18n/index';
 import type { Appearance } from '../../data/preferences';
 import { About } from '../About/About';
-import { PairingPanel } from '../../../pairing/components/PairingPanel/PairingPanel';
 import { ConfigurationEditor } from '../../../configuration/components/ConfigurationEditor/ConfigurationEditor';
 import type { DashboardDocument } from '../../../../../../contracts/src/config/types';
 import type { RuntimeSnapshot } from '../../../configuration/data/api';
@@ -120,10 +119,11 @@ export function Settings({
         {t('Refresh')}
       </button>
       <h3>{t('Tablet access')}</h3>
-      <PairingPanel
-        mode={accessMode === 'management' ? 'manager' : 'tablet'}
-        canLogout={canLogout}
-      />
+      {canLogout && (
+        <button type="button" onClick={() => window.dispatchEvent(new Event('everdash-lock'))}>
+          Lock dashboard
+        </button>
+      )}
       {accessMode === 'management' && (
         <>
           <h3>{t('Dashboard configuration')}</h3>

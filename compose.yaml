@@ -1,0 +1,21 @@
+services:
+  everdash:
+    build: .
+    ports:
+      - '8095:8095'
+    volumes:
+      - everdash-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:8095/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+volumes:
+  everdash-data:

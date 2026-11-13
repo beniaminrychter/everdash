@@ -1,3 +1,6 @@
+import appearance from './AdminAppearance.module.css';
+import { AccessSettings } from '../features/access/AccessSettings';
+import { DashboardCanvas } from '../../../../packages/dashboard/src/components/DashboardCanvas';
 import {
   Bed,
   Check,
@@ -7,7 +10,6 @@ import {
   CloudRain,
   CloudSun,
   Home,
-  Copy,
   Coffee,
   Clapperboard,
   ExternalLink,
@@ -22,7 +24,6 @@ import {
   Save,
   Share2,
   Settings2,
-  Trash2,
   Thermometer,
   Plug,
   Sofa,
@@ -30,12 +31,10 @@ import {
   Sunrise,
   UserRound,
   Upload,
-  Wifi,
   X,
   Zap,
 } from '../../../../packages/ui/src/admin/AdminIcons/AdminIcons';
-import { QRCodeSVG } from '../../../../packages/ui/src/admin/QRCode/QRCode';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { useCallback, useEffect, useMemo, useState } from 'preact/hooks';
 import type { JSX } from 'preact';
 import { AdminDialog } from '../../../../packages/ui/src/admin/AdminDialog/AdminDialog';
 import type {
@@ -64,24 +63,11 @@ import { Input, Textarea } from '../components/ui/input';
 import { Select } from '../components/ui/select';
 import { Sheet } from '../components/ui/sheet';
 import { Toaster, toastManager } from '../components/ui/toast';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../components/ui/table';
+
 import { Tabs, TabsContent } from '../components/ui/tabs';
 import { api } from '../lib/api';
-import type { AccessInfo, DeviceRecord, EntityOption, ManagedConfig } from '../lib/api';
-import {
-  createCard,
-  createConfiguredCard,
-  createView,
-  isCardEditorMessage,
-  moveItem,
-} from '../builder';
+import type { EntityOption, ManagedConfig } from '../lib/api';
+import { createCard, createConfiguredCard, createView, moveItem } from '../builder';
 
 type SelectedItem = { type: 'view' } | { type: 'card' | 'badge'; index: number };
 type AdminTab = 'dashboard' | 'devices' | 'json';
@@ -107,24 +93,6 @@ const emptyDocument: DashboardDocument = {
   schemaVersion: 1,
   views: [{ id: 'home', title: 'Home', cards: [], badges: [] }],
 };
-function createPreviewNonce() {
-  const cryptoApi = window.crypto;
-  if (typeof cryptoApi.randomUUID === 'function') {
-    return cryptoApi.randomUUID();
-  }
-
-  const bytes = new Uint8Array(16);
-  if (typeof cryptoApi.getRandomValues === 'function') {
-    cryptoApi.getRandomValues(bytes);
-  } else {
-    bytes.forEach((_, index) => {
-      bytes[index] = Math.floor(Math.random() * 256);
-    });
-  }
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
-}
-
-const previewNonce = createPreviewNonce();
 const cardKinds: CardConfig['type'][] = ['light', 'outlet', 'climate', 'weather', 'pstryk'];
 const iconComponents = {
   away: UserRound,
@@ -272,20 +240,7 @@ function AdminApp() {
   const [jsonBaseline, setJsonBaseline] = useState(serialize(emptyDocument));
   const [jsonIssues, setJsonIssues] = useState<string[]>([]);
   const [jsonExitTarget, setJsonExitTarget] = useState<AdminTab | null>(null);
-  const [access, setAccess] = useState<AccessInfo | null>(null);
-  const [devices, setDevices] = useState<DeviceRecord[]>([]);
-  const [accessError, setAccessError] = useState('');
-  const [pairCode, setPairCode] = useState('');
-  const [deviceName, setDeviceName] = useState('iPad');
-  const [pairError, setPairError] = useState('');
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
-  const [hostOverride, setHostOverride] = useState(() => {
-    try {
-      return localStorage.getItem('everdash:host-override') ?? '';
-    } catch {
-      return '';
-    }
-  });
 
   const dirty = serialize(document) !== baseline;
   const currentView =
@@ -321,17 +276,6 @@ function AdminApp() {
     }
   }, [replaceDocument]);
 
-  const loadAccess = useCallback(async () => {
-    try {
-      const [result, registered] = await Promise.all([api.getAccess(), api.getDevices()]);
-      setAccess(result);
-      setDevices(registered);
-      setAccessError(result.errors.join(' '));
-    } catch (error) {
-      setAccessError(error instanceof Error ? error.message : 'Tablet access could not be loaded.');
-    }
-  }, []);
-
   useEffect(() => {
     if (!document.views.some((view) => view.id === viewId)) {
       setViewId(document.views[0]?.id ?? 'home');
@@ -340,19 +284,7 @@ function AdminApp() {
 
   useEffect(() => {
     void loadConfig();
-    void loadAccess();
-    const refresh = () => {
-      if (!window.document.hidden) {
-        void loadAccess();
-      }
-    };
-    const timer = window.setInterval(refresh, 8000);
-    window.document.addEventListener('visibilitychange', refresh);
-    return () => {
-      window.clearInterval(timer);
-      window.document.removeEventListener('visibilitychange', refresh);
-    };
-  }, [loadAccess, loadConfig]);
+  }, [loadConfig]);
 
   useEffect(() => {
     const beforeUnload = (event: BeforeUnloadEvent) => {
@@ -618,7 +550,6 @@ function AdminApp() {
     const message = value as Record<string, unknown>;
     if (message.type === 'everdash.editor.view.select') {
       if (
-        message.nonce === previewNonce &&
         message.generation === draftGeneration &&
         typeof message.viewId === 'string' &&
         document.views.some((view) => view.id === message.viewId)
@@ -628,13 +559,25 @@ function AdminApp() {
       return;
     }
     if (message.type === 'everdash.editor.card.edit') {
-      if (isCardEditorMessage(value, previewNonce, draftGeneration, viewId, cardCount)) {
+      if (
+        message.generation === draftGeneration &&
+        message.viewId === viewId &&
+        Number.isInteger(message.index) &&
+        (message.index as number) >= 0 &&
+        (message.index as number) < cardCount
+      ) {
         beginCardEdit(message.index as number);
       }
       return;
     }
     if (message.type === 'everdash.editor.card.move') {
-      if (isCardEditorMessage(value, previewNonce, draftGeneration, viewId, cardCount)) {
+      if (
+        message.generation === draftGeneration &&
+        message.viewId === viewId &&
+        Number.isInteger(message.index) &&
+        (message.index as number) >= 0 &&
+        (message.index as number) < cardCount
+      ) {
         reorderCards(
           message.index as number,
           (message.index as number) + (message.offset as -1 | 1),
@@ -643,7 +586,13 @@ function AdminApp() {
       return;
     }
     if (message.type === 'everdash.editor.card.delete') {
-      if (isCardEditorMessage(value, previewNonce, draftGeneration, viewId, cardCount)) {
+      if (
+        message.generation === draftGeneration &&
+        message.viewId === viewId &&
+        Number.isInteger(message.index) &&
+        (message.index as number) >= 0 &&
+        (message.index as number) < cardCount
+      ) {
         const index = message.index as number;
         const label = cards[index]?.name || cards[index]?.entity || 'card';
         setConfirmation({
@@ -665,7 +614,6 @@ function AdminApp() {
     ) {
       const index = message.index;
       if (
-        message.nonce !== previewNonce ||
         message.generation !== draftGeneration ||
         message.viewId !== viewId ||
         !Number.isInteger(index) ||
@@ -851,56 +799,6 @@ function AdminApp() {
     anchor.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
-
-  const approvePairing = async (event: JSX.TargetedEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setPairError('');
-    try {
-      await api.approvePairing(pairCode, deviceName);
-      setPairCode('');
-      toastManager.add({
-        title: 'Tablet approved',
-        description: 'It will appear in the device list when pairing completes.',
-        type: 'success',
-      });
-      void loadAccess();
-    } catch (error) {
-      setPairError(error instanceof Error ? error.message : 'Pairing approval failed.');
-    }
-  };
-
-  const setHost = (value: string) => {
-    const host = value.trim();
-    setHostOverride(host);
-    try {
-      if (host) {
-        localStorage.setItem('everdash:host-override', host);
-      } else {
-        localStorage.removeItem('everdash:host-override');
-      }
-    } catch {
-      setAccessError('This browser could not save the tablet host override.');
-    }
-  };
-
-  const accessUrl = useMemo(() => {
-    if (!access?.httpPort) {
-      return '';
-    }
-    const rawHost = hostOverride || access.hostName || access.addresses[0] || '';
-    let host = rawHost.replace(/^https?:\/\//, '').replace(/\/$/, '');
-    if (!host) {
-      return '';
-    }
-    if (
-      rawHost === access.hostName &&
-      !host.includes('.') &&
-      !/^\d{1,3}(?:\.\d{1,3}){3}$/.test(host)
-    ) {
-      host = `${host}.local`;
-    }
-    return `http://${host.includes(':') && !host.startsWith('[') ? `[${host}]` : host}:${access.httpPort}/`;
-  }, [access, hostOverride]);
 
   const removeView = () => {
     if (document.views.length < 2) {
@@ -1218,182 +1116,9 @@ function AdminApp() {
     );
   };
 
-  const renderAccess = () => (
-    <div className="devices-page">
-      <header className="devices-heading">
-        <h1>Devices</h1>
-        <p>Connect tablets and manage which devices can open EverDash.</p>
-      </header>
-      <Card className="devices-panel">
-        <CardContent>
-          <section className="devices-section" aria-labelledby="devices-address-title">
-            <div className="devices-section-heading">
-              <div>
-                <h2 id="devices-address-title">Dashboard address</h2>
-                <p>Use this address on a tablet connected to your home network.</p>
-              </div>
-            </div>
-            {accessUrl ? (
-              <div className="device-address-layout">
-                <div className="device-address-copy">
-                  <code>{accessUrl}</code>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => void navigator.clipboard?.writeText(accessUrl)}
-                  >
-                    <Copy size={14} /> Copy address
-                  </Button>
-                </div>
-                <div className="device-qr">
-                  <QRCodeSVG
-                    value={accessUrl}
-                    level="M"
-                    includeMargin
-                    size={132}
-                    aria-label="QR code for dashboard address"
-                  />
-                </div>
-              </div>
-            ) : (
-              <Alert>
-                <Wifi size={16} />{' '}
-                {accessError ||
-                  'Home Assistant has not reported an active LAN port mapping for EverDash.'}
-              </Alert>
-            )}
-            <details className="device-advanced">
-              <summary>Address settings</summary>
-              <Field>
-                <FieldLabel htmlFor="host-override">Tablet host override</FieldLabel>
-                <Input
-                  id="host-override"
-                  placeholder="homeassistant.local or 192.168.1.20"
-                  value={hostOverride}
-                  onInput={(event) => setHost(event.currentTarget.value)}
-                />
-                <span className="helper">
-                  Saved in this Home Assistant browser. Enter a local hostname or IP; the mapped
-                  port is added automatically.
-                </span>
-              </Field>
-              {access?.httpsPort && (
-                <p className="footer-note">
-                  Trusted HTTPS dashboard is also available on port {access.httpsPort}.
-                </p>
-              )}
-            </details>
-          </section>
-          <section className="devices-section" aria-labelledby="devices-pair-title">
-            <div className="devices-section-heading">
-              <div>
-                <h2 id="devices-pair-title">Pair a tablet</h2>
-                <p>Start pairing on the tablet, then approve its code here.</p>
-              </div>
-            </div>
-            <form className="device-pair-form" onSubmit={(event) => void approvePairing(event)}>
-              <Field>
-                <FieldLabel htmlFor="pair-code">Pairing code</FieldLabel>
-                <Input
-                  id="pair-code"
-                  inputMode="text"
-                  autoComplete="off"
-                  maxLength={8}
-                  value={pairCode}
-                  onInput={(event) => setPairCode(event.currentTarget.value.toUpperCase())}
-                  placeholder="ABCD2345"
-                />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="device-name">Device name</FieldLabel>
-                <Input
-                  id="device-name"
-                  value={deviceName}
-                  maxLength={80}
-                  onInput={(event) => setDeviceName(event.currentTarget.value)}
-                  placeholder="Kitchen iPad"
-                />
-              </Field>
-              <Button type="submit" disabled={pairCode.trim().length < 8 || !deviceName.trim()}>
-                <Check size={15} /> Pair tablet
-              </Button>
-            </form>
-            {pairError && (
-              <p role="alert" className="inline-error" style={{ marginTop: 10 }}>
-                {pairError}
-              </p>
-            )}
-          </section>
-          <section className="devices-section" aria-labelledby="devices-registered-title">
-            <div className="devices-section-heading devices-registered-heading">
-              <div>
-                <h2 id="devices-registered-title">Paired tablets</h2>
-                <p>Remove a device to require pairing again.</p>
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => void loadAccess()}>
-                <RotateCcw size={14} /> Refresh
-              </Button>
-            </div>
-            {devices.length ? (
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableHeader>Tablet</TableHeader>
-                    <TableHeader>Added</TableHeader>
-                    <TableHeader aria-label="Actions" />
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {devices.map((device) => (
-                    <TableRow key={device.id}>
-                      <TableCell>
-                        <strong>{device.label}</strong>
-                      </TableCell>
-                      <TableCell>{new Date(device.createdAt).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() =>
-                            setConfirmation({
-                              title: `Revoke ${device.label}?`,
-                              description:
-                                'This tablet will need to pair again before it can open EverDash.',
-                              confirmLabel: 'Revoke tablet',
-                              action: async () => {
-                                try {
-                                  await api.revokeDevice(device.id);
-                                  await loadAccess();
-                                } catch (error) {
-                                  setError(
-                                    error instanceof Error
-                                      ? error.message
-                                      : 'Tablet could not be revoked.',
-                                  );
-                                }
-                              },
-                            })
-                          }
-                        >
-                          <Trash2 size={14} /> Revoke
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <p className="helper">No tablets have been paired yet.</p>
-            )}
-          </section>
-        </CardContent>
-      </Card>
-    </div>
-  );
-
   if (loadError && !server) {
     return (
-      <main className="admin-shell">
+      <main className={`admin-shell ${appearance.shell}`}>
         <Topbar
           tab={tab}
           onTabChange={chooseTab}
@@ -1421,7 +1146,7 @@ function AdminApp() {
   }
 
   return (
-    <div className="admin-shell">
+    <div className={`admin-shell ${appearance.shell}`}>
       <Topbar
         tab={tab}
         onTabChange={chooseTab}
@@ -1536,7 +1261,7 @@ function AdminApp() {
                   <Plus size={15} /> Temperature badge
                 </Button>
               </div>
-              <PreviewFrame
+              <EditorCanvas
                 document={document}
                 viewId={viewId}
                 generation={draftGeneration}
@@ -1551,8 +1276,8 @@ function AdminApp() {
               </div>
             </section>
           </TabsContent>
-          <TabsContent value="devices" aria-label="Devices">
-            {renderAccess()}
+          <TabsContent value="devices" aria-label="Tablet access">
+            <AccessSettings />
           </TabsContent>
           <TabsContent value="json" aria-label="JSON">
             <Card>
@@ -1797,7 +1522,7 @@ function Topbar({
           aria-current={tab === 'devices' ? 'page' : undefined}
           onClick={() => onTabChange('devices')}
         >
-          Devices
+          Tablet access
         </Button>
       </nav>
       <div className="topbar-actions">
@@ -1858,7 +1583,7 @@ function Topbar({
   );
 }
 
-function PreviewFrame({
+function EditorCanvas({
   document,
   viewId,
   generation,
@@ -1873,103 +1598,41 @@ function PreviewFrame({
   active: boolean;
   onEditorMessage: (message: unknown) => void;
 }) {
-  const [frameReady, setFrameReady] = useState(false);
+  const [snapshot, setSnapshot] = useState<Awaited<ReturnType<typeof api.preview>> | null>(null);
   const [error, setError] = useState('');
-  const [frame, setFrame] = useState<HTMLIFrameElement | null>(null);
-  const [frameHeight, setFrameHeight] = useState(720);
-  const requestSequence = useRef(0);
-  const sendDraft = useCallback(async () => {
-    if (!frame?.contentWindow || !frameReady || !active) {
-      return;
-    }
-    const sequence = ++requestSequence.current;
-    try {
-      const result = await api.preview(document);
-      if (sequence !== requestSequence.current) {
-        return;
-      }
-      frame.contentWindow.postMessage(
-        {
-          type: 'everdash.preview',
-          nonce: previewNonce,
-          config: result.config,
-          states: result.states,
-          forecasts: result.forecasts,
-          generation,
-          viewId,
-          refreshToken,
-          editor: true,
-        },
-        '*',
-      );
-      setError('');
-    } catch (error) {
-      if (sequence === requestSequence.current) {
-        setError(error instanceof Error ? error.message : 'Dashboard data could not be loaded.');
-      }
-    }
-  }, [active, document, frame, frameReady, generation, refreshToken, viewId]);
+  const [now, setNow] = useState(0);
   useEffect(() => {
-    if (frameReady && active) {
-      void sendDraft();
+    let current = true;
+    if (active) {
+      api
+        .preview(document)
+        .then((result) => {
+          if (current) {
+            setSnapshot(result);
+            setNow(Date.now());
+            setError('');
+          }
+        })
+        .catch(() => {
+          if (current) {
+            setError('Dashboard data could not be loaded.');
+          }
+        });
     }
-  }, [active, frameReady, sendDraft]);
-  useEffect(() => {
-    const receive = (event: MessageEvent<unknown>) => {
-      if (event.source !== frame?.contentWindow || event.origin !== 'null') {
-        return;
-      }
-      if (typeof event.data !== 'object' || event.data === null || !('type' in event.data)) {
-        return;
-      }
-      const data = event.data as { type?: unknown; nonce?: unknown };
-      if (data.nonce !== previewNonce) {
-        return;
-      }
-      if (data.type === 'everdash.preview.ready') {
-        frame?.contentWindow?.postMessage(
-          { type: 'everdash.preview.ack', nonce: previewNonce },
-          '*',
-        );
-        setFrameReady(true);
-        return;
-      }
-      if (data.type === 'everdash.preview.size') {
-        const height = (data as { height?: unknown }).height;
-        if (typeof height === 'number' && Number.isFinite(height)) {
-          setFrameHeight(Math.max(400, Math.min(5000, height)));
-        }
-        return;
-      }
-      if (data.type?.toString().startsWith('everdash.editor.')) {
-        onEditorMessage(event.data);
-      }
+    return () => {
+      current = false;
     };
-    window.addEventListener('message', receive);
-    return () => window.removeEventListener('message', receive);
-  }, [frame, onEditorMessage]);
-  useEffect(() => {
-    const refresh = () => void sendDraft();
-    window.addEventListener('everdash-preview-refresh', refresh);
-    return () => window.removeEventListener('everdash-preview-refresh', refresh);
-  }, [sendDraft]);
-
+  }, [document, refreshToken, active]);
   return (
     <>
-      {error && (
-        <Alert>
-          <CircleHelp size={15} /> {error}
-        </Alert>
+      {error && <p role="alert">{error}</p>}
+      {snapshot && (
+        <DashboardCanvas
+          snapshot={{ ...snapshot, config: document, now, generation, editor: true }}
+          selectedView={viewId}
+          onAction={(action) => onEditorMessage(action)}
+        />
       )}
-      <iframe
-        ref={setFrame}
-        title="EverDash dashboard editor canvas"
-        className="preview-frame"
-        style={{ height: frameHeight }}
-        src={`preview/?nonce=${encodeURIComponent(previewNonce)}&parentOrigin=${encodeURIComponent(window.location.origin)}`}
-        sandbox="allow-scripts"
-      />
-      {!frameReady && <p className="helper">Loading the tablet renderer…</p>}
     </>
   );
 }

@@ -153,7 +153,7 @@
 .admin-shell .editor-navigation button[aria-current] {
   color: var(--foreground);
   background: var(--card);
-  box-shadow: 0 1px 3px #14181f1a;
+  box-shadow: none;
 }
 .admin-shell .editor-view-actions {
   flex: 1;
@@ -283,7 +283,7 @@
 .admin-shell .tabs-trigger[data-active] {
   color: #20252e;
   background: white;
-  box-shadow: 0 1px 3px #14181f1a;
+  box-shadow: none;
 }
 .admin-shell .tabs-content {
   outline: none;
@@ -300,7 +300,7 @@
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--card);
-  box-shadow: 0 1px 2px #151a2010;
+  box-shadow: none;
 }
 .admin-shell .card-header {
   display: flex;
@@ -485,7 +485,7 @@
 .admin-shell .list-item.selected {
   border-color: #82cbd0;
   background: #edf9fa;
-  box-shadow: inset 3px 0 #087f8c;
+  box-shadow: none;
 }
 .admin-shell .list-item-main {
   display: flex;
@@ -612,7 +612,7 @@
   border-left: 1px solid var(--border);
   padding: 22px;
   background: white;
-  box-shadow: -10px 0 32px #0b172024;
+  box-shadow: none;
 }
 .admin-shell .sheet-heading {
   display: flex;
@@ -631,7 +631,7 @@
   border-radius: 10px;
   padding: 4px;
   background: white;
-  box-shadow: 0 12px 32px #10182024;
+  box-shadow: none;
 }
 .admin-shell .combobox-list {
   display: grid;
@@ -797,7 +797,7 @@
   border-radius: 14px;
   padding: 20px;
   background: white;
-  box-shadow: 0 24px 70px #0b172044;
+  box-shadow: none;
 }
 .admin-shell .confirm-dialog p {
   margin: 8px 0 18px;
@@ -932,7 +932,7 @@
 }
 .admin-shell .editor-navigation button[aria-current] {
   background: transparent;
-  box-shadow: inset 0 -2px var(--foreground);
+  box-shadow: none;
 }
 .admin-shell .topbar-actions {
   display: flex;
@@ -958,9 +958,7 @@
   min-height: calc(100vh - 66px);
   overflow: hidden;
   color: #f5f6fb;
-  background:
-    radial-gradient(ellipse at 12% 0%, #526e92 0%, transparent 62%),
-    radial-gradient(ellipse at 100% 80%, #655f71 0%, transparent 70%), #263346;
+  background: #f4f6f8;
 }
 .admin-shell .canvas-toolbar {
   display: flex;
@@ -1030,7 +1028,7 @@
   padding: 5px;
   color: var(--foreground);
   background: var(--card);
-  box-shadow: 0 12px 30px #10182033;
+  box-shadow: none;
   outline: none;
 }
 .admin-shell .dropdown-menu-item,
@@ -1084,7 +1082,7 @@
   padding: 14px;
   color: var(--foreground);
   background: var(--card);
-  box-shadow: 0 12px 32px #1018202a;
+  box-shadow: none;
   transition:
     opacity 160ms ease,
     transform 160ms ease;
@@ -1166,7 +1164,7 @@
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 0 22px 20px;
-  box-shadow: 0 22px 70px #0b172044;
+  box-shadow: none;
 }
 .admin-shell .sheet-heading {
   position: sticky;

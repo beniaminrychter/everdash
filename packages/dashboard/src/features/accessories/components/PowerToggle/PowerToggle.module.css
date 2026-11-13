@@ -35,7 +35,7 @@
   top: 6px;
   left: 3px;
   background: #b6cad4;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  box-shadow: none;
   transition: transform 0.18s;
 }
 

@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { useI18n } from '../../../../../../ui/src/i18n/index';
 import { createClimate } from '../../../climate/data/model';
 import type { LiveClimate, ClimateChange } from '../../../climate/data/model';
@@ -24,7 +25,8 @@ interface Props {
   onDetails: (id: string) => void;
   readOnly?: boolean;
   editorMode?: boolean;
-  onEditorAction?: (action: 'edit' | 'delete' | 'move', index: number, offset?: -1 | 1) => void;
+  editorKeys?: readonly string[];
+  onEditorAction?: (action: 'edit' | 'delete' | 'move', index: number, offset?: number) => void;
 }
 
 function ActionIcon({ name }: { name: 'edit' | 'delete' | 'up' | 'down' }) {
@@ -67,10 +69,20 @@ function EditorFooter({
   index: number;
   count: number;
   name: string;
-  onAction?: (action: 'edit' | 'delete' | 'move', index: number, offset?: -1 | 1) => void;
+  onAction?: (action: 'edit' | 'delete' | 'move', index: number, offset?: number) => void;
 }) {
   return (
     <fieldset class={styles.editorFooter} aria-label={`${name} card actions`}>
+      <button
+        type="button"
+        draggable
+        aria-label={`Drag ${name} to reorder`}
+        onDragStart={(event) => {
+          event.dataTransfer?.setData('text/everdash-card', String(index));
+        }}
+      >
+        ↕
+      </button>
       <button type="button" onClick={() => onAction?.('edit', index)} aria-label={`Edit ${name}`}>
         <ActionIcon name="edit" /> Edit
       </button>
@@ -116,16 +128,74 @@ export function DashboardCards({
   onDetails,
   readOnly = false,
   editorMode = false,
+  editorKeys,
   onEditorAction,
 }: Props) {
+  const surface = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(1024);
+  useEffect(() => {
+    const measure = () => setWidth(surface.current?.getBoundingClientRect().width ?? 1024);
+    measure();
+    window.addEventListener('resize', measure);
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    if (surface.current) {
+      observer?.observe(surface.current);
+    }
+    return () => {
+      window.removeEventListener('resize', measure);
+      observer?.disconnect();
+    };
+  }, []);
   const { t } = useI18n();
   const reading = (id: string | undefined) => (id ? readings[id] : undefined);
   return (
-    <div class={styles.groups}>
+    <div
+      ref={surface}
+      class={styles.groups}
+      onDragOver={(event) => {
+        if (editorMode) {
+          event.preventDefault();
+        }
+      }}
+      onDrop={(event) => {
+        if (!editorMode) {
+          return;
+        }
+        event.preventDefault();
+        const raw = event.dataTransfer?.getData('text/everdash-card') ?? '';
+        const element =
+          event.target instanceof Element
+            ? event.target.closest<HTMLElement>('[data-editor-index]')
+            : null;
+        const target = element?.dataset.editorIndex;
+        if (!/^\d+$/.test(raw) || target === null || target === undefined) {
+          return;
+        }
+        const source = Number(raw);
+        const destination = Number(target);
+        if (
+          source < view.cards.length &&
+          destination < view.cards.length &&
+          source !== destination
+        ) {
+          onEditorAction?.('move', source, destination - source);
+        }
+      }}
+    >
       {groupCards(view.cards).map((group, groupIndex) =>
         group.type === 'accessories' ? (
           <section key={groupIndex} aria-label={t('Accessories')}>
-            <div class={styles.accessoryGrid} data-testid="accessory-grid">
+            <div
+              class={styles.accessoryGrid}
+              style={
+                editorMode
+                  ? {
+                      gridTemplateColumns: `repeat(${width <= 699 ? 2 : width <= 899 ? 3 : 4}, minmax(0, 1fr))`,
+                    }
+                  : undefined
+              }
+              data-testid="accessory-grid"
+            >
               {group.cards.map((card, cardIndex) => {
                 const device = devices.find((candidate) => candidate.id === card.entity);
                 const index = view.cards.indexOf(card);
@@ -133,7 +203,11 @@ export function DashboardCards({
                   return null;
                 }
                 return (
-                  <div class={editorMode ? styles.editorItem : undefined} key={cardIndex}>
+                  <div
+                    class={editorMode ? styles.editorItem : undefined}
+                    key={editorKeys?.[view.cards.indexOf(card)] ?? cardIndex}
+                    data-editor-index={view.cards.indexOf(card)}
+                  >
                     <AccessoryCard
                       device={{ ...device, icon: card.icon, name: card.name, room: view.title }}
                       disabled={!online || (readOnly && !editorMode)}
@@ -154,13 +228,25 @@ export function DashboardCards({
             </div>
           </section>
         ) : (
-          <div key={groupIndex} class={styles.widgetGrid}>
+          <div
+            key={groupIndex}
+            class={styles.widgetGrid}
+            style={
+              editorMode
+                ? {
+                    gridTemplateColumns:
+                      width <= 699 ? 'minmax(0, 1fr)' : 'repeat(2, minmax(0, 1fr))',
+                  }
+                : undefined
+            }
+          >
             {group.cards.map((card, cardIndex) => {
               const titleId = `widget-${encodeURIComponent(view.id)}-${groupIndex}-${cardIndex}`;
               return (
                 <div
                   class={`${card.type === 'weather' ? styles.wide : ''} ${editorMode ? styles.editorItem : ''}`}
-                  key={cardIndex}
+                  key={editorKeys?.[view.cards.indexOf(card)] ?? cardIndex}
+                  data-editor-index={view.cards.indexOf(card)}
                   data-card={card.type}
                   data-card-entity={card.entity}
                 >

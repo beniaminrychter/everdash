@@ -10,7 +10,7 @@
   background: var(--sheet);
   border: 1px solid var(--line);
   color: var(--text);
-  box-shadow: 0 8px 24px rgba(0, 20, 30, 0.2);
+  box-shadow: none;
   font-size: 13px;
   opacity: 0;
   pointer-events: none;

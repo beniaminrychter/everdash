@@ -71,7 +71,7 @@
   border-radius: 4px;
   position: relative;
   margin: 0 4px;
-  background: linear-gradient(90deg, var(--success), #dfb765 55%, var(--danger));
+  background: #f4f6f8;
 }
 
 .marker {

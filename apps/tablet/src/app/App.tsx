@@ -35,6 +35,7 @@ interface Props {
   dashboardDocument: DashboardDocument;
   onConfigPublished: (snapshot: RuntimeSnapshot) => void;
   sessionAuthorized: boolean;
+  pinEnabled?: boolean;
 }
 export function App({
   config,
@@ -42,7 +43,8 @@ export function App({
   revision,
   dashboardDocument,
   onConfigPublished,
-  sessionAuthorized,
+  sessionAuthorized: _sessionAuthorized,
+  pinEnabled = false,
 }: Props) {
   usePreventZoom();
   const dashboard = useDashboard(config);
@@ -198,7 +200,7 @@ export function App({
             configRevision={revision}
             dashboardDocument={dashboardDocument}
             onConfigPublished={onConfigPublished}
-            canLogout={sessionAuthorized && mode === 'direct'}
+            canLogout={pinEnabled}
           />
           <ConnectedDataSources
             view={page}

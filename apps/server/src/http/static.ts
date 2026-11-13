@@ -18,8 +18,14 @@ export function registerStaticFiles(
   app: FastifyInstance,
   rootDirectory: string,
   previewDirectory?: string,
+  adminDirectory?: string,
 ) {
-  const registerDirectory = (directory: string, prefix: string, entryFile = 'index.html') => {
+  const registerDirectory = (
+    directory: string,
+    prefix: string,
+    entryFile = 'index.html',
+    sandboxed = false,
+  ) => {
     const root = resolve(directory);
     const sendFile = async (requestedPath: string, reply: FastifyReply, sandboxed = false) => {
       let path: string;
@@ -39,6 +45,7 @@ export function registerStaticFiles(
         const body = await readFile(path);
         reply.header('Content-Type', contentTypes[extname(path)] ?? 'application/octet-stream');
         reply.header('X-Content-Type-Options', 'nosniff');
+        reply.header('Referrer-Policy', 'no-referrer');
         if (sandboxed) {
           reply.header('Access-Control-Allow-Origin', '*');
         }
@@ -54,10 +61,12 @@ export function registerStaticFiles(
     if (prefix) {
       app.get(`/${prefix}/*`, async (request, reply) => {
         const relativePath = request.params as { '*': string };
-        return sendFile(relativePath['*'] ?? '', reply, true);
+        return sendFile(relativePath['*'] ?? '', reply, sandboxed);
       });
-      app.get(`/${prefix}`, async (_request, reply) => sendFile('', reply, true));
-      app.get(`/${prefix}/`, async (_request, reply) => sendFile('', reply, true));
+      app.get(`/${prefix}`, async (_request, reply) =>
+        prefix === 'admin' ? reply.redirect('/admin/') : sendFile('', reply, sandboxed),
+      );
+      app.get(`/${prefix}/`, async (_request, reply) => sendFile('', reply, sandboxed));
     } else {
       app.get('/*', async (request, reply) => {
         if (request.url.startsWith('/api/')) {
@@ -71,7 +80,10 @@ export function registerStaticFiles(
   };
 
   if (previewDirectory) {
-    registerDirectory(previewDirectory, 'preview');
+    registerDirectory(previewDirectory, 'preview', 'index.html', true);
+  }
+  if (adminDirectory) {
+    registerDirectory(adminDirectory, 'admin');
   }
   registerDirectory(rootDirectory, '');
 }

@@ -9,83 +9,25 @@ EverDash gives legacy tablets new possibilities as Home Assistant dashboards. It
 - No friendly-name entity guessing or fabricated readings; missing and unavailable sources remain visible.
 - A visual Home Assistant builder, read-only tablet preview, and optional advanced JSON editing.
 
-## Install in Home Assistant
-
-EverDash is designed to run as a Home Assistant app. Installation does not require npm or a separate server:
-
-[![Add EverDash repository to Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fbeniaminrychter%2Feverdash)
-
-The button opens Home Assistant's add-repository dialog with EverDash prefilled. After adding it, refresh the app store and look under **Settings → Apps → Install app**. EverDash becomes installable after its versioned multi-architecture image is published to GHCR and the package is public.
-
-1. In Home Assistant, open **Settings → Apps** and choose **Install app from another repository** (or open the App Store menu and choose **Repositories**).
-2. Add the public Git repository URL for EverDash, then refresh the app store and open **EverDash**.
-3. Install and start EverDash, then open it from the Home Assistant sidebar. This opens the authenticated configuration workspace.
-4. In **Builder**, add views and cards, choose entities by name or ID, then select **Save and apply**. JSON editing is available under **Advanced JSON**.
-5. Use the **Tablet access** pane on the same page. It shows the local URL, a QR code, detected Home Assistant addresses, pairing approval, and registered tablets.
-6. Open the displayed URL on the iPad, start pairing, and approve the code and device name in Home Assistant. Then add the dashboard to the Home Screen from Safari.
-
-By default the dashboard is available on the Home Assistant LAN at `http://homeassistant.local:8095/`, with the actual mapped port and IP addresses shown in the Tablet access pane. The Home Assistant panel opens configuration; the direct URL opens the tablet dashboard. Optional trusted HTTPS is available for installations that need offline service-worker support.
-
-EverDash is licensed under the [MIT License](LICENSE). You may use, modify, and redistribute it, including publishing modified versions, if you retain the copyright and license notice.
-
-Third-party dependency and asset information is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-
-## Run from source
-
-Requires Node.js 22.12+, npm, and Docker with Docker Compose. The local test setup runs Home Assistant Core on port 8123 and EverDash directly from this checkout. It keeps Home Assistant data in `.local/homeassistant/` and EverDash data in `.local/everdash/`; these paths are ignored by Git and excluded from the production Docker build context.
-
-This Compose setup is a development fixture on macOS using Docker Desktop. Home Assistant's standard macOS installation instructions use Home Assistant OS in a virtual machine; the Core container here is for exercising EverDash's real HTTP API, not a full Home Assistant OS installation.
+## Run with Docker
 
 ```sh
-npm ci
-npm run local:ha:up
+docker compose up -d --build
 ```
 
-Wait for Home Assistant to finish its first startup, then open [http://127.0.0.1:8123/](http://127.0.0.1:8123/) and complete onboarding. Add an integration or test entities so EverDash has entities to discover. In your Home Assistant user profile, open **Security → Long-lived access tokens → Create token**, then copy the token; Home Assistant will not show it again. See the [Home Assistant Container installation guide](https://www.home-assistant.io/installation/linux/) and [authentication documentation](https://www.home-assistant.io/docs/authentication/).
+Open `http://YOUR-SERVER:8095/admin/`, enter your Home Assistant URL, and sign in with a Home Assistant administrator account. The URL must be reachable by your browser and the container. EverDash stores the refresh credential only on the server in its persistent `/data` volume.
 
-Create a private local environment file and paste the token there:
+Configure views and cards in the visual editor. Under Tablet access, optionally save a four-to-six digit PIN. Open `http://YOUR-SERVER:8095/` on the tablet. No pairing is required. A PIN unlock lasts for the browser session; use Lock to end it explicitly. Browser session restoration may retain the unlock.
 
-```sh
-cp local.env.example .env.local
-chmod 600 .env.local
-```
+Initialize on a trusted LAN before external exposure. For HTTPS, put a trusted reverse proxy in front of the service and configure explicit trusted proxy CIDRs. HTTP LAN access works, but offline service-worker installation requires trusted HTTPS.
 
-Edit `.env.local` and replace `EVERDASH_HA_TOKEN`. The defaults target Home Assistant at `http://127.0.0.1:8123`; optionally set `EVERDASH_LAN_HOST` to the Mac's LAN IP or hostname if automatic detection does not find the address that your iPad can reach. Do not commit or share `.env.local`. The browser never receives the token; it is used only by EverDash's local Node server. Local mode controls real Home Assistant entities, so use test devices or take care when invoking controls.
+The named Docker volume holds dashboard configuration, recovery files, connection credentials and access settings. Back it up before upgrading. Imported dashboards remain locked until an HA administrator saves an access choice. Existing device records are left untouched and unused.
 
-Build the three production-compatible frontend bundles and start the local server:
-
-```sh
-npm run local:start
-```
-
-Open the admin builder at [http://127.0.0.1:8099/](http://127.0.0.1:8099/). This management listener accepts connections only from the Mac itself. Configure entities and save the dashboard. The **Tablet access** pane shows the LAN URL and QR code; open that URL on the iPad or another device on the same network, start pairing, and approve it in the admin workspace. For example, the tablet URL may look like `http://192.168.1.25:8095/`. Do not use `localhost` on the iPad: it would refer to the iPad itself.
-
-EverDash configuration and paired devices survive server restarts. Stop EverDash with **Ctrl+C**. Stop the Home Assistant container with:
-
-```sh
-npm run local:ha:down
-```
-
-The container data remains under `.local/homeassistant/` when stopped. To start it again, run `npm run local:ha:up`. To permanently erase the local Home Assistant instance and EverDash test state, stop the container and remove `.local/` yourself.
-
-If Home Assistant does not load, inspect it with `npm run local:ha:logs`. If port 8123 is already in use, change the host side of the Compose mapping (the left-hand number) and update `EVERDASH_HA_URL` in `.env.local` to match. If EverDash reports that 8099 or 8095 is occupied, stop the other process using that port. If the iPad cannot open the tablet URL, confirm both devices are on the same LAN, allow incoming connections to Node.js in the Mac firewall, and set `EVERDASH_LAN_HOST` to the Mac's reachable LAN address.
-
-This gives you a live local test loop for entity discovery, builder saves, dashboard reads and controls, pairing, and persistence without pushing or publishing. Home Assistant Container does not include Home Assistant apps/add-ons or Supervisor, so it cannot test EverDash's Home Assistant Ingress panel, add-on installation, or Supervisor-based address discovery. Those release checks still require Home Assistant OS or another Supervisor host. See [Home Assistant installation types](https://www.home-assistant.io/installation/) for the differences.
-
-For the fast frontend-only development server, run `npm run dev` and open `http://localhost:5173/`; it uses the example dashboard and does not connect to a live Home Assistant instance. The browser fixture suite remains the automated isolated test path. Use the production build on the old iPad:
-
-```sh
-npm run build
-npm run preview -- --port 4173
-```
-
-The printed LAN address opens the built tablet app. The local EverDash server launched by `npm run local:start` is the path for testing real Home Assistant API calls and device pairing.
+Development checks: `npm ci`, `npm run build`, `npm test`, `npm run test:browser`, and `npm run test:admin-browser`. Optional Home Assistant fixtures in `compose.local.yaml` are for development only.
 
 ## Home Assistant connection
 
-The add-on server uses Home Assistant's fixed Supervisor API route and server-provided `SUPERVISOR_TOKEN`. The local test server uses the URL and token in `.env.local`. In both cases, browser requests go to same-origin EverDash endpoints, server policy filters tablet reads and commands to entities in the saved dashboard configuration, and Home Assistant credentials remain on the server.
-
-The Codex Home Assistant connector is useful for inspecting devices during development. The deployed PWA uses the configured REST connection independently of Codex.
+The standalone server uses Home Assistant OAuth. Browser requests use same-origin EverDash endpoints. The server filters tablet reads and commands to explicit saved entity IDs. Admin logout leaves the household connection intact; Reconnect Home Assistant replaces its credential after successful login.
 
 ## App configuration
 
@@ -156,14 +98,14 @@ Text selection, touch callouts and visible focus outlines are disabled across th
 - Vite's official legacy plugin emits an ES5 SystemJS fallback plus a modern bundle. IE11 is only a conservative syntax floor, not a supported product target.
 - Native XMLHttpRequest provides timeouts, cancellation, and authenticated requests on iOS 12 without a Fetch/AbortController polyfill. Runtime code uses APIs available in Safari 12; SystemJS is retained without IE-only core-js polyfills.
 - The tablet uses Preact, CSS Modules, and a Safari 12 CSS target. The admin workspace uses Preact, native primitives, and CSS Modules; its files build separately and stay out of the tablet bundle and offline cache.
-- The Ingress preview is a separate Preact entry that renders the tablet components in read-only mode and receives a validated draft plus configured entity snapshot through same-origin messaging.
+- The admin canvas directly imports the shared Preact dashboard cards. It uses authenticated draft snapshots and never sends device-control commands.
 
 | File | Responsibility |
 | --- | --- |
 | `examples/dashboard.json` | Generic starter dashboard using the runtime JSON schema |
 | `packages/contracts/src/config/` | JSON contracts, schema, defaults and validation |
 | `apps/admin/` | Preact Home Assistant workspace and visual builder |
-| `preview/` | Same-origin read-only Preact tablet preview entry |
+| `packages/dashboard/src/components/` | Direct shared dashboard canvas |
 | `packages/dashboard/src/features/dashboard/` | Dashboard composition, source resolution, observation polling and schedules |
 | `packages/dashboard/src/features/accessories/` | Accessory UI, capability/state mapping, commands and polling |
 | `packages/dashboard/src/features/climate/` | Climate UI, state/capabilities, optimistic command queue and polling |
@@ -173,7 +115,7 @@ Text selection, touch callouts and visible focus outlines are disabled across th
 | `packages/dashboard/src/shared/home-assistant/` | REST client and browser-side transport helpers; contracts live in `packages/contracts/src/home-assistant/` |
 | `packages/ui/src/ui/` | Reusable interface primitives with adjacent CSS Modules |
 | `apps/tablet/src/app/App.tsx` | Configured live page and modal composition |
-| `vite.config.ts`, `apps/admin/vite.config.ts`, `vite.preview.config.ts` | Separate tablet, admin, and preview builds |
+| `vite.config.ts`, `apps/admin/vite.config.ts`, `vite.server.config.ts` | Tablet, admin, and server builds |
 | `apps/tablet/public/` | Manifest and Home Screen icons |
 
 ## Quality tools and checks
@@ -190,7 +132,7 @@ npm run lint:fix         # Apply safe lint fixes
 npm run format           # Apply Ultracite safe fixes and format authored files
 npm run format:check     # Verify formatting
 npm run check            # Lint + formatting + both TypeScript projects + unit tests
-npm run build            # Tablet, admin, and preview production bundles
+npm run build            # Tablet, admin, and server production bundles
 npm run check:compat     # After build: ES5 syntax, Safari CSS, PWA/cache inventory
 npm run test:browser     # Self-contained build/server + installed Chrome; no live devices
 ```

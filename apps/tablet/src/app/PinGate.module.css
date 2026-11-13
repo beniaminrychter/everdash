@@ -1,0 +1,57 @@
+.gate {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: #f4f6f8;
+  color: #17212b;
+}
+.panel {
+  width: 340px;
+  max-width: 100%;
+  padding: 24px;
+  background: #fff;
+  border: 1px solid #667481;
+  border-radius: 12px;
+}
+.panel input {
+  width: 100%;
+  padding: 12px;
+  margin-top: 8px;
+  margin-bottom: 16px;
+  border: 1px solid #667481;
+  font-size: 24px;
+  letter-spacing: 8px;
+  text-align: center;
+}
+.keypad {
+  display: flex;
+  flex-wrap: wrap;
+  margin: -4px;
+}
+.keypad button {
+  width: calc(33.333% - 8px);
+  min-height: 64px;
+  margin: 4px;
+  background: #eef2f5;
+  color: #17212b;
+  border: 1px solid #667481;
+  border-radius: 6px;
+  font-size: 24px;
+}
+.unlock {
+  width: 100%;
+  min-height: 52px;
+  margin-top: 16px;
+  background: #0f766e;
+  color: white;
+  border: 0;
+  border-radius: 6px;
+  font-size: 20px;
+}

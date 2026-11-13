@@ -2,7 +2,7 @@
 
 ## What this project is
 
-EverDash is a Preact progressive web app and Node.js service for controlling explicitly configured Home Assistant devices on legacy screens, including an iPad running iOS 12. Browser requests use same-origin endpoints; only the server holds the Supervisor credential and talks to Home Assistant's REST API. The app includes accessory and climate controls, energy prices and usage, weather forecasts, sensor badges, saved dashboard and appearance preferences, and an offline app shell.
+EverDash is a Preact progressive web app and Node.js service for controlling explicitly configured Home Assistant devices on legacy screens, including an iPad running iOS 12. Browser requests use same-origin endpoints; only the server holds the Home Assistant OAuth refresh credential and talks to Home Assistant's REST API. The app includes accessory and climate controls, energy prices and usage, weather forecasts, sensor badges, saved dashboard and appearance preferences, and an offline app shell.
 
 The production target is iOS 12 and Safari 12. Keep the app usable on that hardware when changing TypeScript, JavaScript, CSS, build configuration, or dependencies. The IE11 output is only a conservative JavaScript syntax floor; IE11 is not a supported product target.
 
@@ -16,7 +16,7 @@ The production target is iOS 12 and Safari 12. Keep the app usable on that hardw
 
 The runtime dashboard is versioned JSON validated by `packages/contracts/src/config/` and edited through Home Assistant management. Keep entity IDs explicit; do not silently substitute entities by friendly name or invent production readings. The visual selector may use Home Assistant's entity registry to help a person choose IDs, but the saved dashboard must retain each selected ID explicitly.
 
-The Home Assistant app package lives in `everdash/`; repository and image owner placeholders must remain unreleased until replaced with real public coordinates. Never add a license file without the repository owner's explicit choice. Home Assistant credentials are server-only and must not enter frontend build variables, static files, or test fixtures outside isolated dummy values.
+Production deployment uses the root Dockerfile and compose.yaml; legacy packaging in `everdash/` is retained for history and is unsupported; repository and image owner placeholders must remain unreleased until replaced with real public coordinates. Never add a license file without the repository owner's explicit choice. Home Assistant credentials are server-only and must not enter frontend build variables, static files, or test fixtures outside isolated dummy values.
 
 ## Adding or changing a feature
 

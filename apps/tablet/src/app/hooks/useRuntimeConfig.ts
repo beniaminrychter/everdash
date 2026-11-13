@@ -55,8 +55,12 @@ function bootstrap(): Promise<Bootstrap> {
       if (xhr.status < 200 || xhr.status >= 300) {
         const error = new Error('Access to this dashboard has ended.') as Error & {
           status?: number;
+          code?: string;
         };
         error.status = xhr.status;
+        if (body && typeof body === 'object' && 'code' in body && typeof body.code === 'string') {
+          error.code = body.code;
+        }
         reject(error);
         return;
       }
@@ -108,7 +112,9 @@ export function useRuntimeConfig(
         typeof error === 'object' &&
         error !== null &&
         'status' in error &&
-        error.status === 401
+        error.status === 401 &&
+        'code' in error &&
+        error.code === 'TABLET_ACCESS_REQUIRED'
       ) {
         clearOfflineRuntimeConfig();
         setAuthorized(false);

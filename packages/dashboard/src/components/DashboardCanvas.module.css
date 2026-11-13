@@ -1,0 +1,23 @@
+.mainContent {
+  padding: 20px;
+  color: var(--text, #17212b);
+  background: var(--bg, #f4f6f8);
+  min-width: 0;
+}
+
+.mainContent {
+  --text: #17212b;
+  --muted: #536170;
+  --accent: #0f766e;
+  --amber: #946000;
+  --off-icon: #0f766e;
+  --mint: #126a49;
+  --background: #f4f6f8;
+  --surface: #fff;
+  --surface-strong: #eaf0f4;
+  --line: #8994a0;
+  --sheet: #fff;
+  --icon-bg: #eaf0f4;
+  --success: #126a49;
+  --danger: #b6313a;
+}

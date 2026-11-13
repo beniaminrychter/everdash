@@ -1,0 +1,31 @@
+.shell.shell :global(.dashboard-stage) {
+  color: #17212b;
+  background: #f4f6f8;
+}
+.shell.shell :global(.canvas-view-select) {
+  color: #17212b;
+  background: #fff;
+  border: 1px solid #667481;
+  border-radius: 6px;
+  padding: 4px 10px;
+}
+.shell.shell :global(.canvas-tool) {
+  color: #17212b;
+  background: #fff;
+  border: 1px solid #667481;
+}
+.shell.shell :global(.canvas-tool:hover:not(:disabled)) {
+  color: #17212b;
+  background: #eaf0f4;
+}
+.shell.shell :global(.canvas-add-card .button) {
+  color: #17212b;
+  background: #fff;
+  border: 1px solid #667481;
+}
+.shell.shell :global(button:focus-visible),
+.shell.shell :global(select:focus-visible),
+.shell.shell :global(input:focus-visible) {
+  outline: 2px solid #0f766e;
+  outline-offset: 3px;
+}

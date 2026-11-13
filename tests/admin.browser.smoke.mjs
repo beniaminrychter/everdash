@@ -2,7 +2,8 @@ import { chromium, expect } from '@playwright/test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
-import { extname, resolve, sep } from 'node:path';
+import { tmpdir } from 'node:os';
+import { join, extname, resolve, sep } from 'node:path';
 
 const roots = { admin: resolve('dist-admin'), preview: resolve('dist-preview') };
 const config = {
@@ -49,6 +50,10 @@ const server = createServer(async (request, response) => {
       savedConfig = JSON.parse(body).config;
       saveCount += 1;
       sendJson(200, { revision: `revision-${saveCount + 1}`, config: savedConfig });
+      return;
+    }
+    if (url.pathname === '/api/manage/auth/session') {
+      sendJson(200, { authenticated: true, connection: 'connected' });
       return;
     }
     if (url.pathname === '/api/manage/entities') {
@@ -183,9 +188,9 @@ try {
   await page.goto(`http://127.0.0.1:${address.port}/`);
   await expect(page.getByRole('button', { name: 'Dashboard', exact: true })).toBeVisible();
   await expect(page.getByText('Loading the tablet renderer…')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Devices' }).click();
-  await expect(page.getByText('http://homeassistant.local:8095/')).toBeVisible();
-  await expect(page.getByText('http://homeassistant.local:8095/')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Tablet access' }).click();
+  await expect(page.getByRole('heading', { name: 'Tablet access' })).toBeVisible();
+  await expect(page.getByLabel('New PIN (optional)')).toBeVisible();
   await page.getByRole('button', { name: 'Dashboard', exact: true }).click();
 
   await page.getByRole('button', { name: 'Add view' }).click();
@@ -257,7 +262,7 @@ try {
   await page.getByRole('combobox', { name: 'Temperature unit' }).selectOption('°F');
   await expect(page.getByRole('combobox', { name: 'Temperature unit' })).toHaveValue('°F');
   await page.getByRole('button', { name: 'Add', exact: true }).click();
-  const preview = page.frameLocator('iframe');
+  const preview = page;
   await expect(preview.getByRole('button', { name: 'Edit Living Room Climate' })).toBeVisible();
   await expect(preview.getByRole('button', { name: 'Delete Living Room Climate' })).toBeVisible();
   await expect(preview.getByText(/card controls/)).toHaveCount(0);
@@ -339,7 +344,7 @@ try {
   await page
     .getByRole('combobox', { name: 'Dashboard view' })
     .selectOption({ label: 'Guest room' });
-  await expect(page.locator('iframe')).toBeVisible();
+  await expect(page.locator('iframe')).toHaveCount(0);
 
   await page.setViewportSize({ width: 1024, height: 768 });
   await preview.getByRole('button', { name: 'Edit Living Room Climate' }).click();
@@ -355,7 +360,7 @@ try {
   await expect(page.getByLabel('Display name override')).toHaveValue('Cancelled rename');
   await page.keyboard.press('Escape');
   await expect(inspector).not.toBeVisible();
-  await expect(page.locator('iframe')).toBeFocused();
+  await expect(preview.getByRole('button', { name: 'Edit Living Room Climate' })).toBeFocused();
   await expect(preview.getByRole('button', { name: 'Edit Living Room Climate' })).toBeVisible();
 
   await preview.getByRole('button', { name: 'Delete Living Room Climate' }).click();
@@ -363,6 +368,7 @@ try {
   await expect(deleteDialog).toBeVisible();
   await deleteDialog.getByRole('button', { name: 'Cancel' }).click();
   await expect(preview.getByRole('button', { name: 'Delete Living Room Climate' })).toBeVisible();
+  await page.screenshot({ path: join(tmpdir(), 'everdash-admin.png'), fullPage: true });
   assert.ok(previewCount > 0, 'preview snapshot endpoint was not called');
   assert.deepEqual(pageErrors, []);
   assert.deepEqual(consoleErrors, []);
@@ -371,7 +377,7 @@ try {
       {
         result: 'PASS',
         checks: [
-          'tablet address is displayed once in Devices',
+          'optional PIN access settings replace device pairing',
           'view creation and rename through focused settings',
           'view ordering and boundary move states',
           'view deletion preserves the final view',

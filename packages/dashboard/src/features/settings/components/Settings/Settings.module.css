@@ -31,7 +31,7 @@
 }
 .modes button[aria-pressed='true'] {
   background: var(--sheet);
-  box-shadow: 0 2px 8px #0002;
+  box-shadow: none;
   font-weight: 650;
 }
 .url {
