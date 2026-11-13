@@ -18,15 +18,14 @@ export interface CanvasSnapshot {
   generation: number;
   editor: boolean;
 }
-export function DashboardCanvas({
-  snapshot,
-  selectedView,
-  onAction,
-}: {
+
+export interface DashboardCanvasProps {
   snapshot: CanvasSnapshot;
   selectedView: string;
   onAction: (action: Record<string, unknown>) => void;
-}) {
+}
+
+export function DashboardCanvas({ snapshot, selectedView, onAction }: DashboardCanvasProps) {
   const model = useMemo(() => {
     if (!snapshot) {
       return null;

@@ -8,6 +8,7 @@
     "jsxImportSource": "react",
     "strict": true,
     "paths": {
+      "@everdash/dashboard/editor/mountDashboardCanvas": ["./src/types/mountDashboardCanvas.d.ts"],
       "@everdash/contracts/*": ["../../packages/contracts/src/*"],
       "@everdash/ui/*": ["../../packages/ui/src/*"],
       "@everdash/dashboard/*": ["../../packages/dashboard/src/*"],
