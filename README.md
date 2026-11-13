@@ -30,11 +30,11 @@ The named Docker volume holds dashboard configuration, recovery files, connectio
 ## Local development (no container)
 
 ```sh
-npm ci
-npm run dev
+pnpm install --frozen-lockfile
+pnpm dev
 ```
 
-`npm run dev` starts three processes with hot reload:
+`pnpm dev` starts three processes with hot reload:
 
 | URL                            | What                                                        |
 | ------------------------------ | ----------------------------------------------------------- |
@@ -44,7 +44,7 @@ npm run dev
 
 Both Vite servers proxy `/api` to the server. Data is kept in `.local/everdash` (git-ignored). The server runs on your machine, so sign in with `http://localhost:8123` when Home Assistant runs locally or in a container that publishes port 8123. Override `EVERDASH_PORT` or `EVERDASH_DATA_DIR` if needed.
 
-To run a production build without a container: `npm run build`, then `npm start` (port 8095, data in `.local/everdash`; set `EVERDASH_PORT` if a container already uses 8095).
+To run a production build without a container: `pnpm build`, then `pnpm start` (port 8095, data in `.local/everdash`; set `EVERDASH_PORT` if a container already uses 8095).
 
 ### Changing the Home Assistant instance
 
@@ -66,10 +66,10 @@ The dashboard is stored as a versioned JSON document. Use the visual builder to 
 To migrate a TypeScript dashboard configuration to the versioned JSON format, run:
 
 ```sh
-npm run config:export
+pnpm config:export
 ```
 
-Pass source and destination paths when needed: `npm run config:export -- /path/to/home.config.ts /path/to/dashboard.json`. Keep personal dashboards and exports out of the public repository.
+Pass source and destination paths when needed: `pnpm config:export /path/to/home.config.ts /path/to/dashboard.json`. Keep personal dashboards and exports out of the public repository.
 
 Dashboard configuration uses JSON Schema version 1. See the [generic dashboard example](examples/dashboard.json) and [schema](packages/contracts/src/config/schema.ts). A dashboard contains `views`; each view has a stable `id`, a `title`, and optionally ordered `badges` and `cards`. Entity IDs are explicit and must match their Home Assistant domains.
 
@@ -154,21 +154,21 @@ Ultracite runs Oxlint and Oxfmt with its core and React-compatible presets. Reac
 
 [`@stale-styles/eslint-plugin`](https://github.com/stalecheck/stale-styles/tree/main/packages/eslint-plugin) checks CSS Module references: missing/unused classes, raw class strings, empty selectors, unresolved dynamic access, and missing files. Oxlint's JavaScript plugin support is alpha. These rules complement the production Safari CSS audit.
 
-Oxfmt formats TSX, TypeScript, CSS, HTML, JSON, and Markdown. Configurations are `oxlint.config.ts`, `oxfmt.config.ts`, and `.editorconfig`. Generated assets, dependencies, browser reports, and npm's lockfile are excluded. Import sorting stays off to preserve stylesheet order. Quality tools add nothing to the browser bundle.
+Oxfmt formats TSX, TypeScript, CSS, HTML, JSON, and Markdown. Configurations are `oxlint.config.ts`, `oxfmt.config.ts`, and `.editorconfig`. Generated assets, dependencies, browser reports, and pnpm's lockfile are excluded. Import sorting stays off to preserve stylesheet order. Quality tools add nothing to the browser bundle.
 
 ```sh
-npm run dev              # Server + tablet + admin with hot reload
-npm run build            # Typecheck, then tablet, admin, and server production bundles
-npm start                # Run the production build locally
-npm run lint             # Fail on warnings and errors
-npm run format           # Apply Ultracite safe fixes and format authored files
-npm run format:check     # Verify formatting
-npm run typecheck        # Tablet, admin, and server TypeScript projects
-npm run check            # Lint + formatting + typecheck + unit tests
-npm test                 # Unit tests
-npm run check:compat     # After build: ES5 syntax, Safari CSS, PWA/cache inventory
-npm run smoke:server     # After build: start the server bundle and probe it
-npm run test:browser     # Tablet and admin browser suites; isolated fixtures, no live devices
+pnpm dev              # Server + tablet + admin with hot reload
+pnpm build            # Typecheck, then tablet, admin, and server production bundles
+pnpm start            # Run the production build locally
+pnpm lint             # Fail on warnings and errors
+pnpm format           # Apply Ultracite safe fixes and format authored files
+pnpm format:check     # Verify formatting
+pnpm typecheck        # Tablet, admin, and server TypeScript projects
+pnpm check            # Lint + formatting + typecheck + unit tests
+pnpm test             # Unit tests
+pnpm check:compat     # After build: ES5 syntax, Safari CSS, PWA/cache inventory
+pnpm smoke:server     # After build: start the server bundle and probe it
+pnpm test:browser     # Tablet and admin browser suites; isolated fixtures, no live devices
 ```
 
 The browser test uses a stable configuration in `tests/fixtures/dashboard.ts`, independent of the generic runtime JSON example. It builds into an OS temporary directory using dummy environment credentials and an isolated cross-origin HTTP API fixture. No preview server is needed, and the normal `dist/` and `.env` remain untouched. It verifies explicit entity bindings and metadata refresh, saved dashboard/appearance preferences, multiple views with shared controls and badge-only views, ordered widgets, HA sunrise/sunset, compact Pstryk/weather/temperature widgets, real browser HTTP requests, service payloads, inline AC temperature/mode/fan controls and failure rollback, automatic polling, capability-dependent controls, dimming, authentication/error recovery, unavailable entities, modal keyboard behavior, offline disabled controls, reconnect, four responsive widths, and forced SystemJS startup. Screenshots go to the OS temporary directory; set `MY_HOME_SCREENSHOT_DIR` to choose another path. Set `MY_HOME_BROWSER_CHANNEL=chromium` to use a previously installed bundled Chromium.

@@ -10,14 +10,14 @@ const processes = [
   {
     name: 'server',
     color: 35,
-    command: ['npx', 'tsx', 'watch', '--clear-screen=false', 'apps/server/src/entry.ts'],
+    command: ['pnpm', 'exec', 'tsx', 'watch', '--clear-screen=false', 'apps/server/src/entry.ts'],
     env: { EVERDASH_HOST: '127.0.0.1', EVERDASH_PORT: apiPort, EVERDASH_DATA_DIR: dataDirectory },
   },
-  { name: 'tablet', color: 36, command: ['npx', 'vite', '--host', '0.0.0.0'] },
+  { name: 'tablet', color: 36, command: ['pnpm', 'exec', 'vite', '--host', '0.0.0.0'] },
   {
     name: 'admin',
     color: 33,
-    command: ['npx', 'vite', '--config', 'apps/admin/vite.config.ts', '--host', '0.0.0.0'],
+    command: ['pnpm', 'exec', 'vite', '--config', 'apps/admin/vite.config.ts', '--host', '0.0.0.0'],
   },
 ];
 

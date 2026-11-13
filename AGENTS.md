@@ -51,19 +51,19 @@ Use blank lines to separate distinct steps and make component logic easy to scan
 Use the repository scripts and the TypeScript configurations `oxlint.config.ts` and `oxfmt.config.ts`. Ultracite is the configured lint and safe-fix entry point; Oxfmt is the formatting checker. Import sorting is intentionally disabled.
 
 ```sh
-npm run dev             # Server (tsx watch) + tablet and admin Vite servers with /api proxy
-npm run format          # Apply Ultracite safe fixes and formatting
-npm run lint            # Check lint and formatting rules
-npm run format:check    # Verify Oxfmt formatting
-npm run typecheck       # Typecheck tablet, admin, and server projects
-npm run check           # lint + format:check + typecheck + unit tests
-npm run build           # Typecheck and create tablet, admin, and server bundles
-npm run check:compat    # Run after build; inspect fresh dist output for iOS/Safari compatibility
-npm run smoke:server    # Run after build; start the server bundle and probe it
-npm test                # Run the Node test suite
-npm run test:browser    # Run the tablet and admin browser suites with isolated fixtures
+pnpm dev             # Server (tsx watch) + tablet and admin Vite servers with /api proxy
+pnpm format          # Apply Ultracite safe fixes and formatting
+pnpm lint            # Check lint and formatting rules
+pnpm format:check    # Verify Oxfmt formatting
+pnpm typecheck       # Typecheck tablet, admin, and server projects
+pnpm check           # lint + format:check + typecheck + unit tests
+pnpm build           # Typecheck and create tablet, admin, and server bundles
+pnpm check:compat    # Run after build; inspect fresh dist output for iOS/Safari compatibility
+pnpm smoke:server    # Run after build; start the server bundle and probe it
+pnpm test            # Run the Node test suite
+pnpm test:browser    # Run the tablet and admin browser suites with isolated fixtures
 ```
 
-After editing source, run `npm run format`, `npm run lint`, `npm run format:check`, and `npm run typecheck`. For production or browser-compatibility changes, also run `npm run build` followed by `npm run check:compat`; the compatibility script reads generated files from `dist/`, so run it against a fresh build. Run the relevant existing tests when the task calls for test verification. Do not add tests solely to satisfy a lint or formatting change.
+After editing source, run `pnpm format`, `pnpm lint`, `pnpm format:check`, and `pnpm typecheck`. For production or browser-compatibility changes, also run `pnpm build` followed by `pnpm check:compat`; the compatibility script reads generated files from `dist/`, so run it against a fresh build. Run the relevant existing tests when the task calls for test verification. Do not add tests solely to satisfy a lint or formatting change.
 
 Keep the compatibility check clean: it validates ES5 legacy bundles and service worker syntax, unsupported CSS, Apple web-app metadata, manifest values, and local precache entries. The browser smoke suite uses isolated test configuration and does not require physical devices. Changes that affect iOS-specific input, TLS, Home Screen installation, or offline launch still need validation on the target iPad when available.

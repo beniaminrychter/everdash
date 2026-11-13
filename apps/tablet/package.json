@@ -4,8 +4,9 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@everdash/contracts": "0.0.0",
-    "@everdash/dashboard": "0.0.0",
-    "@everdash/ui": "0.0.0"
+    "@everdash/contracts": "workspace:*",
+    "@everdash/dashboard": "workspace:*",
+    "@everdash/ui": "workspace:*",
+    "preact": "^10.29.8"
   }
 }
