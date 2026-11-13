@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
-import { validateDashboard } from '../../../../packages/contracts/src/config/validate';
+import { validateDashboard } from '@everdash/contracts/config/validate';
 import type { ServerDependencies } from '../app';
 import { filterConfiguredStates, validateServiceCommand } from '../home-assistant/policy';
 import { expectedOriginFor, requireTabletAccess } from './access-policy';

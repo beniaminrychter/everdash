@@ -4,7 +4,7 @@ import {
   createCommand,
   createDevice,
   mapState,
-} from '../packages/dashboard/src/features/accessories/data/model';
+} from '@everdash/dashboard/features/accessories/data/model';
 import { homePage } from './fixtures/home';
 
 const light = homePage.cards[0];

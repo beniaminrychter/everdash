@@ -1,1 +1,1 @@
-export * from '../../../../../packages/ui/src/admin/Select/Select';
+export * from '@everdash/ui/admin/Select/Select';

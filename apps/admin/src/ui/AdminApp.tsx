@@ -1,6 +1,6 @@
 import appearance from './AdminAppearance.module.css';
 import { AccessSettings } from '../features/access/AccessSettings';
-import { DashboardCanvas } from '../../../../packages/dashboard/src/components/DashboardCanvas';
+import { DashboardCanvas } from '@everdash/dashboard/components/DashboardCanvas';
 import {
   Bed,
   Check,
@@ -33,19 +33,19 @@ import {
   Upload,
   X,
   Zap,
-} from '../../../../packages/ui/src/admin/AdminIcons/AdminIcons';
+} from '@everdash/ui/admin/AdminIcons/AdminIcons';
 import { useCallback, useEffect, useMemo, useState } from 'preact/hooks';
 import type { JSX } from 'preact';
-import { AdminDialog } from '../../../../packages/ui/src/admin/AdminDialog/AdminDialog';
+import { AdminDialog } from '@everdash/ui/admin/AdminDialog/AdminDialog';
 import type {
   BadgeConfig,
   CardConfig,
   DashboardDocument,
   ViewConfig,
-} from '../../../../packages/contracts/src/config/types';
-import type { IconName } from '../../../../packages/contracts/src/iconNames';
-import { validateDashboard } from '../../../../packages/contracts/src/config/validate';
-import { iconNames } from '../../../../packages/contracts/src/iconNames';
+} from '@everdash/contracts/config/types';
+import type { IconName } from '@everdash/contracts/iconNames';
+import { validateDashboard } from '@everdash/contracts/config/validate';
+import { iconNames } from '@everdash/contracts/iconNames';
 import { Alert } from '../components/ui/alert';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';

@@ -1,4 +1,4 @@
-import type { ConfigIssue } from '../../../../packages/contracts/src/config/validate';
+import type { ConfigIssue } from '@everdash/contracts/config/validate';
 
 export class ConfigRepositoryError extends Error {
   readonly code: 'CONFIG_CONFLICT' | 'CONFIG_INVALID' | 'CONFIG_RECOVERY_REQUIRED';

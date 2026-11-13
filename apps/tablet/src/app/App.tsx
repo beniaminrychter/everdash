@@ -1,30 +1,26 @@
 import { useCallback, useEffect, useMemo, useState } from 'preact/hooks';
-import {
-  LanguageProvider,
-  createTranslator,
-  translateMessage,
-} from '../../../../packages/ui/src/i18n/index';
-import type { AppConfig } from '../../../../packages/contracts/src/config';
-import type { DashboardDocument } from '../../../../packages/contracts/src/config/types';
-import type { RuntimeSnapshot } from '../../../../packages/dashboard/src/features/configuration/data/api';
-import { useClimate } from '../../../../packages/dashboard/src/features/climate/data/useClimate';
+import { LanguageProvider, createTranslator, translateMessage } from '@everdash/ui/i18n/index';
+import type { AppConfig } from '@everdash/contracts/config';
+import type { DashboardDocument } from '@everdash/contracts/config/types';
+import type { RuntimeSnapshot } from '@everdash/dashboard/features/configuration/data/api';
+import { useClimate } from '@everdash/dashboard/features/climate/data/useClimate';
 import { useToast } from './hooks/useToast';
-import { useHomeAssistant } from '../../../../packages/dashboard/src/features/accessories/data/useHomeAssistant';
-import { useDashboard } from '../../../../packages/dashboard/src/features/dashboard/data/useDashboard';
+import { useHomeAssistant } from '@everdash/dashboard/features/accessories/data/useHomeAssistant';
+import { useDashboard } from '@everdash/dashboard/features/dashboard/data/useDashboard';
 import { useEnvironment } from './hooks/useEnvironment';
-import { usePreferences } from '../../../../packages/dashboard/src/features/settings/hooks/usePreferences';
+import { usePreferences } from '@everdash/dashboard/features/settings/hooks/usePreferences';
 import { usePreventZoom } from './hooks/usePreventZoom';
 import { hardReload } from './hardReload';
-import { DashboardPicker } from '../../../../packages/dashboard/src/features/dashboard/components/DashboardPicker/DashboardPicker';
-import { SensorBadges } from '../../../../packages/dashboard/src/features/sensors/components/SensorBadges/SensorBadges';
-import { Settings } from '../../../../packages/dashboard/src/features/settings/components/Settings/Settings';
-import { Toast } from '../../../../packages/ui/src/ui/Toast/Toast';
-import { DashboardCards } from '../../../../packages/dashboard/src/features/dashboard/components/DashboardCards/DashboardCards';
-import { Modal } from '../../../../packages/ui/src/ui/Modal/Modal';
-import { LightControls } from '../../../../packages/dashboard/src/features/accessories/components/LightControls/LightControls';
-import { Icon } from '../../../../packages/ui/src/ui/Icon/Icon';
-import { IconButton } from '../../../../packages/ui/src/ui/IconButton/IconButton';
-import { ConnectedDataSources } from '../../../../packages/dashboard/src/features/settings/components/ConnectedDataSources/ConnectedDataSources';
+import { DashboardPicker } from '@everdash/dashboard/features/dashboard/components/DashboardPicker/DashboardPicker';
+import { SensorBadges } from '@everdash/dashboard/features/sensors/components/SensorBadges/SensorBadges';
+import { Settings } from '@everdash/dashboard/features/settings/components/Settings/Settings';
+import { Toast } from '@everdash/ui/ui/Toast/Toast';
+import { DashboardCards } from '@everdash/dashboard/features/dashboard/components/DashboardCards/DashboardCards';
+import { Modal } from '@everdash/ui/ui/Modal/Modal';
+import { LightControls } from '@everdash/dashboard/features/accessories/components/LightControls/LightControls';
+import { Icon } from '@everdash/ui/ui/Icon/Icon';
+import { IconButton } from '@everdash/ui/ui/IconButton/IconButton';
+import { ConnectedDataSources } from '@everdash/dashboard/features/settings/components/ConnectedDataSources/ConnectedDataSources';
 import styles from './App.module.css';
 
 type OpenModal = { kind: 'light'; deviceId: string } | { kind: 'settings' } | null;

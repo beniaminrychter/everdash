@@ -1,1 +1,1 @@
-export * from '../../../../../packages/ui/src/admin/Combobox/Combobox';
+export * from '@everdash/ui/admin/Combobox/Combobox';

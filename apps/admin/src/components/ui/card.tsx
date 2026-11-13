@@ -1,1 +1,1 @@
-export * from '../../../../../packages/ui/src/admin/Card/Card';
+export * from '@everdash/ui/admin/Card/Card';

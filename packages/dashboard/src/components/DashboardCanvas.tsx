@@ -1,22 +1,13 @@
 import { editorKeys } from './editorKeys';
 import { useMemo } from 'preact/hooks';
-import type { AppConfig, DashboardDocument } from '../../../../packages/contracts/src/config/types';
-import { validateDashboard } from '../../../../packages/contracts/src/config/validate';
-import { LanguageProvider } from '../../../../packages/ui/src/i18n/index';
-import {
-  createDevice,
-  mapState,
-} from '../../../../packages/dashboard/src/features/accessories/data/model';
-import {
-  mapClimate,
-  createClimate,
-} from '../../../../packages/dashboard/src/features/climate/data/model';
-import { DashboardCards } from '../../../../packages/dashboard/src/features/dashboard/components/DashboardCards/DashboardCards';
-import {
-  parseEntities,
-  resolveDashboard,
-} from '../../../../packages/dashboard/src/features/dashboard/data/discovery';
-import { SensorBadges } from '../../../../packages/dashboard/src/features/sensors/components/SensorBadges/SensorBadges';
+import type { AppConfig, DashboardDocument } from '@everdash/contracts/config/types';
+import { validateDashboard } from '@everdash/contracts/config/validate';
+import { LanguageProvider } from '@everdash/ui/i18n/index';
+import { createDevice, mapState } from '../features/accessories/data/model';
+import { mapClimate, createClimate } from '../features/climate/data/model';
+import { DashboardCards } from '../features/dashboard/components/DashboardCards/DashboardCards';
+import { parseEntities, resolveDashboard } from '../features/dashboard/data/discovery';
+import { SensorBadges } from '../features/sensors/components/SensorBadges/SensorBadges';
 import styles from './DashboardCanvas.module.css';
 
 export interface CanvasSnapshot {

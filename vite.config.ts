@@ -5,6 +5,7 @@ import { defineConfig } from 'vite';
 import type { Plugin } from 'vite';
 import legacy from '@vitejs/plugin-legacy';
 import preactPreset from '@preact/preset-vite';
+import { workspaceAliases } from './tooling/aliases';
 
 function offlineShell(): Plugin {
   return {
@@ -87,6 +88,7 @@ const api = process.env.EVERDASH_API_URL ?? 'http://127.0.0.1:8790';
 
 export default defineConfig({
   root: resolve('apps/tablet'),
+  resolve: { alias: workspaceAliases(resolve('apps/tablet/src')) },
   server: {
     port: 5173,
     strictPort: true,

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ObservationStore } from '../packages/dashboard/src/features/dashboard/data/store';
-import { defineConfig } from '../packages/contracts/src/config';
+import { ObservationStore } from '@everdash/dashboard/features/dashboard/data/store';
+import { defineConfig } from '@everdash/contracts/config';
 
 const config = defineConfig({
   views: [
@@ -16,8 +16,8 @@ const config = defineConfig({
     },
   ],
 });
-import { HomeAssistantError } from '../packages/dashboard/src/shared/home-assistant/client';
-import type { CatalogApi } from '../packages/dashboard/src/shared/home-assistant/client';
+import { HomeAssistantError } from '@everdash/dashboard/shared/home-assistant/client';
+import type { CatalogApi } from '@everdash/dashboard/shared/home-assistant/client';
 
 const temperature = {
   attributes: { friendly_name: 'Czujnik Jadalnia Temperatura', unit_of_measurement: '°C' },

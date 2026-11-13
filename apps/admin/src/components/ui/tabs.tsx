@@ -1,1 +1,1 @@
-export * from '../../../../../packages/ui/src/admin/Tabs/Tabs';
+export * from '@everdash/ui/admin/Tabs/Tabs';

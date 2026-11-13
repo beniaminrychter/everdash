@@ -1,1 +1,1 @@
-export * from '../../../../../packages/ui/src/admin/Button/Button';
+export * from '@everdash/ui/admin/Button/Button';

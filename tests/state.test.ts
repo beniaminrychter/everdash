@@ -1,17 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createDevices } from '../packages/dashboard/src/features/legacy-home/data/data.ts';
+import { createDevices } from '@everdash/dashboard/features/legacy-home/data/data.ts';
 import {
   toggleDevice,
   setBrightness,
   setColor,
   applyScene,
   restoreDevices,
-} from '../packages/dashboard/src/features/legacy-home/data/state.ts';
-import {
-  loadDevices,
-  saveDevices,
-} from '../packages/dashboard/src/features/legacy-home/data/storage.ts';
+} from '@everdash/dashboard/features/legacy-home/data/state.ts';
+import { loadDevices, saveDevices } from '@everdash/dashboard/features/legacy-home/data/storage.ts';
 
 test('power cycling restores a dimmed light after brightness reaches zero', () => {
   const light = createDevices()[0];

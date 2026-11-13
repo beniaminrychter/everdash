@@ -1,9 +1,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ensurePrivateDirectory, writeAtomicJson } from '../persistence/atomic-json';
-import type { DashboardDocument } from '../../../../packages/contracts/src/config/types';
-import { validateDashboard } from '../../../../packages/contracts/src/config/validate';
-import type { DashboardValidation } from '../../../../packages/contracts/src/config/validate';
+import type { DashboardDocument } from '@everdash/contracts/config/types';
+import { validateDashboard } from '@everdash/contracts/config/validate';
+import type { DashboardValidation } from '@everdash/contracts/config/validate';
 import { ConfigRepositoryError } from './errors';
 import { dashboardRevision } from './revision';
 

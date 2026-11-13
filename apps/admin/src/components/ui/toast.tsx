@@ -1,1 +1,1 @@
-export * from '../../../../../packages/ui/src/admin/Toast/Toast';
+export * from '@everdash/ui/admin/Toast/Toast';

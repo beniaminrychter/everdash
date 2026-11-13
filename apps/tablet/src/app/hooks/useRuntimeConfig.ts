@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from 'preact/hooks';
-import { validateDashboard } from '../../../../../packages/contracts/src/config/validate';
+import { validateDashboard } from '@everdash/contracts/config/validate';
 import {
   clearOfflineRuntimeConfig,
   runtimeConfigStorageKey,
-} from '../../../../../packages/dashboard/src/shared/config/runtime-cache';
-import type { RuntimeSnapshot } from '../../../../../packages/dashboard/src/features/configuration/data/api';
+} from '@everdash/dashboard/shared/config/runtime-cache';
+import type { RuntimeSnapshot } from '@everdash/dashboard/features/configuration/data/api';
 
-export { runtimeConfigStorageKey } from '../../../../../packages/dashboard/src/shared/config/runtime-cache';
+export { runtimeConfigStorageKey } from '@everdash/dashboard/shared/config/runtime-cache';
 
 export function readOfflineRuntimeConfig(): RuntimeSnapshot | null {
   try {

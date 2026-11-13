@@ -8,6 +8,12 @@
     "jsx": "react-jsx",
     "jsxImportSource": "preact",
     "strict": true,
+    "paths": {
+      "@everdash/contracts/*": ["./packages/contracts/src/*"],
+      "@everdash/ui/*": ["./packages/ui/src/*"],
+      "@everdash/dashboard/*": ["./packages/dashboard/src/*"],
+      "@/*": ["./apps/tablet/src/*"]
+    },
     "noEmit": true,
     "skipLibCheck": true,
     "isolatedModules": true,
@@ -21,6 +27,7 @@
     "tests/config.types.ts",
     "vite.config.ts",
     "vite.preview.config.ts",
+    "tooling/aliases.ts",
     "scripts/export-config.ts"
   ]
 }

@@ -5,6 +5,7 @@
   "type": "module",
   "dependencies": {
     "@everdash/contracts": "workspace:*",
+    "@everdash/dashboard": "workspace:*",
     "@everdash/ui": "workspace:*",
     "preact": "^10.29.8"
   }

@@ -3,7 +3,7 @@ import test from 'node:test';
 import {
   clearOfflineRuntimeConfig,
   runtimeConfigStorageKey,
-} from '../packages/dashboard/src/shared/config/runtime-cache';
+} from '@everdash/dashboard/shared/config/runtime-cache';
 
 test('logout clears only the private offline dashboard snapshot and keeps preferences', () => {
   const values = new Map([

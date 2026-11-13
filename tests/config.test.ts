@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { defineConfig } from '../packages/contracts/src/config';
+import { defineConfig } from '@everdash/contracts/config';
 import {
   resolveDashboard,
   groupCards,
-} from '../packages/dashboard/src/features/dashboard/data/discovery';
+} from '@everdash/dashboard/features/dashboard/data/discovery';
 
 const config = () =>
   defineConfig({

@@ -1,4 +1,4 @@
-import { defineConfig } from '../../packages/contracts/src/config';
+import { defineConfig } from '@everdash/contracts/config';
 
 // Stable browser-test input, independent of each user's runtime dashboard JSON.
 export const dashboardDocument = {

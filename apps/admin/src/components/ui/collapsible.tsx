@@ -1,1 +1,1 @@
-export * from '../../../../../packages/ui/src/admin/Collapsible/Collapsible';
+export * from '@everdash/ui/admin/Collapsible/Collapsible';

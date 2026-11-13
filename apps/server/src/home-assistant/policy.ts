@@ -1,4 +1,4 @@
-import type { AppConfig, CardConfig } from '../../../../packages/contracts/src/config/types';
+import type { AppConfig, CardConfig } from '@everdash/contracts/config/types';
 import { PolicyError } from './policy-error';
 
 function isRecord(value: unknown): value is Record<string, unknown> {

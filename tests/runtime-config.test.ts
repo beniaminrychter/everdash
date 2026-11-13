@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { validateDashboard } from '../packages/contracts/src/config/validate';
-import { dashboardSchema } from '../packages/contracts/src/config/schema';
-import { iconNames } from '../packages/contracts/src/iconNames';
+import { validateDashboard } from '@everdash/contracts/config/validate';
+import { dashboardSchema } from '@everdash/contracts/config/schema';
+import { iconNames } from '@everdash/contracts/iconNames';
 
 const valid = {
   schemaVersion: 1,

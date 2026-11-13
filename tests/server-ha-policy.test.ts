@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { validateDashboard } from '../packages/contracts/src/config/validate';
+import { validateDashboard } from '@everdash/contracts/config/validate';
 import {
   filterConfiguredStates,
   validateServiceCommand,

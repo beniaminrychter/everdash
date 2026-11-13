@@ -3,13 +3,13 @@ import test from 'node:test';
 import {
   resolveDashboard,
   parseEntities,
-} from '../packages/dashboard/src/features/dashboard/data/discovery';
-import { mapEnergy, powerKilowatts } from '../packages/dashboard/src/features/energy/data/readings';
+} from '@everdash/dashboard/features/dashboard/data/discovery';
+import { mapEnergy, powerKilowatts } from '@everdash/dashboard/features/energy/data/readings';
 import {
   mapWeather,
   parseForecastResponse,
-} from '../packages/dashboard/src/features/weather/data/forecast';
-import { sensorValue } from '../packages/dashboard/src/features/sensors/data/readings';
+} from '@everdash/dashboard/features/weather/data/forecast';
+import { sensorValue } from '@everdash/dashboard/features/sensors/data/readings';
 import config from './fixtures/dashboard';
 
 const entity = (

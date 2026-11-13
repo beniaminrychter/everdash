@@ -7,8 +7,8 @@ import { useRuntimeConfig } from './hooks/useRuntimeConfig';
 import { registerWorker } from './registerWorker';
 import { removeReloadMarker } from './hardReload';
 import { StatusPage } from './StatusPage';
-import { validateDashboard } from '../../../../packages/contracts/src/config/validate';
-import type { RuntimeSnapshot } from '../../../../packages/dashboard/src/features/configuration/data/api';
+import { validateDashboard } from '@everdash/contracts/config/validate';
+import type { RuntimeSnapshot } from '@everdash/dashboard/features/configuration/data/api';
 
 interface BootstrapResponse {
   mode?: 'direct' | 'management';

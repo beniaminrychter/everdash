@@ -3,7 +3,7 @@ import type {
   AuthErrorCode,
   AuthSessionResponse,
   AuthStartRequest,
-} from '../../../../packages/contracts/src/auth/oauth';
+} from '@everdash/contracts/auth/oauth';
 import {
   ADMIN_COOKIE,
   TRANSACTION_COOKIE,

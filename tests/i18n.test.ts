@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createTranslator, translateMessage, formatNumber } from '../packages/ui/src/i18n/index';
+import { createTranslator, translateMessage, formatNumber } from '@everdash/ui/i18n/index';
 
 test('Polish translates app text and interpolates configured names without translating them', () => {
   const t = createTranslator('pl');

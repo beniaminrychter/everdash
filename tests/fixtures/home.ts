@@ -1,4 +1,4 @@
-import type { PageConfig } from '../../packages/dashboard/src/features/accessories/data/model';
+import type { PageConfig } from '@everdash/dashboard/features/accessories/data/model';
 
 export const homePage = {
   cards: [

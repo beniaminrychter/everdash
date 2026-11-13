@@ -5,7 +5,7 @@ import {
   savePreferences,
   resolveTheme,
   preferenceKey,
-} from '../packages/dashboard/src/features/settings/data/preferences';
+} from '@everdash/dashboard/features/settings/data/preferences';
 
 const pages = [
   { id: 'first-floor', name: 'First floor' },

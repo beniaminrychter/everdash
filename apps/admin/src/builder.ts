@@ -1,8 +1,4 @@
-import type {
-  CardConfig,
-  DashboardDocument,
-  ViewConfig,
-} from '../../../packages/contracts/src/config/types';
+import type { CardConfig, DashboardDocument, ViewConfig } from '@everdash/contracts/config/types';
 
 export type CardKind = CardConfig['type'];
 

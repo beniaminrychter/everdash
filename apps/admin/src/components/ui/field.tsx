@@ -1,1 +1,1 @@
-export * from '../../../../../packages/ui/src/admin/Field/Field';
+export * from '@everdash/ui/admin/Field/Field';

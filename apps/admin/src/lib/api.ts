@@ -1,4 +1,4 @@
-import type { DashboardDocument } from '../../../../packages/contracts/src/config/types';
+import type { DashboardDocument } from '@everdash/contracts/config/types';
 
 export interface EntityOption {
   entityId: string;

@@ -1,4 +1,4 @@
-import type { AuthErrorCode } from '../../../../packages/contracts/src/auth/oauth';
+import type { AuthErrorCode } from '@everdash/contracts/auth/oauth';
 
 const messages: Record<AuthErrorCode, string> = {
   INVALID_REQUEST: 'Invalid authentication request.',

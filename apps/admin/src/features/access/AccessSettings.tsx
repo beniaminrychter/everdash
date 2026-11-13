@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'preact/hooks';
-import styles from '../../AdminEntry.module.css';
+import styles from '@/AdminEntry.module.css';
 import local from './AccessSettings.module.css';
-import { AdminDialog } from '../../../../../packages/ui/src/admin/AdminDialog/AdminDialog';
-import { Button } from '../../../../../packages/ui/src/admin/Button/Button';
-import { QRCodeSVG } from '../../../../../packages/ui/src/admin/QRCode/QRCode';
+import { AdminDialog } from '@everdash/ui/admin/AdminDialog/AdminDialog';
+import { Button } from '@everdash/ui/admin/Button/Button';
+import { QRCodeSVG } from '@everdash/ui/admin/QRCode/QRCode';
 
 async function logout() {
   await fetch('/api/manage/auth/logout', {

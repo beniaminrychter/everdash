@@ -44,6 +44,17 @@ export default defineConfig({
     'eslint/no-param-reassign': 'off',
     'eslint/no-plusplus': 'off',
     'eslint/no-promise-executor-return': 'off',
+    'eslint/no-restricted-imports': [
+      'error',
+      {
+        patterns: [
+          {
+            group: ['**/packages/*/src/**'],
+            message: 'Import workspace packages as @everdash/<pkg>/…',
+          },
+        ],
+      },
+    ],
     'eslint/no-shadow': 'off',
     'eslint/prefer-destructuring': 'off',
     'eslint/prefer-named-capture-group': 'off',
