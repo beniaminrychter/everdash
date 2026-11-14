@@ -82,18 +82,28 @@ function hostOf(origin: string): string {
 export function AppSidebar({ route, onNavigate, origin }: AppSidebarProps) {
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-1.5">
-          <div className="bg-primary text-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-md text-sm font-semibold">
-            E
-          </div>
-          <div className="grid min-w-0 flex-1 text-left leading-tight">
-            <span className="truncate text-sm font-semibold">EverDash</span>
-            {origin && (
-              <span className="text-muted-foreground truncate text-xs">{hostOf(origin)}</span>
-            )}
-          </div>
-        </div>
+      {/* Same height as the page's top bar, so the two line up across the window. */}
+      <SidebarHeader className="h-14 justify-center">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              size="lg"
+              tooltip="Editor"
+              className="h-10"
+              onClick={() => onNavigate('editor')}
+            >
+              <div className="bg-primary text-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-md text-sm font-semibold">
+                E
+              </div>
+              <div className="grid min-w-0 flex-1 text-left leading-tight">
+                <span className="truncate text-sm font-semibold">EverDash</span>
+                {origin && (
+                  <span className="text-muted-foreground truncate text-xs">{hostOf(origin)}</span>
+                )}
+              </div>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
         {groups.map((group) => (

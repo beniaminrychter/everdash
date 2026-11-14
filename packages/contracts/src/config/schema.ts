@@ -14,7 +14,10 @@ const icon = {
     'cloud',
     'coffee',
     'desk-lamp',
+    'door',
+    'droplet',
     'floor-lamp',
+    'gauge',
     'home',
     'laptop',
     'moon',
@@ -27,12 +30,15 @@ const icon = {
     'share',
     'sliders',
     'sofa',
+    'sparkle',
     'sun',
     'sunrise',
     'thermometer',
+    'toggle',
   ],
 };
 const sensor = entity('sensor');
+const entityIn = (...domains: string[]) => entity(`(?:${domains.join('|')})`);
 
 export const dashboardSchema = {
   $schema: 'https://json-schema.org/draft/2020-12/schema',
@@ -136,6 +142,46 @@ export const dashboardSchema = {
                     entity: entity('climate'),
                     name: displayName,
                     temperatureUnit: { enum: ['°C', '°F'] },
+                  },
+                },
+                {
+                  type: 'object',
+                  additionalProperties: false,
+                  required: ['type', 'entity'],
+                  properties: {
+                    type: { const: 'value' },
+                    entity: entityIn('sensor', 'input_number'),
+                    name: displayName,
+                    icon,
+                    template: { enum: ['tile', 'compact', 'hero'] },
+                    unit: {
+                      type: 'string',
+                      maxLength: 12,
+                      pattern: '^$|^(?=.*\\S)[^\\x00-\\x1f\\x7f]*$',
+                    },
+                    precision: { type: 'integer', minimum: 0, maximum: 3 },
+                  },
+                },
+                {
+                  type: 'object',
+                  additionalProperties: false,
+                  required: ['type', 'entity'],
+                  properties: {
+                    type: { const: 'toggle' },
+                    entity: entityIn('input_boolean', 'switch', 'binary_sensor'),
+                    name: displayName,
+                    icon,
+                  },
+                },
+                {
+                  type: 'object',
+                  additionalProperties: false,
+                  required: ['type', 'entity'],
+                  properties: {
+                    type: { const: 'scene' },
+                    entity: entityIn('scene', 'script'),
+                    name: displayName,
+                    icon,
                   },
                 },
               ],

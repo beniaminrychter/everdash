@@ -104,11 +104,13 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ config }),
     }),
-  getEntities: (query: string, domain: string) => {
+  getEntities: (query: string, domain: string | readonly string[]) => {
     const params = new URLSearchParams({ q: query, limit: '60' });
 
-    if (domain) {
-      params.set('domain', domain);
+    const domains = typeof domain === 'string' ? domain : domain.join(',');
+
+    if (domains) {
+      params.set('domain', domains);
     }
 
     return request<{ entities: EntityOption[]; total: number }>(`api/manage/entities?${params}`);

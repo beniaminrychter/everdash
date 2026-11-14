@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { defineConfig } from '@everdash/contracts/config';
+import { validateDashboard } from '@everdash/contracts/config/validate';
 import {
   resolveDashboard,
   groupCards,
@@ -201,4 +202,97 @@ test('default widget titles are localizable while explicit config titles remain 
   assert.equal(cards[0].defaultTitle, true);
   assert.equal(cards[1].defaultTitle, false);
   assert.equal(cards[1].name, 'Current weather');
+});
+
+const withCard = (card: Record<string, unknown>) =>
+  validateDashboard({
+    schemaVersion: 1,
+    views: [{ cards: [card], id: 'home', title: 'Home' }],
+  });
+const issuePaths = (card: Record<string, unknown>) => {
+  const result = withCard(card);
+
+  return result.ok ? [] : result.issues.map((issue) => issue.path);
+};
+
+test('value and toggle cards keep an unset icon (auto); scenes default to a sparkle', () => {
+  const result = validateDashboard({
+    schemaVersion: 1,
+    views: [
+      {
+        cards: [
+          { type: 'value', entity: 'sensor.power', template: 'hero', unit: 'kW', precision: 2 },
+          { type: 'value', entity: 'input_number.target' },
+          { type: 'toggle', entity: 'input_boolean.guest_mode', icon: 'moon' },
+          { type: 'toggle', entity: 'switch.pump' },
+          { type: 'toggle', entity: 'binary_sensor.door' },
+          { type: 'scene', entity: 'scene.evening' },
+          { type: 'scene', entity: 'script.goodnight' },
+        ],
+        id: 'home',
+        title: 'Home',
+      },
+    ],
+  });
+  assert.equal(result.ok, true);
+  if (!result.ok) {
+    return;
+  }
+  const icons = result.config.views[0].cards.map((card) => card.icon);
+  assert.deepEqual(icons, [
+    undefined,
+    undefined,
+    'moon',
+    undefined,
+    undefined,
+    'sparkle',
+    'sparkle',
+  ]);
+});
+
+test('value cards reject bad domains, templates, precision, units and unknown keys', () => {
+  assert.deepEqual(issuePaths({ type: 'value', entity: 'light.kitchen' }), [
+    'views[0].cards[0].entity',
+  ]);
+  assert.deepEqual(issuePaths({ type: 'value', entity: 'sensor.x', template: 'giant' }), [
+    'views[0].cards[0].template',
+  ]);
+  assert.deepEqual(issuePaths({ type: 'value', entity: 'sensor.x', precision: 4 }), [
+    'views[0].cards[0].precision',
+  ]);
+  assert.deepEqual(issuePaths({ type: 'value', entity: 'sensor.x', precision: 1.5 }), [
+    'views[0].cards[0].precision',
+  ]);
+  assert.deepEqual(issuePaths({ type: 'value', entity: 'sensor.x', unit: 'x'.repeat(13) }), [
+    'views[0].cards[0].unit',
+  ]);
+  for (const unit of ['   ', '\u0007', 'a\nb']) {
+    assert.deepEqual(issuePaths({ type: 'value', entity: 'sensor.x', unit }), [
+      'views[0].cards[0].unit',
+    ]);
+  }
+  // An empty unit hides the unit.
+  assert.deepEqual(issuePaths({ type: 'value', entity: 'sensor.x', unit: '' }), []);
+  assert.deepEqual(issuePaths({ type: 'value', entity: 'sensor.x', sellPrice: 'sensor.y' }), [
+    'views[0].cards[0].sellPrice',
+  ]);
+});
+
+test('toggle and scene cards reject unsupported domains, options and icons', () => {
+  assert.deepEqual(issuePaths({ type: 'toggle', entity: 'light.kitchen' }), [
+    'views[0].cards[0].entity',
+  ]);
+  assert.deepEqual(issuePaths({ type: 'toggle', entity: 'sensor.door' }), [
+    'views[0].cards[0].entity',
+  ]);
+  assert.deepEqual(issuePaths({ type: 'toggle', entity: 'switch.x', template: 'tile' }), [
+    'views[0].cards[0].template',
+  ]);
+  assert.deepEqual(issuePaths({ type: 'scene', entity: 'switch.x' }), ['views[0].cards[0].entity']);
+  assert.deepEqual(issuePaths({ type: 'scene', entity: 'scene.x', icon: 'nope' }), [
+    'views[0].cards[0].icon',
+  ]);
+  assert.deepEqual(issuePaths({ type: 'scene', entity: 'scene.x', extra: 1 }), [
+    'views[0].cards[0].extra',
+  ]);
 });

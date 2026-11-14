@@ -9,6 +9,7 @@ export type CardConfig = {
 } & (
   | { type: 'light'; entityId: `light.${string}` }
   | { type: 'outlet'; entityId: `switch.${string}` }
+  | { type: 'toggle'; entityId: `input_boolean.${string}` | `switch.${string}` }
 );
 
 export interface PageConfig {
@@ -108,6 +109,18 @@ export function mapState(previous: LiveDevice, value: unknown): LiveDevice {
   };
 }
 
+function commandDomain(card: CardConfig): ServiceCommand['domain'] {
+  if (card.type === 'light') {
+    return 'light';
+  }
+
+  if (card.type === 'toggle' && card.entityId.startsWith('input_boolean.')) {
+    return 'input_boolean';
+  }
+
+  return 'switch';
+}
+
 export function createCommand(card: CardConfig, desired: DesiredState): ServiceCommand {
   if (card.type !== 'light' && (desired.brightness !== undefined || desired.color !== undefined)) {
     throw new Error('Only a light supports brightness and color.');
@@ -128,7 +141,7 @@ export function createCommand(card: CardConfig, desired: DesiredState): ServiceC
   }
   return {
     data,
-    domain: card.type === 'light' ? 'light' : 'switch',
+    domain: commandDomain(card),
     service: off ? 'turn_off' : 'turn_on',
   };
 }

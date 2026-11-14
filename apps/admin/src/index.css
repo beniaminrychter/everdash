@@ -194,6 +194,10 @@
   outline-offset: 3px;
 }
 
+:where([data-canvas-island] :focus:not(:focus-visible)) {
+  outline: none;
+}
+
 :where([data-canvas-island] :is(h2, h3, p)) {
   margin: 0;
 }

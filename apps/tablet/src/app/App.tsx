@@ -7,6 +7,10 @@ import { useClimate } from '@everdash/dashboard/features/climate/data/useClimate
 import { useToast } from './hooks/useToast';
 import { useHomeAssistant } from '@everdash/dashboard/features/accessories/data/useHomeAssistant';
 import { useDashboard } from '@everdash/dashboard/features/dashboard/data/useDashboard';
+import {
+  describeStaleness,
+  staleSince,
+} from '@everdash/dashboard/features/dashboard/data/staleness';
 import { useEnvironment } from './hooks/useEnvironment';
 import { usePreferences } from '@everdash/dashboard/features/settings/hooks/usePreferences';
 import { usePreventZoom } from './hooks/usePreventZoom';
@@ -84,7 +88,12 @@ export function App({
     : undefined;
   const openDevice =
     openState && openDefinition
-      ? { ...openState, icon: openDefinition.icon, name: openDefinition.name, room: page.title }
+      ? {
+          ...openState,
+          icon: openDefinition.icon ?? openState.icon,
+          name: openDefinition.name,
+          room: page.title,
+        }
       : undefined;
   const showingModal = modal?.kind === 'settings' || Boolean(openDevice);
   const hasOpenDevice = Boolean(openDevice);
@@ -115,6 +124,9 @@ export function App({
       (connectionReady ? 'Connected to Home Assistant' : 'Connecting to Home Assistant…')
     : 'You’re offline. Controls will reconnect when the network returns.';
   const connectionProblem = !online || Boolean(home.error || climate.error || dashboard.error);
+  const staleness = connectionProblem
+    ? describeStaleness(staleSince([dashboard, home, climate]), now)
+    : null;
   return (
     <LanguageProvider language={preferences.language}>
       {toast.visible && <Toast message={translateMessage(toast.message, t)} visible />}
@@ -144,7 +156,8 @@ export function App({
             class={styles.connectionNotice}
             onClick={() => setModal({ kind: 'settings' })}
           >
-            {online ? t('Connection needs attention') : t('Offline')} · {t('Open Settings')}
+            {online ? t('Connection needs attention') : t('Offline')}
+            {staleness ? ` · ${t(staleness.key, staleness.values)}` : ''} · {t('Open Settings')}
           </button>
         )}
         <DashboardCards
@@ -155,9 +168,11 @@ export function App({
           readings={dashboard.readings}
           forecasts={dashboard.forecasts}
           online={online}
+          ready={dashboard.ready}
           now={now}
           timeZone={config.timeZone}
           onToggle={toggle}
+          onActivate={home.activate}
           onDetails={(id) => setModal({ deviceId: id, kind: 'light' })}
         />
       </main>

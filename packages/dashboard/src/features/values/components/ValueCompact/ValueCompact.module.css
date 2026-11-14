@@ -1,0 +1,53 @@
+.row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 56px;
+  border-radius: 20px;
+  padding: 8px 16px;
+  background: var(--surface);
+  color: var(--text);
+}
+.icon {
+  width: 26px;
+  height: 26px;
+  margin-right: 12px;
+  color: var(--off-icon);
+}
+.name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.reading {
+  flex-shrink: 0;
+  margin-left: 10px;
+  text-align: right;
+  white-space: nowrap;
+}
+.reading strong {
+  font-size: 20px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.unit {
+  margin-left: 3px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.status {
+  color: var(--danger);
+  font-size: 14px;
+  font-weight: 600;
+}
+.isUnavailable {
+  background: var(--icon-bg);
+}
+.isUnavailable .name,
+.isUnavailable .icon {
+  color: var(--muted);
+}

@@ -22,4 +22,8 @@
   --success: #126a49;
   --danger: #b6313a;
   --wallpaper: var(--background);
+  --on-bg: #ffefb8;
+  --on-text: #18202b;
+  --on-status: #5b4600;
+  --on-ring: #d9a400;
 }

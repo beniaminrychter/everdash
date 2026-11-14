@@ -177,7 +177,11 @@ export class HomeAssistantStore {
           ) {
             return;
           }
-          pollError = this.fail(card.entityId, error);
+          const message = this.fail(card.entityId, error);
+          // A missing entity only affects its own card; it is not a connection error.
+          if (!(error instanceof HomeAssistantError && error.status === 404)) {
+            pollError = message;
+          }
         }
       }),
     );
@@ -348,6 +352,23 @@ export class HomeAssistantStore {
         void this.flush(id);
       }
     }
+  }
+
+  /** Runs a scene or script once. Resolves when Home Assistant accepts the call. */
+  async activate(entityId: string): Promise<void> {
+    if (this.stopped || !this.active || this.authFailed) {
+      throw new Error('Home Assistant is unavailable.');
+    }
+
+    if (!/^(scene|script)\.[a-z0-9_]+$/.test(entityId)) {
+      throw new Error('Only scenes and scripts can be activated.');
+    }
+
+    await this.api.callService({
+      data: { entity_id: entityId },
+      domain: entityId.startsWith('script.') ? 'script' : 'scene',
+      service: 'turn_on',
+    });
   }
 
   stop() {

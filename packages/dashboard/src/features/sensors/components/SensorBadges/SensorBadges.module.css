@@ -5,21 +5,43 @@
   margin: 4px -5px 22px;
 }
 .item {
+  min-width: 0;
+  max-width: 100%;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   margin: 5px;
 }
 /* Editor only: marks the badge shown in the inspector. */
-.selectedItem {
-  border-radius: 22px;
+.selectedItem .selectLayer,
+.selectLayer:focus-visible {
   outline: 2px solid #2563eb;
   outline-offset: 3px;
 }
+.selectLayer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+.selectLayer:hover {
+  background: rgba(37, 99, 235, 0.06);
+}
 .badge {
+  position: relative;
   display: flex;
   align-items: center;
   min-height: 42px;
+  min-width: 0;
+  max-width: 320px;
   padding: 10px 15px;
   border-radius: 24px;
   background: var(--surface);
@@ -28,8 +50,12 @@
   font-size: 14px;
 }
 .badge span {
-  color: var(--muted);
+  min-width: 0;
   margin-right: 12px;
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .badge strong {
   font-size: 15px;
@@ -45,44 +71,37 @@
 .editorActions {
   display: flex;
   align-items: center;
-  min-height: 40px;
   min-width: 0;
-  margin: 0;
+  margin: 4px 0 0;
   border: 0;
-  padding: 3px 5px 0;
+  padding: 0 2px;
   color: var(--muted);
-}
-.editorActions button + button {
-  margin-left: 4px;
 }
 .editorActions button {
   display: inline-flex;
   align-items: center;
-  min-width: 34px;
-  min-height: 32px;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
   border: 0;
-  border-radius: 6px;
-  padding: 4px 6px;
+  border-radius: 8px;
+  padding: 0;
   color: var(--muted);
   background: transparent;
-  font: inherit;
-  font-size: 12px;
 }
 .actionIcon {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-  margin-right: 6px;
+  width: 16px;
+  height: 16px;
 }
 .editorActions button:hover,
 .editorActions button:focus-visible {
-  color: var(--text);
+  color: #c62828;
   background: var(--surface-strong);
 }
 
 @media (pointer: coarse) {
   .editorActions button {
-    min-width: 40px;
-    min-height: 44px;
+    width: 40px;
+    height: 40px;
   }
 }

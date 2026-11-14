@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  compatibleCardKinds,
+  convertCard,
   createCard,
   createConfiguredCard,
   createView,
@@ -32,6 +34,9 @@ test('builder can start every supported card type with a valid domain placeholde
   assert.deepEqual(createCard('climate'), { type: 'climate', entity: 'climate.select_entity' });
   assert.deepEqual(createCard('weather'), { type: 'weather', entity: 'weather.select_entity' });
   assert.deepEqual(createCard('pstryk'), { type: 'pstryk', entity: 'sensor.select_entity' });
+  assert.deepEqual(createCard('value'), { type: 'value', entity: 'sensor.select_entity' });
+  assert.deepEqual(createCard('toggle'), { type: 'toggle', entity: 'input_boolean.select_entity' });
+  assert.deepEqual(createCard('scene'), { type: 'scene', entity: 'scene.select_entity' });
 });
 
 test('builder creates a configured card only for an explicit entity of its domain', () => {
@@ -41,6 +46,20 @@ test('builder creates a configured card only for an explicit entity of its domai
   });
   assert.throws(() => createConfiguredCard('light', ''), /valid light entity/);
   assert.throws(() => createConfiguredCard('light', 'switch.kitchen'), /valid light entity/);
+  assert.deepEqual(createConfiguredCard('value', 'input_number.target'), {
+    type: 'value',
+    entity: 'input_number.target',
+  });
+  assert.deepEqual(createConfiguredCard('toggle', 'binary_sensor.door'), {
+    type: 'toggle',
+    entity: 'binary_sensor.door',
+  });
+  assert.deepEqual(createConfiguredCard('scene', 'script.goodnight'), {
+    type: 'scene',
+    entity: 'script.goodnight',
+  });
+  assert.throws(() => createConfiguredCard('scene', 'light.kitchen'), /scene or script/);
+  assert.throws(() => createConfiguredCard('toggle', 'sensor.door'), /valid input_boolean/);
 });
 
 test('card editor accepts only current-view intents with a matching nonce and generation', () => {
@@ -65,4 +84,24 @@ test('card editor accepts only current-view intents with a matching nonce and ge
     isCardEditorMessage({ ...message, viewId: 'other' }, 'current-nonce', 4, 'home', 2),
     false,
   );
+});
+
+test('convertCard keeps the name and an entity the new type accepts', () => {
+  const outlet = { type: 'outlet', entity: 'switch.kettle', name: 'Kettle' } as const;
+
+  assert.deepEqual(convertCard(outlet, 'toggle'), {
+    type: 'toggle',
+    entity: 'switch.kettle',
+    name: 'Kettle',
+  });
+  assert.deepEqual(convertCard(outlet, 'light'), { type: 'light', entity: '', name: 'Kettle' });
+  assert.equal(convertCard(outlet, 'outlet'), outlet);
+});
+
+test('compatibleCardKinds lists only types that accept the entity', () => {
+  const kinds = ['light', 'outlet', 'value', 'toggle', 'scene', 'pstryk'] as const;
+
+  assert.deepEqual(compatibleCardKinds('switch.kettle', kinds), ['outlet', 'toggle']);
+  assert.deepEqual(compatibleCardKinds('sensor.power', kinds), ['value', 'pstryk']);
+  assert.deepEqual(compatibleCardKinds('script.bedtime', kinds), ['scene']);
 });

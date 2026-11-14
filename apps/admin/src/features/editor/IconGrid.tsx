@@ -5,6 +5,9 @@ import {
   CloudIcon,
   CloudRainIcon,
   CoffeeIcon,
+  DoorClosedIcon,
+  DropletIcon,
+  GaugeIcon,
   HouseIcon,
   LampDeskIcon,
   LampFloorIcon,
@@ -15,9 +18,11 @@ import {
   Share2Icon,
   SlidersHorizontalIcon,
   SofaIcon,
+  SparklesIcon,
   SunIcon,
   SunriseIcon,
   ThermometerIcon,
+  ToggleRightIcon,
   UserRoundIcon,
   XIcon,
   EllipsisIcon,
@@ -36,7 +41,10 @@ const iconComponents: Record<IconName, LucideIcon> = {
   cloud: CloudIcon,
   coffee: CoffeeIcon,
   'desk-lamp': LampDeskIcon,
+  door: DoorClosedIcon,
+  droplet: DropletIcon,
   'floor-lamp': LampFloorIcon,
+  gauge: GaugeIcon,
   home: HouseIcon,
   laptop: LaptopIcon,
   moon: MoonIcon,
@@ -49,21 +57,40 @@ const iconComponents: Record<IconName, LucideIcon> = {
   share: Share2Icon,
   sliders: SlidersHorizontalIcon,
   sofa: SofaIcon,
+  sparkle: SparklesIcon,
   sun: SunIcon,
   sunrise: SunriseIcon,
   thermometer: ThermometerIcon,
+  toggle: ToggleRightIcon,
 };
 
 interface IconGridProps {
   value: IconName | undefined;
   label: string;
-  onChange: (icon: IconName) => void;
+  onChange: (icon: IconName | undefined) => void;
+  /** Adds an "Auto" choice that clears the icon, so the tablet picks one from the device class. */
+  auto?: boolean;
 }
 
-export function IconGrid({ value, label, onChange }: IconGridProps) {
+export function IconGrid({ value, label, onChange, auto = false }: IconGridProps) {
   return (
     <fieldset className="grid grid-cols-6 gap-1.5">
       <legend className="sr-only">{label}</legend>
+      {auto && (
+        <button
+          type="button"
+          aria-pressed={value === undefined}
+          onClick={() => onChange(undefined)}
+          className={cn(
+            'focus-visible:ring-ring/50 col-span-6 h-9 rounded-md border text-sm transition-colors outline-none focus-visible:ring-[3px]',
+            value === undefined
+              ? 'border-primary bg-primary/10 text-foreground ring-primary ring-1'
+              : 'border-input text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+          )}
+        >
+          Auto (from the entity type)
+        </button>
+      )}
       {iconNames.map((name) => {
         const Icon = iconComponents[name];
         const pressed = value === name;

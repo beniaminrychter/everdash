@@ -1,0 +1,103 @@
+.tile {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 104px;
+  border-radius: 27px;
+  padding: 14px;
+  background: var(--surface);
+  color: var(--text);
+}
+.disc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  padding: 11px;
+  border-radius: 50%;
+  background: var(--icon-bg);
+  color: var(--off-icon);
+}
+.icon {
+  width: 100%;
+  height: 100%;
+}
+.text {
+  flex: 1;
+  min-width: 0;
+  padding-left: 12px;
+}
+.name {
+  display: block;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: -0.2px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.reading {
+  display: block;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+.reading strong {
+  font-size: 28px;
+  font-weight: 650;
+  letter-spacing: -0.6px;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+.unit {
+  margin-left: 3px;
+  color: var(--muted);
+  font-size: 15px;
+}
+.status {
+  display: block;
+  color: var(--danger);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.isUnavailable {
+  background: var(--icon-bg);
+}
+.isUnavailable .name,
+.isUnavailable .reading strong {
+  color: var(--muted);
+}
+@media (max-width: 899px) {
+  .tile {
+    padding: 12px;
+  }
+  .disc {
+    width: 46px;
+    height: 46px;
+    padding: 10px;
+  }
+}
+@media (max-width: 599px) {
+  .tile {
+    min-height: 100px;
+    border-radius: 24px;
+    padding: 12px 10px;
+  }
+  .disc {
+    width: 44px;
+    height: 44px;
+    padding: 8px;
+  }
+  .text {
+    padding-left: 9px;
+  }
+  .name {
+    font-size: 14px;
+  }
+  .reading strong {
+    font-size: 24px;
+  }
+}

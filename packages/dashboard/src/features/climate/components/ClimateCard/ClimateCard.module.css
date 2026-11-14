@@ -48,7 +48,7 @@
 .options legend {
   padding: 0;
   margin-bottom: 7px;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--muted);
 }
 .buttons {
@@ -60,16 +60,19 @@
 .buttons button {
   flex: 1;
   min-width: 0;
-  min-height: 40px;
+  min-height: 44px;
   padding: 7px 3px;
   border-radius: 10px;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--muted);
 }
 .buttons button[aria-pressed='true'] {
   background: var(--surface-strong);
   color: var(--text);
+}
+.step:active:not(:disabled) {
+  transform: scale(0.92);
 }
 .step:disabled,
 .buttons button:disabled {
@@ -79,7 +82,7 @@
 .status {
   margin-top: 12px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .step svg {
@@ -94,7 +97,7 @@
 
 @media (max-width: 360px) {
   .buttons button {
-    font-size: 11px;
+    font-size: 13px;
     padding-right: 1px;
     padding-left: 1px;
   }

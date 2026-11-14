@@ -41,7 +41,7 @@ export function AccessoryCard({
   const ink = luminance > 0.179 ? '#18202b' : '#fff';
   return (
     <article
-      class={`${styles.accessory} ${device.on && !unavailable ? styles.isOn : ''}`}
+      class={`${styles.accessory} ${device.on && !unavailable ? styles.isOn : ''} ${unavailable ? styles.isUnavailable : ''}`}
       data-device={device.id}
       style={{
         '--device-color': accent,

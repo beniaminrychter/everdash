@@ -95,12 +95,14 @@ test('the published JSON schema rejects unknown fields and advertises every supp
   const cardSchemas = viewSchema.properties.cards.items.oneOf;
   assert.deepEqual(
     cardSchemas.map((schema) => schema.properties.type.const),
-    ['light', 'outlet', 'pstryk', 'weather', 'climate'],
+    ['light', 'outlet', 'pstryk', 'weather', 'climate', 'value', 'toggle', 'scene'],
   );
   assert.ok(cardSchemas.every((schema) => schema.additionalProperties === false));
   assert.ok(
     cardSchemas
-      .filter((schema) => ['light', 'outlet'].includes(schema.properties.type.const))
+      .filter((schema) =>
+        ['light', 'outlet', 'value', 'toggle', 'scene'].includes(schema.properties.type.const),
+      )
       .every((schema) => JSON.stringify(schema.properties.icon.enum) === JSON.stringify(iconNames)),
   );
 });

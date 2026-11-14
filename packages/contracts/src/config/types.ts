@@ -30,7 +30,37 @@ export interface ClimateConfig extends Pick<DisplayOptions, 'name'> {
   temperatureUnit?: '°C' | '°F';
 }
 
-export type CardConfig = AccessoryConfig | PstrykConfig | WeatherConfig | ClimateConfig;
+export type ValueTemplate = 'tile' | 'hero' | 'compact';
+
+export interface ValueConfig extends DisplayOptions {
+  type: 'value';
+  entity: EntityId<'sensor'> | EntityId<'input_number'>;
+  /** Defaults to 'tile'. */
+  template?: ValueTemplate;
+  /** Overrides the entity's unit_of_measurement, at most 12 characters. */
+  unit?: string;
+  /** Decimal places from 0 to 3. Defaults to the standard sensor formatting. */
+  precision?: number;
+}
+
+export interface ToggleConfig extends DisplayOptions {
+  type: 'toggle';
+  entity: EntityId<'input_boolean'> | EntityId<'switch'> | EntityId<'binary_sensor'>;
+}
+
+export interface SceneConfig extends DisplayOptions {
+  type: 'scene';
+  entity: EntityId<'scene'> | EntityId<'script'>;
+}
+
+export type CardConfig =
+  | AccessoryConfig
+  | PstrykConfig
+  | WeatherConfig
+  | ClimateConfig
+  | ValueConfig
+  | ToggleConfig
+  | SceneConfig;
 
 export interface BadgeConfig extends DisplayOptions {
   type: 'temperature';
@@ -61,7 +91,9 @@ export interface DashboardDocument extends HomeConfig {
   schemaVersion: 1;
 }
 
-export type ConfiguredCard = CardConfig & { icon: IconName };
+/** Value and toggle cards may leave the icon unset, meaning it is chosen from the entity's device class. */
+type WithIcon<Card> = Card extends { type: 'value' | 'toggle' } ? Card : Card & { icon: IconName };
+export type ConfiguredCard = WithIcon<CardConfig>;
 export type ConfiguredBadge = BadgeConfig & { icon: IconName };
 
 export interface ConfiguredView extends Omit<ViewConfig, 'badges' | 'cards'> {

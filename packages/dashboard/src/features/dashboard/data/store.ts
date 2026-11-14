@@ -15,6 +15,8 @@ export interface ObservationSnapshot {
   updatedAt: number | null;
 }
 
+const forecastTtlMs = 900_000;
+
 export class ObservationStore {
   private snapshot: ObservationSnapshot;
   private listeners = new Set<() => void>();
@@ -143,23 +145,33 @@ export class ObservationStore {
         });
       } else {
         const readings: Record<string, Entity> = {};
-        let failures = 0;
+        let transportFailures = 0;
         let authenticationError: string | null = null;
         await Promise.all(
           this.snapshot.resolved.observationIds.map(async (id) => {
             try {
               const entity = await this.api.getState(id);
               if (!isEntity(entity) || entity.entity_id !== id) {
-                throw new Error('Invalid sensor response.');
+                throw new HomeAssistantError('Invalid sensor response.');
               }
               readings[id] = entity;
             } catch (error) {
-              failures++;
-              if (
-                error instanceof HomeAssistantError &&
-                (error.status === 401 || error.status === 403)
-              ) {
-                authenticationError = error.message;
+              const status = error instanceof HomeAssistantError ? error.status : 0;
+              if (status === 401 || status === 403) {
+                authenticationError = error instanceof Error ? error.message : null;
+                return;
+              }
+
+              if (status === 404) {
+                // A missing entity only affects its own card or badge.
+                return;
+              }
+
+              // Transport failure: keep the last known reading for this entity.
+              transportFailures++;
+              const previous = this.snapshot.readings[id];
+              if (previous) {
+                readings[id] = previous;
               }
             }
           }),
@@ -176,8 +188,8 @@ export class ObservationStore {
           ...(authenticationError ? { forecasts: {} } : {}),
           error:
             authenticationError ||
-            (failures ? 'Some readings are unavailable. Refresh to retry.' : null),
-          updatedAt: Date.now(),
+            (transportFailures ? 'Some readings are unavailable. Refresh to retry.' : null),
+          ...(authenticationError || transportFailures ? {} : { updatedAt: Date.now() }),
         });
       }
       if (!this.authFailed) {
@@ -189,10 +201,14 @@ export class ObservationStore {
       }
       this.authFailed =
         error instanceof HomeAssistantError && (error.status === 401 || error.status === 403);
-      this.forecastChecked = {};
+      if (this.authFailed) {
+        this.forecastChecked = {};
+      }
+      // Offline or server errors keep the last known readings, and forecasts inside their cache window.
       this.emit({
-        readings: {},
-        forecasts: {},
+        ...(this.authFailed
+          ? { readings: {}, forecasts: {} }
+          : { forecasts: this.freshForecasts() }),
         error: error instanceof Error ? error.message : 'Home Assistant data is unavailable.',
       });
     } finally {
@@ -207,6 +223,21 @@ export class ObservationStore {
       }
     }
   }
+  /** Forecasts that are still inside the 15 minute cache window. */
+  private freshForecasts(): Record<string, readonly unknown[]> {
+    const forecasts: Record<string, readonly unknown[]> = {};
+    for (const [id, forecast] of Object.entries(this.snapshot.forecasts)) {
+      const checked = this.forecastChecked[id];
+      if (checked !== undefined && Date.now() - checked < forecastTtlMs) {
+        forecasts[id] = forecast;
+      } else {
+        delete this.forecastChecked[id];
+      }
+    }
+
+    return forecasts;
+  }
+
   private async refreshForecasts(manual: boolean, revision: number) {
     if (this.stopped || revision !== this.revision) {
       return;
@@ -232,7 +263,7 @@ export class ObservationStore {
         if (
           !manual &&
           this.forecastChecked[id] !== undefined &&
-          Date.now() - this.forecastChecked[id] < 900_000
+          Date.now() - this.forecastChecked[id] < forecastTtlMs
         ) {
           return;
         }

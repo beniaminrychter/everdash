@@ -43,11 +43,7 @@ function InspectorContent({ onRequestDelete }: Pick<InspectorProps, 'onRequestDe
 
     case 'pending-card': {
       return (
-        <CardInspector
-          key={`pending-${selection.card.type}`}
-          selection={selection}
-          onRequestDelete={onRequestDelete}
-        />
+        <CardInspector key="pending-card" selection={selection} onRequestDelete={onRequestDelete} />
       );
     }
 

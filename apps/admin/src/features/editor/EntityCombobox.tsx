@@ -17,8 +17,8 @@ import { cn } from '@/lib/utils';
 interface EntityComboboxProps {
   id?: string;
   value: string;
-  /** Home Assistant domain the search is restricted to. */
-  domain: string;
+  /** Home Assistant domain, or domains, the search is restricted to. */
+  domain: string | readonly string[];
   onChange: (entityId: string) => void;
   /** Adds a "No entity" row, for optional sources. */
   clearable?: boolean;
@@ -35,6 +35,7 @@ function describeState(option: EntityOption): string {
 }
 
 export function EntityCombobox({ id, value, domain, onChange, clearable }: EntityComboboxProps) {
+  const domainLabel = typeof domain === 'string' ? domain : domain.join(' or ');
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [options, setOptions] = useState<EntityOption[]>([]);
@@ -110,7 +111,7 @@ export function EntityCombobox({ id, value, domain, onChange, clearable }: Entit
   let caption = '';
 
   if (known?.option) {
-    caption = `${known.option.name} · ${describeState(known.option)}`;
+    caption = `Now ${describeState(known.option)}`;
   } else if (known) {
     caption = 'Not found in Home Assistant. The saved ID stays unchanged.';
   }
@@ -131,20 +132,40 @@ export function EntityCombobox({ id, value, domain, onChange, clearable }: Entit
             variant="outline"
             aria-haspopup="listbox"
             aria-expanded={open}
-            className="w-full justify-between font-normal"
+            title={value || undefined}
+            className="h-auto min-h-9 w-full justify-between py-1.5 text-left font-normal whitespace-normal"
           >
-            <span className={cn('truncate', !value && 'text-muted-foreground')}>
-              {value || `Search ${domain} entities`}
-            </span>
-            <ChevronsUpDownIcon className="text-muted-foreground" />
+            {/* Full name and ID, wrapped rather than cut off, so similar entities stay distinguishable. */}
+            {value ? (
+              <span className="min-w-0 flex-1">
+                {known?.option && <span className="block break-words">{known.option.name}</span>}
+                <span
+                  className={cn(
+                    'block font-mono break-all',
+                    known?.option && 'text-muted-foreground text-xs',
+                  )}
+                >
+                  {value}
+                </span>
+              </span>
+            ) : (
+              <span className="text-muted-foreground min-w-0 flex-1 truncate">
+                {`Search ${domainLabel} entities`}
+              </span>
+            )}
+            <ChevronsUpDownIcon className="text-muted-foreground shrink-0" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="w-(--radix-popover-trigger-width) p-0">
+        {/* Wider than the inspector field and opening toward the canvas, so long names fit. */}
+        <PopoverContent
+          align="end"
+          className="w-[min(30rem,calc(100vw-2rem))] min-w-(--radix-popover-trigger-width) p-0"
+        >
           <Command shouldFilter={false}>
             <CommandInput
               value={query}
               onValueChange={setQuery}
-              placeholder={`Search ${domain} by name or ID`}
+              placeholder={`Search ${domainLabel} by name or ID`}
             />
             <CommandList>
               <CommandEmpty>
@@ -179,8 +200,8 @@ export function EntityCombobox({ id, value, domain, onChange, clearable }: Entit
                       )}
                     />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate">{option.name}</span>
-                      <span className="text-muted-foreground block truncate font-mono text-xs">
+                      <span className="block break-words">{option.name}</span>
+                      <span className="text-muted-foreground block font-mono text-xs break-all">
                         {option.entityId}
                       </span>
                     </span>

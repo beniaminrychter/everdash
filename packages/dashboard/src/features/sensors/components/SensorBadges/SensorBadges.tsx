@@ -4,7 +4,8 @@ import { sensorValue } from '../../data/readings';
 import { Icon } from '@everdash/ui/ui/Icon/Icon';
 import styles from './SensorBadges.module.css';
 
-function BadgeActionIcon({ name }: { name: 'edit' | 'delete' }) {
+/** The delete (trash) icon in the editor's badge actions. */
+function BadgeActionIcon() {
   return (
     <svg
       class={styles.actionIcon}
@@ -16,17 +17,7 @@ function BadgeActionIcon({ name }: { name: 'edit' | 'delete' }) {
       stroke-linejoin="round"
       aria-hidden="true"
     >
-      {name === 'edit' ? (
-        <>
-          <path d="M12 20h9" />
-          <path d="m16.5 3.5 4 4L8 20H4v-4z" />
-        </>
-      ) : (
-        <>
-          <path d="M3 6h18M8 6V4h8v2m3 0-1 15H6L5 6" />
-          <path d="M10 11v6m4-6v6" />
-        </>
-      )}
+      <path d="M3 6h18M8 6V4h8v2m3 0-1 15H6L5 6M10 11v6m4-6v6" />
     </svg>
   );
 }
@@ -51,7 +42,7 @@ export function SensorBadges({
 }) {
   const { t, locale } = useI18n();
   return (
-    <div class={styles.badges} aria-label={t('Room temperatures')}>
+    <div class={styles.badges} aria-label={t('Sensors')}>
       {badges.map((badge, index) => {
         const entity = readings[badge.entity];
         const value = sensorValue(online ? entity : undefined, locale);
@@ -62,12 +53,12 @@ export function SensorBadges({
                 ? `${styles.item} ${styles.selectedItem}`
                 : styles.item
             }
-            key={badge.entity + badge.name}
+            key={`${badge.entity}#${badges.slice(0, index).filter((other) => other.entity === badge.entity).length}`}
           >
             <div
               class={styles.badge}
               data-sensor={badge.entity}
-              aria-label={t('{name} temperature: {value}', {
+              aria-label={t('{name}: {value}', {
                 name: badge.name,
                 value: value.available ? value.value + value.unit : t('Unavailable'),
               })}
@@ -75,22 +66,27 @@ export function SensorBadges({
               <Icon name={badge.icon} className={styles.icon} />
               <span>{badge.name}</span>
               <strong>{value.available ? `${value.value}${value.unit}` : '—'}</strong>
+              {editorMode && (
+                // Covers the badge, so a click anywhere on it opens the badge in the inspector.
+                <button
+                  type="button"
+                  class={styles.selectLayer}
+                  onClick={() => onEdit?.(index)}
+                  aria-label={`Edit ${badge.name}`}
+                  aria-pressed={selectedIndex === index}
+                  title={`Edit ${badge.name}`}
+                />
+              )}
             </div>
             {editorMode && (
               <fieldset class={styles.editorActions} aria-label={`${badge.name} badge actions`}>
                 <button
                   type="button"
-                  onClick={() => onEdit?.(index)}
-                  aria-label={`Edit ${badge.name}`}
-                >
-                  <BadgeActionIcon name="edit" /> Edit
-                </button>
-                <button
-                  type="button"
                   onClick={() => onDelete?.(index)}
                   aria-label={`Delete ${badge.name}`}
+                  title="Delete"
                 >
-                  <BadgeActionIcon name="delete" /> Delete
+                  <BadgeActionIcon />
                 </button>
               </fieldset>
             )}

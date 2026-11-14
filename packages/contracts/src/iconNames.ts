@@ -7,7 +7,10 @@ export const iconNames = [
   'cloud',
   'coffee',
   'desk-lamp',
+  'door',
+  'droplet',
   'floor-lamp',
+  'gauge',
   'home',
   'laptop',
   'moon',
@@ -20,9 +23,11 @@ export const iconNames = [
   'share',
   'sliders',
   'sofa',
+  'sparkle',
   'sun',
   'sunrise',
   'thermometer',
+  'toggle',
 ] as const;
 
 export type IconName = (typeof iconNames)[number];

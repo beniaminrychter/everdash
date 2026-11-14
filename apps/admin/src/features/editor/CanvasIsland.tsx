@@ -83,6 +83,35 @@ function CanvasMountView({
 
 const CanvasMount = memo(CanvasMountView);
 
+/** The entity a card or badge uses in the preview until a real one is chosen. */
+const placeholderEntity = /^([a-z_]+)\.select_entity$/;
+
+/**
+ * Neutral states for placeholder entities, so a card that is still being added looks like an
+ * idle card ("Off", "Tap to run") instead of reporting a missing entity.
+ */
+function placeholderStates(document: DashboardDocument): unknown[] {
+  const ids = new Set<string>();
+
+  for (const view of document.views) {
+    for (const item of [...(view.cards ?? []), ...(view.badges ?? [])]) {
+      if (placeholderEntity.test(item.entity)) {
+        ids.add(item.entity);
+      }
+    }
+  }
+
+  return [...ids].map((id) => {
+    const domain = placeholderEntity.exec(id)?.[1] ?? '';
+    const switchable = ['light', 'switch', 'input_boolean', 'climate'].includes(domain);
+    // Readings show a dash, which is not a value; scenes and weather treat "unknown" as idle.
+    const reading = ['sensor', 'input_number', 'binary_sensor'].includes(domain);
+    const state = switchable ? 'off' : reading ? '—' : 'unknown';
+
+    return { entity_id: id, state, attributes: {} };
+  });
+}
+
 export function CanvasIsland({
   document,
   viewId,
@@ -137,7 +166,14 @@ export function CanvasIsland({
       return null;
     }
 
-    return { ...preview.result, config: document, now: preview.now, generation, editor: true };
+    return {
+      ...preview.result,
+      states: [...preview.result.states, ...placeholderStates(document)],
+      config: document,
+      now: preview.now,
+      generation,
+      editor: true,
+    };
   }, [document, generation, preview]);
 
   if (invalid) {

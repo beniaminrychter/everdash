@@ -45,7 +45,7 @@
   text-align: center;
 }
 .forecast time {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--muted);
   display: block;
 }
@@ -93,7 +93,7 @@
     font-size: 12px;
   }
   .forecast time {
-    font-size: 10px;
+    font-size: 12px;
   }
   .note {
     margin-top: 16px;
