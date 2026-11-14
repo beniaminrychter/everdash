@@ -16,6 +16,8 @@ interface Props {
   title?: string;
   titleId?: string;
   online: boolean;
+  /** True until the first dashboard readings have arrived. */
+  loading?: boolean;
   now: number;
   timeZone?: string;
 }
@@ -26,6 +28,7 @@ export function EnergyCard({
   scheduleEntity,
   usageEntity,
   online,
+  loading = false,
   now,
   timeZone,
   title,
@@ -54,7 +57,9 @@ export function EnergyCard({
   }[tone];
   const status = online
     ? reading.buy === null
-      ? t('Pstryk price unavailable. Connect a price sensor in Home Assistant.')
+      ? loading
+        ? t('Loading prices…')
+        : t('Pstryk price unavailable. Connect a price sensor in Home Assistant.')
       : ''
     : t('Offline · prices unavailable');
   return (

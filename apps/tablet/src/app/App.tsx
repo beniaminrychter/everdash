@@ -163,6 +163,7 @@ export function App({
           readings={dashboard.readings}
           forecasts={dashboard.forecasts}
           online={online}
+          ready={dashboard.ready}
           now={now}
           timeZone={config.timeZone}
           onToggle={toggle}

@@ -19,6 +19,10 @@
   --success: #72dfb8;
   --danger: #ff9c9c;
   --wallpaper: var(--background);
+  --on-bg: #f8f9fb;
+  --on-text: #18202b;
+  --on-status: #4a5360;
+  --on-ring: transparent;
 }
 :global(html[data-theme='light']) {
   --text: #1d2533;
@@ -35,6 +39,10 @@
   --success: #126a49;
   --danger: #b6313a;
   --wallpaper: var(--background);
+  --on-bg: #ffefb8;
+  --on-text: #18202b;
+  --on-status: #5b4600;
+  --on-ring: #d9a400;
 }
 :global(*) {
   box-sizing: border-box;
@@ -63,6 +71,9 @@
   color: inherit;
   border: 0;
   background: none;
+}
+:global(button:active:not(:disabled)) {
+  opacity: 0.6;
 }
 :global(:focus) {
   outline: 2px solid var(--accent);
@@ -118,9 +129,10 @@
 }
 .connectionNotice {
   display: block;
-  padding: 10px 0;
+  min-height: 44px;
+  padding: 12px 0;
   color: var(--danger);
-  font-size: 13px;
+  font-size: 15px;
   text-align: left;
   margin-bottom: 12px;
 }

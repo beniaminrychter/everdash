@@ -51,7 +51,7 @@ export function SensorBadges({
 }) {
   const { t, locale } = useI18n();
   return (
-    <div class={styles.badges} aria-label={t('Room temperatures')}>
+    <div class={styles.badges} aria-label={t('Sensors')}>
       {badges.map((badge, index) => {
         const entity = readings[badge.entity];
         const value = sensorValue(online ? entity : undefined, locale);
@@ -62,12 +62,12 @@ export function SensorBadges({
                 ? `${styles.item} ${styles.selectedItem}`
                 : styles.item
             }
-            key={badge.entity + badge.name}
+            key={`${badge.entity}#${badges.slice(0, index).filter((other) => other.entity === badge.entity).length}`}
           >
             <div
               class={styles.badge}
               data-sensor={badge.entity}
-              aria-label={t('{name} temperature: {value}', {
+              aria-label={t('{name}: {value}', {
                 name: badge.name,
                 value: value.available ? value.value + value.unit : t('Unavailable'),
               })}

@@ -18,6 +18,9 @@ interface BootstrapResponse {
 }
 
 removeReloadMarker();
+
+// Safari 12 only applies :active styles once a touch listener exists on the document.
+document.addEventListener('touchstart', () => undefined, false);
 const root = document.querySelector('#app')!;
 
 function RuntimeApp({

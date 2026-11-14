@@ -19,6 +19,8 @@ interface Props {
   readings: EntityReadings;
   forecasts: Readonly<Record<string, readonly unknown[]>>;
   online: boolean;
+  /** False until the first readings arrive; cards then show a loading state. */
+  ready?: boolean;
   now: number;
   timeZone?: string;
   onToggle: (id: string) => void;
@@ -124,6 +126,7 @@ export function DashboardCards({
   readings,
   forecasts,
   online,
+  ready = true,
   now,
   timeZone,
   onToggle,
@@ -165,6 +168,7 @@ export function DashboardCards({
             scheduleEntity={reading(card.schedule)}
             usageEntity={reading(card.usage)}
             online={online}
+            loading={!ready}
             now={now}
             timeZone={timeZone}
           />
@@ -251,6 +255,11 @@ export function DashboardCards({
         }
       }}
     >
+      {view.cards.length === 0 && !editorMode && (
+        <p class={styles.emptyView} data-testid="empty-view">
+          {t('No cards in this view yet')}
+        </p>
+      )}
       {groupCards(view.cards).map((group, groupIndex) =>
         group.type === 'accessories' ? (
           <section key={groupIndex} aria-label={t('Accessories')}>
