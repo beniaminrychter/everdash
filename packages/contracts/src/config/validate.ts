@@ -1,4 +1,4 @@
-import { cardEntityDomain } from './cardDomains';
+import { cardEntityDomains, isCardEntity } from './cardDomains';
 import { defineConfig } from './normalize';
 import type { AppConfig, CardConfig, DashboardDocument, HomeConfig } from './types';
 import { iconNames } from '../iconNames';
@@ -20,8 +20,13 @@ const cardKeys: Record<string, string[]> = {
   light: ['type', 'entity', 'name', 'icon'],
   outlet: ['type', 'entity', 'name', 'icon'],
   pstryk: ['type', 'entity', 'name', 'sellPrice', 'nextPrice', 'usage', 'schedule'],
+  scene: ['type', 'entity', 'name', 'icon'],
+  toggle: ['type', 'entity', 'name', 'icon'],
+  value: ['type', 'entity', 'name', 'icon', 'template', 'unit', 'precision'],
   weather: ['type', 'entity', 'name'],
 };
+const iconCardTypes = new Set(['light', 'outlet', 'value', 'toggle', 'scene']);
+const valueTemplates = new Set(['tile', 'hero', 'compact']);
 const iconSet = new Set<string>(iconNames);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -174,14 +179,14 @@ export function validateDashboard(input: unknown): DashboardValidation {
               return;
             }
             addUnknownKeys(card, cardKeys[card.type], cardPath, issues);
-            validateEntity(
-              card.entity,
-              cardEntityDomain(card.type as CardConfig['type']),
-              `${cardPath}.entity`,
-              issues,
-            );
+            if (!isCardEntity(card.type as CardConfig['type'], card.entity)) {
+              issues.push({
+                path: `${cardPath}.entity`,
+                message: `Expected an entity ID in the ${cardEntityDomains(card.type as CardConfig['type']).join(' or ')} domain.`,
+              });
+            }
             validateOptionalText(card.name, `${cardPath}.name`, issues);
-            if (card.type === 'light' || card.type === 'outlet') {
+            if (iconCardTypes.has(card.type)) {
               validateOptionalText(card.icon, `${cardPath}.icon`, issues);
               if (card.icon !== undefined && !iconSet.has(String(card.icon))) {
                 issues.push({ path: `${cardPath}.icon`, message: 'Unknown icon.' });
@@ -197,6 +202,35 @@ export function validateDashboard(input: unknown): DashboardValidation {
                 path: `${cardPath}.temperatureUnit`,
                 message: 'Expected °C or °F.',
               });
+            }
+            if (card.type === 'value') {
+              if (card.template !== undefined && !valueTemplates.has(String(card.template))) {
+                issues.push({
+                  path: `${cardPath}.template`,
+                  message: 'Expected tile, compact or hero.',
+                });
+              }
+              if (
+                card.unit !== undefined &&
+                (typeof card.unit !== 'string' || card.unit.length > 12)
+              ) {
+                issues.push({
+                  path: `${cardPath}.unit`,
+                  message: 'Expected a unit of at most 12 characters.',
+                });
+              }
+              if (
+                card.precision !== undefined &&
+                (typeof card.precision !== 'number' ||
+                  !Number.isInteger(card.precision) ||
+                  card.precision < 0 ||
+                  card.precision > 3)
+              ) {
+                issues.push({
+                  path: `${cardPath}.precision`,
+                  message: 'Expected a whole number from 0 to 3.',
+                });
+              }
             }
             if (card.type === 'pstryk') {
               for (const field of ['sellPrice', 'nextPrice', 'usage', 'schedule']) {

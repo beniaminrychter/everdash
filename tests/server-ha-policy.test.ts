@@ -24,6 +24,12 @@ const config = {
           usage: 'sensor.daily_usage',
         },
         { type: 'weather', entity: 'weather.local' },
+        { type: 'toggle', entity: 'input_boolean.guest' },
+        { type: 'toggle', entity: 'switch.pump' },
+        { type: 'toggle', entity: 'binary_sensor.door' },
+        { type: 'scene', entity: 'scene.evening' },
+        { type: 'scene', entity: 'script.goodnight' },
+        { type: 'value', entity: 'input_number.target' },
       ],
     },
   ],
@@ -111,4 +117,46 @@ test('rejects unknown services, unconfigured targets, extra fields and invalid v
   for (const [domain, service, data] of cases) {
     assert.throws(() => validateServiceCommand(domain, service, data, validConfig.config));
   }
+});
+
+const run = (domain: string, service: string, body: unknown) =>
+  validateServiceCommand(domain, service, body, validConfig.config);
+
+test('allows toggle, scene and script commands only for their configured card types', () => {
+  assert.deepEqual(run('input_boolean', 'turn_on', { entity_id: 'input_boolean.guest' }), {
+    entity_id: 'input_boolean.guest',
+  });
+  assert.deepEqual(run('input_boolean', 'turn_off', { entity_id: 'input_boolean.guest' }), {
+    entity_id: 'input_boolean.guest',
+  });
+  assert.deepEqual(run('switch', 'turn_on', { entity_id: 'switch.pump' }), {
+    entity_id: 'switch.pump',
+  });
+  assert.deepEqual(run('scene', 'turn_on', { entity_id: 'scene.evening' }), {
+    entity_id: 'scene.evening',
+  });
+  assert.deepEqual(run('script', 'turn_on', { entity_id: 'script.goodnight' }), {
+    entity_id: 'script.goodnight',
+  });
+});
+
+test('rejects commands that a toggle or scene card does not authorize', () => {
+  // A binary_sensor toggle is read-only.
+  assert.throws(() => run('binary_sensor', 'turn_on', { entity_id: 'binary_sensor.door' }));
+  assert.throws(() => run('switch', 'turn_on', { entity_id: 'binary_sensor.door' }));
+  // Scene and script accept only entity_id.
+  assert.throws(() => run('scene', 'turn_on', { entity_id: 'scene.evening', transition: 5 }));
+  assert.throws(() => run('script', 'turn_on', { entity_id: 'script.goodnight', variables: {} }));
+  // Other scene/script services and mismatched domains stay blocked.
+  assert.throws(() => run('scene', 'create', { entity_id: 'scene.evening' }));
+  assert.throws(() => run('script', 'turn_off', { entity_id: 'script.goodnight' }));
+  assert.throws(() => run('scene', 'turn_on', { entity_id: 'script.goodnight' }));
+  assert.throws(() => run('script', 'turn_on', { entity_id: 'scene.evening' }));
+  // input_boolean works only for configured toggle cards, never for other card types.
+  assert.throws(() => run('input_boolean', 'turn_on', { entity_id: 'input_boolean.other' }));
+  assert.throws(() => run('input_boolean', 'turn_on', { entity_id: 'switch.kettle' }));
+  assert.throws(() => run('input_boolean', 'toggle', { entity_id: 'input_boolean.guest' }));
+  // An outlet card cannot be driven through the input_boolean service, and value cards are read-only.
+  assert.throws(() => run('input_number', 'set_value', { entity_id: 'input_number.target' }));
+  assert.throws(() => run('switch', 'turn_on', { entity_id: 'switch.unconfigured' }));
 });

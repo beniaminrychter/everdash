@@ -12,7 +12,10 @@ const defaults: Record<string, string> = {
   light: 'bulb',
   outlet: 'outlet',
   pstryk: 'plug',
+  scene: 'sparkle',
   temperature: 'thermometer',
+  toggle: 'toggle',
+  value: 'gauge',
   weather: 'sun',
 };
 
@@ -26,7 +29,7 @@ for (const view of input.views) {
     if (card.icon === defaults[card.type]) {
       delete card.icon;
     }
-    if (!['light', 'outlet'].includes(card.type)) {
+    if (!['light', 'outlet', 'value', 'toggle', 'scene'].includes(card.type)) {
       delete card.icon;
     }
   }

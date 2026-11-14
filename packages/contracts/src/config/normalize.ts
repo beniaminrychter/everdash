@@ -1,4 +1,4 @@
-import { cardEntityDomain } from './cardDomains';
+import { isCardEntity } from './cardDomains';
 import type { AppConfig, BadgeConfig, CardConfig, HomeConfig } from './types';
 import type { IconName } from '../iconNames';
 
@@ -7,7 +7,10 @@ const icons: Record<CardConfig['type'] | BadgeConfig['type'], IconName> = {
   light: 'bulb',
   outlet: 'outlet',
   pstryk: 'plug',
+  scene: 'sparkle',
   temperature: 'thermometer',
+  toggle: 'toggle',
+  value: 'gauge',
   weather: 'sun',
 };
 
@@ -56,7 +59,10 @@ export function defineConfig(config: HomeConfig): AppConfig {
       return { ...badge, icon: badge.icon || icons.temperature };
     });
     const cards = (view.cards || []).map((card) => {
-      validateEntity(card.entity, cardEntityDomain(card.type));
+      if (!isCardEntity(card.type, card.entity)) {
+        throw new Error(`Invalid ${card.type} entity: ${String(card.entity)}`);
+      }
+
       if (card.type === 'pstryk') {
         for (const entity of [card.sellPrice, card.nextPrice, card.usage, card.schedule]) {
           if (entity !== undefined) {
@@ -67,7 +73,12 @@ export function defineConfig(config: HomeConfig): AppConfig {
       return {
         ...card,
         icon:
-          (card.type === 'light' || card.type === 'outlet') && card.icon
+          (card.type === 'light' ||
+            card.type === 'outlet' ||
+            card.type === 'value' ||
+            card.type === 'toggle' ||
+            card.type === 'scene') &&
+          card.icon
             ? card.icon
             : icons[card.type],
       };

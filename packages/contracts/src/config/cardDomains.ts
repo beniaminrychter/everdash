@@ -11,6 +11,9 @@ const cardEntityDomainsByType: Readonly<Record<CardConfig['type'], readonly stri
   climate: ['climate'],
   weather: ['weather'],
   pstryk: ['sensor'],
+  value: ['sensor', 'input_number'],
+  toggle: ['input_boolean', 'switch', 'binary_sensor'],
+  scene: ['scene', 'script'],
 };
 
 export function cardEntityDomains(type: CardConfig['type']): readonly string[] {
@@ -20,4 +23,12 @@ export function cardEntityDomains(type: CardConfig['type']): readonly string[] {
 /** Primary entity domain for a card type. */
 export function cardEntityDomain(type: CardConfig['type']): string {
   return cardEntityDomainsByType[type][0]!;
+}
+
+/** Whether an entity ID belongs to one of the domains allowed for a card type. */
+export function isCardEntity(type: CardConfig['type'], entity: unknown): entity is string {
+  return (
+    typeof entity === 'string' &&
+    new RegExp(`^(?:${cardEntityDomains(type).join('|')})\\.[a-z0-9_]+$`).test(entity)
+  );
 }

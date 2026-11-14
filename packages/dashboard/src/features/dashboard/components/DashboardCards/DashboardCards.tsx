@@ -213,6 +213,13 @@ export function DashboardCards({
         );
       }
 
+      case 'value':
+      case 'toggle':
+      case 'scene': {
+        // Rendered by the tablet card components added next.
+        return null;
+      }
+
       default: {
         const unsupported: never = card;
 

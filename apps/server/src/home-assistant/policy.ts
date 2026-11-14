@@ -117,7 +117,17 @@ export function validateServiceCommand(
   }
   if (domain === 'switch' && (service === 'turn_on' || service === 'turn_off')) {
     assertKeys(input, ['entity_id']);
-    assertEntity(input, 'switch', config, ['outlet']);
+    assertEntity(input, 'switch', config, ['outlet', 'toggle']);
+    return { entity_id: input.entity_id };
+  }
+  if (domain === 'input_boolean' && (service === 'turn_on' || service === 'turn_off')) {
+    assertKeys(input, ['entity_id']);
+    assertEntity(input, 'input_boolean', config, ['toggle']);
+    return { entity_id: input.entity_id };
+  }
+  if ((domain === 'scene' || domain === 'script') && service === 'turn_on') {
+    assertKeys(input, ['entity_id']);
+    assertEntity(input, domain, config, ['scene']);
     return { entity_id: input.entity_id };
   }
   if (

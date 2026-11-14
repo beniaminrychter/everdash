@@ -46,10 +46,21 @@ const shapes = {
       <path d="m8 12-4 5v5m-2 0h12m-1-7-5 5" />
     </>
   ),
+  droplet: (
+    <>
+      <path d="M12 3c3 4 6 7 6 11a6 6 0 0 1-12 0c0-4 3-7 6-11Z" />
+    </>
+  ),
   'floor-lamp': (
     <>
       <path d="M6 3h12l4 11H2z" fill="currentColor" stroke-linejoin="round" />
       <path d="M12 14v8m-4 0h8" />
+    </>
+  ),
+  gauge: (
+    <>
+      <path d="M4 18a9 9 0 1 1 16 0M12 14l4-5" />
+      <circle cx="12" cy="14" r="1.4" fill="currentColor" />
     </>
   ),
   home: (
@@ -121,6 +132,12 @@ const shapes = {
       <path d="M5 11V7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v4M5 18v3m14-3v3M3 11h3v4h12v-4h3v7H3z" />
     </>
   ),
+  sparkle: (
+    <>
+      <path d="M12 3c.8 4.5 2.5 6.2 7 7-4.5.8-6.2 2.5-7 7-.8-4.5-2.5-6.2-7-7 4.5-.8 6.2-2.5 7-7Z" />
+      <path d="M19 16v4m-2-2h4" />
+    </>
+  ),
   sun: (
     <>
       <circle cx="12" cy="12" r="4" />
@@ -137,6 +154,12 @@ const shapes = {
     <>
       <path d="M9 14.5V5a3 3 0 0 1 6 0v9.5a5 5 0 1 1-6 0Z" />
       <path d="M12 8v10m6-11h3m-3 4h2" />
+    </>
+  ),
+  toggle: (
+    <>
+      <rect x="2" y="7" width="20" height="10" rx="5" />
+      <circle cx="16" cy="12" r="2.6" fill="currentColor" />
     </>
   ),
 } satisfies Record<IconName, ComponentChildren>;

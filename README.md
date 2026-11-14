@@ -73,7 +73,7 @@ Pass source and destination paths when needed: `pnpm config:export /path/to/home
 
 Dashboard configuration uses JSON Schema version 1. See the [generic dashboard example](examples/dashboard.json) and [schema](packages/contracts/src/config/schema.ts). A dashboard contains `views`; each view has a stable `id`, a `title`, and optionally ordered `badges` and `cards`. Entity IDs are explicit and must match their Home Assistant domains.
 
-Supported cards are `light`, `outlet`, `pstryk`, `weather`, and `climate`. Temperature badges use `sensor.*`. Optional root fields are `timeZone`, `sun`, and polling intervals in milliseconds. The validator applies the existing polling and icon defaults, rejects unknown fields and invalid entity IDs, and returns field-level issues.
+Supported cards are `light`, `outlet`, `pstryk`, `weather`, `climate`, `value` (a read-only `sensor` or `input_number` value with an optional `template` of `tile`, `compact` or `hero`, `unit` and `precision`), `toggle` (an `input_boolean` or `switch` control, or a read-only `binary_sensor`), and `scene` (a `scene` or `script` run with one tap). Temperature badges use `sensor.*`. Optional root fields are `timeZone`, `sun`, and polling intervals in milliseconds. The validator applies the existing polling and icon defaults, rejects unknown fields and invalid entity IDs, and returns field-level issues.
 
 ### Language
 
