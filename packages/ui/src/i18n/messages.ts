@@ -254,5 +254,18 @@ export const polish = {
   '{name} temperature: {value}': '{name}, temperatura: {value}',
   '{name}, choose dashboard': '{name}, wybierz pulpit',
   '{time}: {price} {currency}/kWh': '{time}: {price} {currency}/kWh',
+  'Unlock dashboard': 'Odblokuj pulpit',
+  Unlock: 'Odblokuj',
+  'Unlocking…': 'Odblokowywanie…',
+  Delete: 'Usuń',
+  'Enter the PIN for this tablet.': 'Wpisz PIN tego tabletu.',
+  '{count} of up to 6 digits entered': 'Wpisano cyfr: {count} z maksymalnie 6',
+  'Incorrect PIN. Try again.': 'Nieprawidłowy PIN. Spróbuj ponownie.',
+  'Too many attempts. Wait a minute and try again.':
+    'Zbyt wiele prób. Odczekaj minutę i spróbuj ponownie.',
+  'Set up EverDash': 'Skonfiguruj EverDash',
+  'Finish the setup in administration to choose who can open this dashboard.':
+    'Dokończ konfigurację w panelu administracyjnym, aby zdecydować, kto może otwierać ten pulpit.',
+  'Open administration': 'Otwórz panel administracyjny',
 } as const;
 export type TranslationKey = keyof typeof polish;
