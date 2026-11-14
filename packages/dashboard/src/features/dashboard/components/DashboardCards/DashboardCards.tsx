@@ -1,3 +1,4 @@
+import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { translateText, useI18n } from '@everdash/ui/i18n/index';
 import { createClimate } from '../../../climate/data/model';
@@ -48,34 +49,65 @@ interface Props {
   onEditorAction?: (action: 'edit' | 'delete' | 'move', index: number, offset?: number) => void;
 }
 
-function ActionIcon({ name }: { name: 'edit' | 'delete' | 'up' | 'down' }) {
+type ActionIconName = 'delete' | 'grip' | 'up' | 'down' | 'left' | 'right';
+
+const actionIconPaths: Record<ActionIconName, string> = {
+  delete: 'M3 6h18M8 6V4h8v2m3 0-1 15H6L5 6M10 11v6m4-6v6',
+  grip: 'M9 6h.01M9 12h.01M9 18h.01M15 6h.01M15 12h.01M15 18h.01',
+  up: 'm6 14 6-6 6 6',
+  down: 'm6 10 6 6 6-6',
+  left: 'm14 6-6 6 6 6',
+  right: 'm10 6 6 6-6 6',
+};
+
+function ActionIcon({ name }: { name: ActionIconName }) {
   return (
     <svg
       class={styles.actionIcon}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      stroke-width="1.8"
+      stroke-width={name === 'grip' ? '3' : '1.8'}
       stroke-linecap="round"
       stroke-linejoin="round"
       aria-hidden="true"
     >
-      {name === 'edit' ? (
-        <>
-          <path d="M12 20h9" />
-          <path d="m16.5 3.5 4 4L8 20H4v-4z" />
-        </>
-      ) : name === 'delete' ? (
-        <>
-          <path d="M3 6h18M8 6V4h8v2m3 0-1 15H6L5 6" />
-          <path d="M10 11v6m4-6v6" />
-        </>
-      ) : name === 'up' ? (
-        <path d="m6 14 6-6 6 6" />
-      ) : (
-        <path d="m6 10 6 6 6-6" />
-      )}
+      <path d={actionIconPaths[name]} />
     </svg>
+  );
+}
+
+type EditorAction = (action: 'edit' | 'delete' | 'move', index: number, offset?: number) => void;
+
+/**
+ * Editor only: the card plus a transparent layer over it. Clicking anywhere on the card selects it
+ * for the inspector, because the card's own controls are inert in the editor.
+ */
+function EditorCard({
+  index,
+  name,
+  selected,
+  onAction,
+  children,
+}: {
+  index: number;
+  name: string;
+  selected: boolean;
+  onAction?: EditorAction;
+  children: ComponentChildren;
+}) {
+  return (
+    <div class={selected ? `${styles.editorCard} ${styles.selectedCard}` : styles.editorCard}>
+      {children}
+      <button
+        type="button"
+        class={styles.selectLayer}
+        aria-label={`Edit ${name}`}
+        aria-pressed={selected}
+        title={`Edit ${name}`}
+        onClick={() => onAction?.('edit', index)}
+      />
+    </div>
   );
 }
 
@@ -83,51 +115,56 @@ function EditorFooter({
   index,
   count,
   name,
+  horizontal,
   onAction,
 }: {
   index: number;
   count: number;
   name: string;
-  onAction?: (action: 'edit' | 'delete' | 'move', index: number, offset?: number) => void;
+  /** Cards in a grid move left and right; stacked widgets move up and down. */
+  horizontal: boolean;
+  onAction?: EditorAction;
 }) {
   return (
     <fieldset class={styles.editorFooter} aria-label={`${name} card actions`}>
       <button
         type="button"
+        class={styles.dragHandle}
         draggable
         aria-label={`Drag ${name} to reorder`}
+        title="Drag to reorder"
         onDragStart={(event) => {
           event.dataTransfer?.setData('text/everdash-card', String(index));
         }}
       >
-        ↕
-      </button>
-      <button type="button" onClick={() => onAction?.('edit', index)} aria-label={`Edit ${name}`}>
-        <ActionIcon name="edit" /> Edit
-      </button>
-      <button
-        type="button"
-        class={styles.deleteAction}
-        onClick={() => onAction?.('delete', index)}
-        aria-label={`Delete ${name}`}
-      >
-        <ActionIcon name="delete" /> Delete
+        <ActionIcon name="grip" />
       </button>
       <button
         type="button"
         onClick={() => onAction?.('move', index, -1)}
         disabled={index === 0}
         aria-label={`Move ${name} earlier`}
+        title={horizontal ? 'Move left' : 'Move up'}
       >
-        <ActionIcon name="up" />
+        <ActionIcon name={horizontal ? 'left' : 'up'} />
       </button>
       <button
         type="button"
         onClick={() => onAction?.('move', index, 1)}
         disabled={index === count - 1}
         aria-label={`Move ${name} later`}
+        title={horizontal ? 'Move right' : 'Move down'}
       >
-        <ActionIcon name="down" />
+        <ActionIcon name={horizontal ? 'right' : 'down'} />
+      </button>
+      <button
+        type="button"
+        class={styles.deleteAction}
+        onClick={() => onAction?.('delete', index)}
+        aria-label={`Delete ${name}`}
+        title="Delete"
+      >
+        <ActionIcon name="delete" />
       </button>
     </fieldset>
   );
@@ -410,7 +447,6 @@ export function DashboardCards({
                 const compact = card.type === 'value' && card.template === 'compact';
                 const classes = [
                   editorMode ? styles.editorItem : '',
-                  editorMode && selected ? styles.selectedItem : '',
                   compact ? styles.compactItem : '',
                 ]
                   .filter(Boolean)
@@ -421,14 +457,26 @@ export function DashboardCards({
                     key={editorKeys?.[index] ?? cardIndex}
                     data-editor-index={index}
                   >
-                    {content}
-                    {editorMode && (
-                      <EditorFooter
-                        index={index}
-                        count={view.cards.length}
-                        name={card.name}
-                        onAction={onEditorAction}
-                      />
+                    {editorMode ? (
+                      <>
+                        <EditorCard
+                          index={index}
+                          name={card.name}
+                          selected={selected}
+                          onAction={onEditorAction}
+                        >
+                          {content}
+                        </EditorCard>
+                        <EditorFooter
+                          index={index}
+                          count={view.cards.length}
+                          name={card.name}
+                          horizontal
+                          onAction={onEditorAction}
+                        />
+                      </>
+                    ) : (
+                      content
                     )}
                   </div>
                 );
@@ -457,7 +505,6 @@ export function DashboardCards({
                   class={[
                     card.type === 'weather' || card.type === 'value' ? styles.wide : '',
                     editorMode ? styles.editorItem : '',
-                    selected ? styles.selectedItem : '',
                   ]
                     .filter(Boolean)
                     .join(' ')}
@@ -466,14 +513,26 @@ export function DashboardCards({
                   data-card={card.type}
                   data-card-entity={card.entity}
                 >
-                  {renderWidget(card, titleId)}
-                  {editorMode && (
-                    <EditorFooter
-                      index={index}
-                      count={view.cards.length}
-                      name={card.name}
-                      onAction={onEditorAction}
-                    />
+                  {editorMode ? (
+                    <>
+                      <EditorCard
+                        index={index}
+                        name={card.name}
+                        selected={selected}
+                        onAction={onEditorAction}
+                      >
+                        {renderWidget(card, titleId)}
+                      </EditorCard>
+                      <EditorFooter
+                        index={index}
+                        count={view.cards.length}
+                        name={card.name}
+                        horizontal={false}
+                        onAction={onEditorAction}
+                      />
+                    </>
+                  ) : (
+                    renderWidget(card, titleId)
                   )}
                 </div>
               );

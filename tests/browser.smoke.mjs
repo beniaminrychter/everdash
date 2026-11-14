@@ -517,6 +517,8 @@ try {
   await expect(light.getByTestId('device-status')).toHaveText('80%');
   await expect(outlet.getByTestId('device-status')).toHaveText('Off');
   await expectConnection('Connected to Home Assistant');
+  // The focus ring is for keyboard use only, so focus follows a key press as it would with Tab.
+  await page.keyboard.press('Shift');
   await page.getByRole('button', { exact: true, name: 'Settings' }).focus();
   expect(
     await page
