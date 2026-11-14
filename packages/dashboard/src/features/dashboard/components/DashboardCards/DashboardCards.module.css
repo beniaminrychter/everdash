@@ -48,6 +48,10 @@
   grid-column: 1 / -1;
 }
 
+.compactItem {
+  align-self: start;
+}
+
 .editorItem {
   min-width: 0;
 }

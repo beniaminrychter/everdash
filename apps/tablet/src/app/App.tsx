@@ -167,6 +167,7 @@ export function App({
           now={now}
           timeZone={config.timeZone}
           onToggle={toggle}
+          onActivate={home.activate}
           onDetails={(id) => setModal({ deviceId: id, kind: 'light' })}
         />
       </main>

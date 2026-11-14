@@ -1,14 +1,27 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { useI18n } from '@everdash/ui/i18n/index';
+import { translateText, useI18n } from '@everdash/ui/i18n/index';
 import { createClimate } from '../../../climate/data/model';
 import type { LiveClimate, ClimateChange } from '../../../climate/data/model';
 import { ClimateCard } from '../../../climate/components/ClimateCard/ClimateCard';
-import { groupCards } from '../../data/discovery';
-import type { EntityReadings, ResolvedView, ResolvedWidget } from '../../data/types';
+import { groupCards, isControlToggle } from '../../data/discovery';
+import type {
+  EntityReadings,
+  ResolvedAccessory,
+  ResolvedView,
+  ResolvedWidget,
+} from '../../data/types';
 import type { LiveDevice } from '../../../accessories/data/model';
 import { AccessoryCard } from '../../../accessories/components/AccessoryCard/AccessoryCard';
 import { EnergyCard } from '../../../energy/components/EnergyCard/EnergyCard';
 import { WeatherCard } from '../../../weather/components/WeatherCard/WeatherCard';
+import { ValueTile } from '../../../values/components/ValueTile/ValueTile';
+import { ValueCompact } from '../../../values/components/ValueCompact/ValueCompact';
+import { ValueHero } from '../../../values/components/ValueHero/ValueHero';
+import { readValue, valueIcon } from '../../../values/data/reading';
+import { ToggleCard } from '../../../toggles/components/ToggleCard/ToggleCard';
+import { controlStatus, sensorStatus } from '../../../toggles/data/status';
+import { SceneCard } from '../../../scenes/components/SceneCard/SceneCard';
+import { hasState } from '../../../../shared/dashboard/readings';
 import styles from './DashboardCards.module.css';
 
 interface Props {
@@ -25,6 +38,8 @@ interface Props {
   timeZone?: string;
   onToggle: (id: string) => void;
   onDetails: (id: string) => void;
+  /** Runs a scene or script; resolves when Home Assistant accepts the call. */
+  onActivate?: (id: string) => Promise<void>;
   readOnly?: boolean;
   editorMode?: boolean;
   editorKeys?: readonly string[];
@@ -131,6 +146,7 @@ export function DashboardCards({
   timeZone,
   onToggle,
   onDetails,
+  onActivate,
   readOnly = false,
   editorMode = false,
   editorKeys,
@@ -152,8 +168,101 @@ export function DashboardCards({
       observer?.disconnect();
     };
   }, []);
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const reading = (id: string | undefined) => (id ? readings[id] : undefined);
+
+  const renderAccessory = (card: ResolvedAccessory) => {
+    const interactive = online && !(readOnly && !editorMode);
+    switch (card.type) {
+      case 'light':
+      case 'outlet': {
+        const device = devices.find((candidate) => candidate.id === card.entity);
+        if (!device) {
+          return null;
+        }
+
+        return (
+          <AccessoryCard
+            device={{ ...device, icon: card.icon, name: card.name, room: view.title }}
+            disabled={!interactive}
+            onToggle={editorMode ? () => undefined : onToggle}
+            onDetails={editorMode ? () => undefined : onDetails}
+          />
+        );
+      }
+
+      case 'toggle': {
+        if (isControlToggle(card.entity)) {
+          const device = devices.find((candidate) => candidate.id === card.entity);
+          if (!device) {
+            return null;
+          }
+
+          const status = controlStatus(device);
+
+          return (
+            <ToggleCard
+              name={card.name}
+              icon={card.icon}
+              entityId={card.entity}
+              status={translateText(status.text, t)}
+              on={status.on}
+              problem={status.problem}
+              disabled={!interactive}
+              onToggle={editorMode ? undefined : () => onToggle(card.entity)}
+            />
+          );
+        }
+
+        const status = sensorStatus(reading(card.entity), { online, ready }, locale);
+
+        return (
+          <ToggleCard
+            name={card.name}
+            icon={card.icon}
+            entityId={card.entity}
+            status={translateText(status.text, t)}
+            on={status.on}
+            problem={status.problem}
+            readOnly
+          />
+        );
+      }
+
+      case 'scene': {
+        const entity = reading(card.entity);
+
+        return (
+          <SceneCard
+            name={card.name}
+            icon={card.icon}
+            entityId={card.entity}
+            problem={ready && !hasState(entity)}
+            disabled={!interactive || editorMode || !onActivate}
+            onRun={(id) => onActivate?.(id) ?? Promise.reject(new Error('Unavailable'))}
+          />
+        );
+      }
+
+      case 'value': {
+        const entity = reading(card.entity);
+        const value = readValue(entity, card, { online, ready }, locale);
+        const icon = valueIcon(card.icon, entity);
+
+        return card.template === 'compact' ? (
+          <ValueCompact name={card.name} icon={icon} reading={value} entityId={card.entity} />
+        ) : (
+          <ValueTile name={card.name} icon={icon} reading={value} entityId={card.entity} />
+        );
+      }
+
+      default: {
+        const unsupported: never = card;
+
+        return unsupported;
+      }
+    }
+  };
 
   const renderWidget = (card: ResolvedWidget, titleId: string) => {
     switch (card.type) {
@@ -213,11 +322,20 @@ export function DashboardCards({
         );
       }
 
-      case 'value':
-      case 'toggle':
-      case 'scene': {
-        // Rendered by the tablet card components added next.
-        return null;
+      case 'value': {
+        const entity = reading(card.entity);
+
+        return (
+          <ValueHero
+            name={card.name}
+            titleId={titleId}
+            icon={valueIcon(card.icon, entity)}
+            reading={readValue(entity, card, { online, ready }, locale)}
+            entityId={card.entity}
+            lastChanged={entity?.last_changed}
+            now={now}
+          />
+        );
       }
 
       default: {
@@ -282,28 +400,27 @@ export function DashboardCards({
               data-testid="accessory-grid"
             >
               {group.cards.map((card, cardIndex) => {
-                const device = devices.find((candidate) => candidate.id === card.entity);
+                const content = renderAccessory(card);
                 const index = view.cards.indexOf(card);
                 const selected = editorMode && selectedIndex === index;
-                if (!device) {
+                if (!content) {
                   return null;
                 }
+                const compact = card.type === 'value' && card.template === 'compact';
+                const classes = [
+                  editorMode ? styles.editorItem : '',
+                  editorMode && selected ? styles.selectedItem : '',
+                  compact ? styles.compactItem : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ');
                 return (
                   <div
-                    class={
-                      editorMode
-                        ? `${styles.editorItem}${selected ? ` ${styles.selectedItem}` : ''}`
-                        : undefined
-                    }
+                    class={classes || undefined}
                     key={editorKeys?.[index] ?? cardIndex}
                     data-editor-index={index}
                   >
-                    <AccessoryCard
-                      device={{ ...device, icon: card.icon, name: card.name, room: view.title }}
-                      disabled={!online || (readOnly && !editorMode)}
-                      onToggle={editorMode ? () => undefined : onToggle}
-                      onDetails={editorMode ? () => undefined : onDetails}
-                    />
+                    {content}
                     {editorMode && (
                       <EditorFooter
                         index={index}
@@ -337,7 +454,7 @@ export function DashboardCards({
               return (
                 <div
                   class={[
-                    card.type === 'weather' ? styles.wide : '',
+                    card.type === 'weather' || card.type === 'value' ? styles.wide : '',
                     editorMode ? styles.editorItem : '',
                     selected ? styles.selectedItem : '',
                   ]

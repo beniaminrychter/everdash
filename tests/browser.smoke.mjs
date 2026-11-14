@@ -110,6 +110,16 @@ states['weather.dom'] = observed('weather.dom', 'Home', 'partlycloudy', {
   wind_speed_unit: 'km/h',
 });
 states['sun.sun'] = observed('sun.sun', 'Sun', 'above_horizon');
+const guestId = 'input_boolean.fixture_guest';
+const sceneId = 'scene.fixture_evening';
+states[guestId] = observed(guestId, 'Guest mode', 'off');
+states['binary_sensor.fixture_door'] = observed('binary_sensor.fixture_door', 'Front door', 'on', {
+  device_class: 'door',
+});
+states['sensor.fixture_value'] = observed('sensor.fixture_value', 'Fixture power', '1234.5678', {
+  unit_of_measurement: 'W',
+});
+states[sceneId] = observed(sceneId, 'Evening', '2026-10-16T18:00:00+00:00');
 states[climateId] = observed(climateId, 'Air Conditioner', 'heat', {
   current_temperature: 24,
   fan_mode: 'auto',
@@ -225,14 +235,16 @@ const api = createServer(async (request, response) => {
       response.end('[]');
       return;
     }
-    const match = url.pathname.match(/^\/api\/services\/(light|switch)\/(turn_on|turn_off)$/);
+    const match = url.pathname.match(
+      /^\/api\/services\/(light|switch|input_boolean|scene)\/(turn_on|turn_off)$/,
+    );
     if (request.method === 'POST' && match) {
       let body = '';
       for await (const chunk of request) {
         body += chunk;
       }
       const data = JSON.parse(body);
-      assert.ok([lightId, outletId].includes(data.entity_id));
+      assert.ok([lightId, outletId, guestId, sceneId].includes(data.entity_id));
       assert.equal(match[1], data.entity_id.split('.')[0]);
       commands.push({ data, domain: match[1], service: match[2] });
       const status = nextServiceStatus;
@@ -245,6 +257,11 @@ const api = createServer(async (request, response) => {
         return;
       }
       const entity = states[data.entity_id];
+      if (match[1] === 'scene') {
+        entity.state = new Date().toISOString();
+        response.end(JSON.stringify([entity]));
+        return;
+      }
       entity.state = match[2] === 'turn_on' ? 'on' : 'off';
       if (data.brightness_pct !== undefined) {
         entity.attributes.brightness = Math.round((data.brightness_pct / 100) * 255);
@@ -334,6 +351,38 @@ try {
           title: 'Sensors',
           badges: [{ type: 'temperature', entity: 'sensor.fixture_living_temp' }],
         },
+        ...(url.searchParams.has('extras')
+          ? [
+              {
+                id: 'fixture-extras',
+                title: 'Extras',
+                cards: [
+                  {
+                    type: 'value',
+                    entity: 'sensor.fixture_value',
+                    name: 'Tile power',
+                    precision: 1,
+                    unit: 'watts',
+                  },
+                  {
+                    type: 'value',
+                    entity: 'sensor.fixture_value',
+                    name: 'Compact power',
+                    template: 'compact',
+                  },
+                  {
+                    type: 'value',
+                    entity: 'sensor.fixture_value',
+                    name: 'Hero power',
+                    template: 'hero',
+                  },
+                  { type: 'toggle', entity: guestId, name: 'Guest mode' },
+                  { type: 'toggle', entity: 'binary_sensor.fixture_door', name: 'Front door' },
+                  { type: 'scene', entity: sceneId, name: 'Evening' },
+                ],
+              },
+            ]
+          : []),
       ];
       const config = {
         ...dashboardDocument,
@@ -1207,6 +1256,40 @@ try {
   await expect.poll(() => liveBootstrapCalls).toBeGreaterThan(1);
   await expect(livePage.getByRole('heading', { level: 1 })).toHaveText('Updated live');
   await liveContext.close();
+
+  const extrasContext = await browser.newContext();
+  await routeHaApi(extrasContext);
+  const extrasPage = await extrasContext.newPage();
+  extrasPage.on('pageerror', (error) => errors.push(error.message));
+  await extrasPage.addInitScript(() => {
+    localStorage.setItem(
+      'my-home:preferences:v1',
+      JSON.stringify({ appearance: 'light', language: 'en', page: 'fixture-extras' }),
+    );
+  });
+  await extrasPage.goto(`${appUrl}?extras`);
+  await expect(extrasPage.getByRole('heading', { level: 1 })).toHaveText('Extras');
+  await expect(
+    extrasPage.locator('[data-value-card="tile"] [data-testid="value-reading"]'),
+  ).toHaveText('1,234.6watts');
+  await expect(extrasPage.locator('[data-value-card="compact"]')).toContainText('1,234.57W');
+  await expect(extrasPage.locator('[data-value-card="hero"]')).toContainText('1,234.57');
+  const guest = extrasPage.getByRole('switch', { name: 'Guest mode power' });
+  await expect(guest).toHaveAttribute('aria-checked', 'false');
+  await guest.click();
+  await expect(guest).toHaveAttribute('aria-checked', 'true');
+  expect(
+    commands.some((item) => item.domain === 'input_boolean' && item.service === 'turn_on'),
+  ).toBe(true);
+  const door = extrasPage.locator('[data-toggle-card="readonly"]');
+  await expect(door).toContainText('Open');
+  await expect(door).toHaveAttribute('aria-readonly', 'true');
+  const scene = extrasPage.locator('[data-scene-card]');
+  await expect(scene).toContainText('Tap to run');
+  await scene.click();
+  await expect(scene).toContainText('Done');
+  expect(commands.some((item) => item.domain === 'scene' && item.service === 'turn_on')).toBe(true);
+  await extrasContext.close();
 
   const blockedContext = await browser.newContext();
   await routeHaApi(blockedContext);

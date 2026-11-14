@@ -1,5 +1,5 @@
 export interface ServiceCommand {
-  domain: 'light' | 'switch';
+  domain: 'light' | 'switch' | 'input_boolean' | 'scene' | 'script';
   service: 'turn_on' | 'turn_off';
   data: { entity_id: string; brightness_pct?: number; rgb_color?: number[] };
 }

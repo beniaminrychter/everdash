@@ -42,8 +42,13 @@ export function useHomeAssistant(
       store.current?.update(id, desired, debounceMs),
     [],
   );
+  const activate = useCallback(
+    (entityId: string) =>
+      store.current?.activate(entityId) ?? Promise.reject(new Error('Not connected.')),
+    [],
+  );
   const refresh = useCallback(() => {
     void store.current?.refresh();
   }, []);
-  return { ...snapshot, refresh, update };
+  return { ...snapshot, activate, refresh, update };
 }

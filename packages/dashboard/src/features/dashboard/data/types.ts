@@ -11,8 +11,15 @@ export type ResolvedCard = ConfiguredCard & {
   defaultTitle?: boolean;
   resolution: ResolvedSource;
 };
-export type ResolvedAccessory = Extract<ResolvedCard, { type: 'light' | 'outlet' }>;
-export type ResolvedWidget = Exclude<ResolvedCard, ResolvedAccessory>;
+/** Cards drawn in the accessory grid. A hero value card is a widget instead. */
+export type ResolvedAccessory = Extract<
+  ResolvedCard,
+  { type: 'light' | 'outlet' | 'toggle' | 'scene' | 'value' }
+>;
+export type ResolvedWidget = Extract<
+  ResolvedCard,
+  { type: 'pstryk' | 'weather' | 'climate' | 'value' }
+>;
 export interface ResolvedView extends Omit<ConfiguredView, 'cards' | 'badges'> {
   cards: readonly ResolvedCard[];
   badges: readonly (ConfiguredBadge & { name: string })[];

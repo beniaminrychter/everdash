@@ -2,7 +2,7 @@ export interface Device {
   id: string;
   name: string;
   room: string;
-  type: 'light' | 'outlet';
+  type: 'light' | 'outlet' | 'toggle';
   icon: string;
   on: boolean;
   brightness: number;
