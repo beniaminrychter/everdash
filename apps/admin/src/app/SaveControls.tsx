@@ -40,7 +40,12 @@ export function SaveControls() {
       ) : (
         <span className="text-muted-foreground text-sm">All changes saved</span>
       )}
-      <Button variant="outline" disabled={!dirty} onClick={() => setConfirmation('discard')}>
+      {/* A save in flight must finish first, or its result would be applied over the discard. */}
+      <Button
+        variant="outline"
+        disabled={!dirty || saving}
+        onClick={() => setConfirmation('discard')}
+      >
         Discard
       </Button>
       <Tooltip>
@@ -61,7 +66,7 @@ export function SaveControls() {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem
-            disabled={!previousAvailable}
+            disabled={!previousAvailable || saving}
             onSelect={() => setConfirmation('restore')}
           >
             Restore previous version

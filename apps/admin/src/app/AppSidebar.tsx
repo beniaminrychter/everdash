@@ -28,6 +28,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from '@/components/ui/sidebar';
+import { toast } from 'sonner';
 import { routeTitles } from './useHashRoute';
 import type { Route } from './useHashRoute';
 
@@ -56,10 +57,17 @@ const groups: { label: string; items: { route: Route; icon: LucideIcon }[] }[] =
 ];
 
 async function logout() {
-  await fetch('/api/manage/auth/logout', {
-    method: 'POST',
-    headers: { 'X-EverDash-Request': '1' },
-  });
+  try {
+    await fetch('/api/manage/auth/logout', {
+      method: 'POST',
+      headers: { 'X-EverDash-Request': '1' },
+    });
+  } catch {
+    toast.error('Unable to sign out. Check the connection and try again.');
+
+    return;
+  }
+
   window.location.assign('/admin/');
 }
 

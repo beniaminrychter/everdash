@@ -397,6 +397,9 @@ try {
   await preview.getByRole('button', { name: 'Edit Living Room Climate' }).click();
   const inspector = page.getByRole('dialog', { name: 'Inspector' });
   await expect(inspector).toBeVisible();
+  const displayName = inspector.getByLabel('Display name');
+  const originalName = await displayName.inputValue();
+  await displayName.fill('Cancelled rename');
   const editingEntity = inspector.getByLabel('Home Assistant entity');
   await editingEntity.click();
   await page.getByPlaceholder('Search climate by name or ID').fill('Living Room');
@@ -406,6 +409,9 @@ try {
   // The popover keeps its dismiss layer until its exit animation ends.
   await expect(page.getByPlaceholder('Search climate by name or ID')).toHaveCount(0);
   await expect(inspector).toBeVisible();
+  // Escaping the picker must not reset or remount the inspector's other fields.
+  await expect(displayName).toHaveValue('Cancelled rename');
+  await displayName.fill(originalName);
   await page.keyboard.press('Escape');
   await expect(inspector).not.toBeVisible();
   await expect(preview.getByRole('button', { name: 'Edit Living Room Climate' })).toBeFocused();

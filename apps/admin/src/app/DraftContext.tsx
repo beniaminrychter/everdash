@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from 'react';
 import { toast } from 'sonner';
 import { UnauthorizedError, api } from '@/lib/api';
-import { draftIssues } from './draft/draftReducer';
+import { draftIssues, isDirty } from './draft/draftReducer';
 import type { DraftAction, DraftState } from './draft/draftReducer';
 import { useDashboardDraft } from './draft/useDashboardDraft';
 
@@ -82,6 +82,9 @@ export function DraftProvider({ children }: { children: ReactNode }) {
     };
   }, [dispatch]);
 
+  // Once the draft is back in sync (discarded or saved), an old save error no longer applies.
+  const visibleSaveError = isDirty(state) ? saveError : '';
+
   const save = useCallback(async () => {
     if (draftIssues(state).length > 0) {
       return;
@@ -138,7 +141,7 @@ export function DraftProvider({ children }: { children: ReactNode }) {
       recovery,
       previousAvailable,
       saving,
-      saveError,
+      saveError: visibleSaveError,
     }),
     [
       state,
@@ -149,7 +152,7 @@ export function DraftProvider({ children }: { children: ReactNode }) {
       recovery,
       previousAvailable,
       saving,
-      saveError,
+      visibleSaveError,
     ],
   );
 

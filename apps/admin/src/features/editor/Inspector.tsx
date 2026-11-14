@@ -4,6 +4,8 @@ import { useDraft } from '@/app/DraftContext';
 import { BadgeInspector } from './BadgeInspector';
 import { CardInspector } from './CardInspector';
 import type { DeleteTarget } from './DeleteItemDialog';
+import { findOpener, rememberOpener } from './sheetOpener';
+import type { OpenerMemory } from './sheetOpener';
 import { useMediaQuery } from './useMediaQuery';
 import { ViewInspector } from './ViewInspector';
 
@@ -73,7 +75,7 @@ export function Inspector({
   const { state, dispatch } = useDraft();
   const desktop = useMediaQuery('(min-width: 1024px)');
   // The sheet has no trigger, so it hands focus back to whatever opened it, such as a canvas button.
-  const opener = useRef<HTMLElement | null>(null);
+  const opener = useRef<OpenerMemory | null>(null);
 
   if (desktop) {
     return (
@@ -99,14 +101,14 @@ export function Inspector({
         side="right"
         className="w-80 gap-0 p-0 sm:max-w-80"
         onOpenAutoFocus={() => {
-          opener.current = document.activeElement as HTMLElement | null;
+          opener.current = rememberOpener(document.activeElement);
         }}
         onCloseAutoFocus={(event) => {
-          const target = opener.current;
+          const target = findOpener(opener.current);
 
           opener.current = null;
 
-          if (target?.isConnected) {
+          if (target) {
             event.preventDefault();
             target.focus();
           }

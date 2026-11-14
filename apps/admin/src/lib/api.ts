@@ -54,6 +54,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     },
     ...init,
   });
+
   if (response.status === 401) {
     const error = new UnauthorizedError();
 
@@ -69,6 +70,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     code?: string;
     issues?: unknown;
   };
+
   if (!response.ok) {
     const error = new Error(
       result.message || `EverDash request failed (${response.status}).`,
@@ -77,11 +79,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       code?: string;
       issues?: unknown;
     };
+
     error.status = response.status;
     error.code = result.code;
     error.issues = result.issues;
+
     throw error;
   }
+
   return result;
 }
 
@@ -101,9 +106,11 @@ export const api = {
     }),
   getEntities: (query: string, domain: string) => {
     const params = new URLSearchParams({ q: query, limit: '60' });
+
     if (domain) {
       params.set('domain', domain);
     }
+
     return request<{ entities: EntityOption[]; total: number }>(`api/manage/entities?${params}`);
   },
   preview: (config: DashboardDocument) =>
