@@ -10,7 +10,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useDraft } from '@/app/DraftContext';
-import { cardKindInfo, isEntityForDomain } from './cardKinds';
+import { compatibleCardKinds, convertCard } from '@/app/draft/builder';
+import type { CardKind } from '@/app/draft/builder';
+import { cardKindInfo, cardKinds, isEntityForDomain } from './cardKinds';
 import type { DeleteTarget } from './DeleteItemDialog';
 import { EntityCombobox } from './EntityCombobox';
 import { IconGrid } from './IconGrid';
@@ -58,6 +60,9 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
   const pending = selection.kind === 'pending-card';
   const entityInvalid = card.entity.length > 0 && !isEntityForDomain(card.entity, info.domains);
   const canAdd = isEntityForDomain(card.entity, info.domains);
+  const allKinds = cardKinds.map((item) => item.kind);
+  // A saved card may only switch to types that accept its entity, so the draft stays valid.
+  const typeChoices = pending ? allKinds : compatibleCardKinds(card.entity, allKinds);
 
   function change(next: CardConfig) {
     if (selection.kind === 'pending-card') {
@@ -120,6 +125,46 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
       title={card.name || card.entity || 'Choose an entity'}
       footer={footer}
     >
+      <InspectorField
+        label="Card type"
+        htmlFor="card-type"
+        hint={
+          pending
+            ? undefined
+            : typeChoices.length > 1
+              ? 'Only types that can show this entity are listed.'
+              : 'No other card type can show this entity.'
+        }
+      >
+        <Select
+          value={card.type}
+          disabled={typeChoices.length < 2}
+          onValueChange={(kind) => change(convertCard(card, kind as CardKind))}
+        >
+          <SelectTrigger id="card-type" className="w-full">
+            {/* The closed select shows the icon and name only; the list adds descriptions. */}
+            <SelectValue>
+              <info.icon aria-hidden="true" />
+              {info.label}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {typeChoices.map((kind) => {
+              const { label, description, icon: Icon } = cardKindInfo(kind);
+
+              return (
+                <SelectItem key={kind} value={kind} textValue={label}>
+                  <Icon aria-hidden="true" />
+                  <span className="flex flex-col">
+                    <span>{label}</span>
+                    <span className="text-muted-foreground text-xs">{description}</span>
+                  </span>
+                </SelectItem>
+              );
+            })}
+          </SelectContent>
+        </Select>
+      </InspectorField>
       <InspectorField
         label="Home Assistant entity"
         htmlFor="card-entity"

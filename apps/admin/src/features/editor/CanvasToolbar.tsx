@@ -1,11 +1,9 @@
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useDraft } from '@/app/DraftContext';
-import { AddCardDialog } from './AddCardDialog';
 
 export function CanvasToolbar() {
-  const { dispatch } = useDraft();
-  const [chooserOpen, setChooserOpen] = useState(false);
+  const { state, dispatch } = useDraft();
+  const pendingCard = state.selection.kind === 'pending-card';
 
   return (
     <div className="mb-3 flex items-center justify-between gap-2 text-sm">
@@ -17,11 +15,16 @@ export function CanvasToolbar() {
         <Button variant="outline" size="sm" onClick={() => dispatch({ type: 'start-badge' })}>
           + Badge
         </Button>
-        <Button variant="outline" size="sm" onClick={() => setChooserOpen(true)}>
+        {/* The new card shows in the preview at once; its type is chosen in the inspector. */}
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={pendingCard}
+          onClick={() => dispatch({ type: 'start-card', kind: 'light' })}
+        >
           + Add card
         </Button>
       </div>
-      <AddCardDialog open={chooserOpen} onOpenChange={setChooserOpen} />
     </div>
   );
 }

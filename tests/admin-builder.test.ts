@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  compatibleCardKinds,
+  convertCard,
   createCard,
   createConfiguredCard,
   createView,
@@ -82,4 +84,24 @@ test('card editor accepts only current-view intents with a matching nonce and ge
     isCardEditorMessage({ ...message, viewId: 'other' }, 'current-nonce', 4, 'home', 2),
     false,
   );
+});
+
+test('convertCard keeps the name and an entity the new type accepts', () => {
+  const outlet = { type: 'outlet', entity: 'switch.kettle', name: 'Kettle' } as const;
+
+  assert.deepEqual(convertCard(outlet, 'toggle'), {
+    type: 'toggle',
+    entity: 'switch.kettle',
+    name: 'Kettle',
+  });
+  assert.deepEqual(convertCard(outlet, 'light'), { type: 'light', entity: '', name: 'Kettle' });
+  assert.equal(convertCard(outlet, 'outlet'), outlet);
+});
+
+test('compatibleCardKinds lists only types that accept the entity', () => {
+  const kinds = ['light', 'outlet', 'value', 'toggle', 'scene', 'pstryk'] as const;
+
+  assert.deepEqual(compatibleCardKinds('switch.kettle', kinds), ['outlet', 'toggle']);
+  assert.deepEqual(compatibleCardKinds('sensor.power', kinds), ['value', 'pstryk']);
+  assert.deepEqual(compatibleCardKinds('script.bedtime', kinds), ['scene']);
 });

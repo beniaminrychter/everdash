@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { DraftAlerts } from '@/app/DraftAlerts';
 import { useDraft } from '@/app/DraftContext';
 import { PageHeader } from '@/app/PageHeader';
@@ -8,6 +8,7 @@ import { CanvasToolbar } from './CanvasToolbar';
 import { DeleteItemDialog } from './DeleteItemDialog';
 import type { DeleteTarget } from './DeleteItemDialog';
 import { Inspector } from './Inspector';
+import { pendingPreview } from './pendingPreview';
 import { ViewTabs } from './ViewTabs';
 
 /** Reads a current canvas delete request. Stale or out-of-range messages are ignored. */
@@ -77,6 +78,12 @@ export function EditorPage() {
     }, 150);
   }, [dispatch]);
 
+  // Shows a card or badge that is still being added, so its type is visible before it is saved.
+  const preview = useMemo(
+    () => pendingPreview(state.document, state.viewId, state.selection),
+    [state.document, state.viewId, state.selection],
+  );
+
   return (
     <div className="flex h-svh min-h-0 flex-col">
       <PageHeader>
@@ -89,14 +96,10 @@ export function EditorPage() {
             <div>
               <CanvasToolbar />
               <CanvasIsland
-                document={state.document}
+                document={preview.document}
                 viewId={state.viewId}
                 generation={state.generation}
-                selection={
-                  state.selection.kind === 'card' || state.selection.kind === 'badge'
-                    ? { kind: state.selection.kind, index: state.selection.index }
-                    : undefined
-                }
+                selection={preview.selection}
                 onMessage={handleMessage}
               />
             </div>

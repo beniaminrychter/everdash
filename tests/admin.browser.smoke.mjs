@@ -299,7 +299,10 @@ try {
     '1px',
   );
   await page.getByRole('button', { name: '+ Add card' }).click();
-  await page.getByRole('button', { name: /^Climate/ }).click();
+  await page.getByRole('combobox', { name: 'Card type' }).click();
+  await page.getByRole('option', { name: /^Climate/ }).click();
+  // The new card is in the preview before an entity is chosen.
+  await expect(page.getByRole('button', { name: 'Edit New climate' })).toBeVisible();
   const entityPicker = page.getByLabel('Home Assistant entity');
   await entityPicker.click();
   await page.getByPlaceholder('Search climate by name or ID').fill('Living Room');
@@ -319,10 +322,14 @@ try {
   await expect(
     preview.getByRole('button', { name: 'Move Living Room Climate later' }),
   ).toBeDisabled();
-  await preview.getByRole('button', { name: 'Increase Living Room Climate temperature' }).click();
+  // The select layer covers the card, so the click lands on it and selects the card instead.
+  await preview
+    .getByRole('button', { name: 'Increase Living Room Climate temperature' })
+    .click({ force: true });
   assert.equal(deviceCommandCount, 0, 'editor card content must not send device commands');
   await page.getByRole('button', { name: '+ Add card' }).click();
-  await page.getByRole('button', { name: /^Value/ }).click();
+  await page.getByRole('combobox', { name: 'Card type' }).click();
+  await page.getByRole('option', { name: /^Value/ }).click();
   await page.getByLabel('Home Assistant entity').click();
   await page.getByPlaceholder('Search sensor or input_number by name or ID').fill('Lounge');
   await page.getByRole('option', { name: /Lounge Temperature/ }).click();
@@ -349,11 +356,13 @@ try {
   await page.getByRole('button', { name: 'Add card', exact: true }).click();
   await expect(preview.getByRole('button', { name: 'Edit Power meter' })).toBeVisible();
   await page.getByRole('button', { name: '+ Add card' }).click();
-  await page.getByRole('button', { name: /^Switch/ }).click();
+  await page.getByRole('combobox', { name: 'Card type' }).click();
+  await page.getByRole('option', { name: /^Switch/ }).click();
   await expect(page.getByLabel('Home Assistant entity')).toBeVisible();
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await page.getByRole('button', { name: '+ Add card' }).click();
-  await page.getByRole('button', { name: /^Scene/ }).click();
+  await page.getByRole('combobox', { name: 'Card type' }).click();
+  await page.getByRole('option', { name: /^Scene/ }).click();
   await expect(page.getByLabel('Home Assistant entity')).toBeVisible();
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await page.getByRole('button', { name: '+ Badge' }).click();
@@ -366,8 +375,9 @@ try {
   await expect(preview.getByRole('button', { name: 'Delete Lounge temp' })).toBeVisible();
   const badgeWrapper = preview.locator('[data-sensor="sensor.lounge_temperature"]').locator('..');
   const badgeBox = await preview.locator('[data-sensor="sensor.lounge_temperature"]').boundingBox();
+  // Edit is the badge itself; the remaining action sits underneath it.
   const badgeActionsBox = await badgeWrapper
-    .getByRole('button', { name: 'Edit Lounge temp' })
+    .getByRole('button', { name: 'Delete Lounge temp' })
     .boundingBox();
   assert.ok(badgeBox && badgeActionsBox && badgeActionsBox.y >= badgeBox.y + badgeBox.height);
 
@@ -469,13 +479,18 @@ try {
   await expect(pendingPage.getByRole('tab', { name: 'Guest room' })).toBeVisible();
   await pendingPage.getByRole('button', { name: '+ View' }).click();
   await pendingPage.getByRole('button', { name: '+ Add card' }).click();
-  await pendingPage.getByRole('button', { name: /^Climate/ }).click();
+  await pendingPage.getByRole('combobox', { name: 'Card type' }).click();
+  await pendingPage.getByRole('option', { name: /^Climate/ }).click();
   await expect(pendingPage.getByRole('button', { name: 'Add card', exact: true })).toBeDisabled();
+  // The preview shows the placeholder card, but saving must not include it.
+  await expect(pendingPage.getByRole('button', { name: 'Edit New climate' })).toBeVisible();
   await pendingPage.getByRole('button', { name: 'Save', exact: true }).click();
   await expect.poll(() => saveCount).toBe(savesBefore + 1);
   assert.equal(cardTotal(savedConfig), cardsBefore, 'a pending card must not be saved');
   assert.equal(
-    savedConfig.views.some((view) => (view.cards ?? []).some((card) => !card.entity)),
+    savedConfig.views.some((view) =>
+      (view.cards ?? []).some((card) => !card.entity || card.entity.endsWith('.select_entity')),
+    ),
     false,
   );
   await pendingPage.close();

@@ -91,6 +91,22 @@ export function createConfiguredCard(type: CardKind, entity: string): CardConfig
   return { ...createCard(type), entity } as CardConfig;
 }
 
+/** Turns a card into another type, keeping its name and its entity when the new type accepts it. */
+export function convertCard(card: CardConfig, type: CardKind): CardConfig {
+  if (card.type === type) {
+    return card;
+  }
+
+  const entity = isCardEntity(type, card.entity) ? card.entity : '';
+
+  return { ...createCard(type), entity, ...(card.name ? { name: card.name } : {}) } as CardConfig;
+}
+
+/** Card types that accept an entity, so an existing card can switch type without becoming invalid. */
+export function compatibleCardKinds(entity: string, kinds: readonly CardKind[]): CardKind[] {
+  return kinds.filter((kind) => isCardEntity(kind, entity));
+}
+
 export function toDocument(value: DashboardDocument): DashboardDocument {
   return structuredClone(value);
 }
