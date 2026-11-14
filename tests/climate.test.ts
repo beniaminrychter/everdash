@@ -5,9 +5,9 @@ import {
   mapClimate,
   climateCommand,
   stepTemperature,
-} from '../src/features/climate/data/model';
-import { ClimateStore } from '../src/features/climate/data/store';
-import type { ClimateCommand, ClimateApi } from '../src/shared/home-assistant/contracts';
+} from '@everdash/dashboard/features/climate/data/model';
+import { ClimateStore } from '@everdash/dashboard/features/climate/data/store';
+import type { ClimateCommand, ClimateApi } from '@everdash/contracts/home-assistant/contracts';
 
 const binding = {
   entityId: 'climate.ac' as const,

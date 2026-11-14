@@ -3,9 +3,9 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { ConfigRepository } from '../server/config/repository';
-import { buildApp } from '../server/app';
-import { HomeAssistantUpstreamError } from '../server/home-assistant/errors';
+import { ConfigRepository } from '../apps/server/src/config/repository';
+import { buildApp } from '../apps/server/src/app';
+import { HomeAssistantUpstreamError } from '../apps/server/src/home-assistant/errors';
 
 const document = {
   schemaVersion: 1,
@@ -38,7 +38,10 @@ async function withApp(
   const app = await buildApp(
     {
       config,
-      authorize: () => options.authorized ?? false,
+      access: {
+        isAdmin: () => mode === 'management' && (options.authorized ?? false),
+        isTablet: () => options.authorized ?? false,
+      },
       expectedOrigin: () => options.expectedOrigin ?? 'https://dashboard.example',
       staticDirectory: options.staticDirectory,
       homeAssistant: {
@@ -177,9 +180,9 @@ test('passes upstream Home Assistant status codes through the API boundary', asy
   }
 });
 
-test('management APIs cannot be invoked through the direct dashboard listener', async () => {
+test('tablet access never grants management APIs', async () => {
   await withApp('direct', { authorized: true }, async (app) => {
-    assert.equal((await app.inject({ method: 'GET', url: '/api/manage/config' })).statusCode, 403);
+    assert.equal((await app.inject({ method: 'GET', url: '/api/manage/config' })).statusCode, 401);
   });
 });
 

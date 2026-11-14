@@ -1,0 +1,14 @@
+{
+  "name": "@everdash/ui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/*"
+  },
+  "dependencies": {
+    "@everdash/contracts": "workspace:*",
+    "preact": "^10.29.8",
+    "qrcode-generator": "^2.0.4"
+  }
+}

@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { validateDashboard } from '../src/shared/config/validate';
-import { dashboardSchema } from '../src/shared/config/schema';
-import { iconNames } from '../src/shared/ui/iconNames';
+import { validateDashboard } from '@everdash/contracts/config/validate';
+import { dashboardSchema } from '@everdash/contracts/config/schema';
+import { iconNames } from '@everdash/contracts/iconNames';
 
 const valid = {
   schemaVersion: 1,
@@ -95,12 +95,14 @@ test('the published JSON schema rejects unknown fields and advertises every supp
   const cardSchemas = viewSchema.properties.cards.items.oneOf;
   assert.deepEqual(
     cardSchemas.map((schema) => schema.properties.type.const),
-    ['light', 'outlet', 'pstryk', 'weather', 'climate'],
+    ['light', 'outlet', 'pstryk', 'weather', 'climate', 'value', 'toggle', 'scene'],
   );
   assert.ok(cardSchemas.every((schema) => schema.additionalProperties === false));
   assert.ok(
     cardSchemas
-      .filter((schema) => ['light', 'outlet'].includes(schema.properties.type.const))
+      .filter((schema) =>
+        ['light', 'outlet', 'value', 'toggle', 'scene'].includes(schema.properties.type.const),
+      )
       .every((schema) => JSON.stringify(schema.properties.icon.enum) === JSON.stringify(iconNames)),
   );
 });

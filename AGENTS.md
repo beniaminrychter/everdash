@@ -2,28 +2,37 @@
 
 ## What this project is
 
-EverDash is a Preact progressive web app and Node.js service for controlling explicitly configured Home Assistant devices on legacy screens, including an iPad running iOS 12. Browser requests use same-origin endpoints; only the server holds the Supervisor credential and talks to Home Assistant's REST API. The app includes accessory and climate controls, energy prices and usage, weather forecasts, sensor badges, saved dashboard and appearance preferences, and an offline app shell.
+EverDash is a Preact progressive web app and Node.js service for controlling explicitly configured Home Assistant devices on legacy screens, including an iPad running iOS 12. Browser requests use same-origin endpoints; only the server holds the Home Assistant OAuth refresh credential and talks to Home Assistant's REST API. The app includes accessory and climate controls, energy prices and usage, weather forecasts, sensor badges, saved dashboard and appearance preferences, and an offline app shell.
 
-The production target is iOS 12 and Safari 12. Keep the app usable on that hardware when changing TypeScript, JavaScript, CSS, build configuration, or dependencies. The IE11 output is only a conservative JavaScript syntax floor; IE11 is not a supported product target.
+The production target for the tablet app is iOS 12 and Safari 12. Keep the tablet app usable on that hardware when changing TypeScript, JavaScript, CSS, build configuration, or dependencies. The IE11 output is only a conservative JavaScript syntax floor; IE11 is not a supported product target.
 
 ## Source organization
 
-- `src/app/` owns application startup, top-level composition, browser registration, and app-wide hooks. Keep `App.tsx` focused on composition and wiring; move feature rendering and behavior into the owning feature.
-- `src/features/<feature>/components/` owns feature UI. Keep component logic and its CSS Module together, preferably in a component directory such as `components/AccessoryCard/AccessoryCard.tsx` and `AccessoryCard.module.css`.
-- `src/features/<feature>/data/` owns feature-specific models, stores, API-to-view mappings, and domain logic. Put feature hooks in a nearby `hooks/` directory when they are not part of a component.
-- `src/shared/` owns code used by multiple features: UI primitives, Home Assistant transport and transport contracts, cross-feature types, configuration, i18n, and shared low-level helpers. Shared modules must not import from `src/features/`.
-- `server/` owns Node.js persistence, authentication boundaries, Home Assistant transport policy, and HTTP serving. It may import browser-safe contracts from `src/shared/`, but never feature modules or frontend credentials.
+- `apps/tablet/src/app/` owns application startup, top-level composition, browser registration, and app-wide hooks. Keep `App.tsx` focused on composition and wiring; move feature rendering and behavior into the owning feature.
+- `packages/dashboard/src/features/<feature>/components/` owns feature UI. Keep component logic and its CSS Module together, preferably in a component directory such as `components/AccessoryCard/AccessoryCard.tsx` and `AccessoryCard.module.css`.
+- `packages/dashboard/src/features/<feature>/data/` owns feature-specific models, stores, API-to-view mappings, and domain logic. Put feature hooks in a nearby `hooks/` directory when they are not part of a component.
+- `packages/dashboard/src/shared/` owns cross-feature dashboard helpers and transport. `packages/contracts/src/` owns browser-safe configuration, Home Assistant contracts, and cross-boundary types. `packages/ui/src/` owns reusable UI primitives and i18n. Shared modules must not import from `packages/dashboard/src/features/`; contracts and UI must not import dashboard or server.
+- `apps/admin/src/` owns the admin app: `app/` (shell, routing, the draft context and reducer), `features/<feature>/` (editor, settings, json, tablets, home-assistant, sign-in), `components/ui/` (vendored shadcn/ui primitives, kept close to upstream), `lib/`, and `types/`. Admin features may import `packages/contracts/` and `packages/ui/` but reach the tablet canvas only through `mountDashboardCanvas`.
+- `apps/server/src/` owns Node.js persistence, authentication boundaries, Home Assistant transport policy, and HTTP serving. It may import browser-safe contracts from `packages/contracts/`, but never feature modules or frontend credentials.
 
-The runtime dashboard is versioned JSON validated by `src/shared/config/` and edited through Home Assistant management. Keep entity IDs explicit; do not silently substitute entities by friendly name or invent production readings. The visual selector may use Home Assistant's entity registry to help a person choose IDs, but the saved dashboard must retain each selected ID explicitly.
+The runtime dashboard is versioned JSON validated by `packages/contracts/src/config/` and edited through Home Assistant management. Keep entity IDs explicit; do not silently substitute entities by friendly name or invent production readings. The visual selector may use Home Assistant's entity registry to help a person choose IDs, but the saved dashboard must retain each selected ID explicitly.
 
-The Home Assistant app package lives in `everdash/`; repository and image owner placeholders must remain unreleased until replaced with real public coordinates. Never add a license file without the repository owner's explicit choice. Home Assistant credentials are server-only and must not enter frontend build variables, static files, or test fixtures outside isolated dummy values.
+Production deployment uses the root Dockerfile and compose.yaml. The server has one runtime: the standalone server in `apps/server/src/standalone.ts` (Home Assistant OAuth for admins, optional PIN for tablets); the former Home Assistant add-on and long-lived-token runtimes were removed. Repository and image owner placeholders must remain unreleased until replaced with real public coordinates. Never add a license file without the repository owner's explicit choice. Home Assistant credentials are server-only and must not enter frontend build variables, static files, or test fixtures outside isolated dummy values.
+
+## Admin app
+
+`apps/admin` is a separate React 19 single-page app styled with Tailwind v4 and shadcn/ui. It is not bound by the Safari 12 floor, the ES5 output rule, or the CSS Modules rule below; those apply to the tablet and the shared packages (`apps/tablet`, `packages/dashboard`, `packages/ui` outside `admin/`, `packages/contracts`). React, Tailwind, and shadcn must stay inside `apps/admin`: `pnpm build` followed by `grep -rl "react-dom\|tailwind" dist/` must find nothing in the tablet output. The admin embeds the real Preact tablet canvas only through `mountDashboardCanvas` (`packages/dashboard/src/editor/`), a plain-TypeScript function the admin types through `apps/admin/src/types/mountDashboardCanvas.d.ts`, so React never type-checks or renders Preact JSX. Keep Tailwind preflight and admin styles out of the canvas container so the preview matches the tablet. The admin edits one draft held by a pure reducer (`apps/admin/src/app/draft/`); keep selection, dirty state, and pending items there.
+
+### Imports
+
+Cross-package imports use package names, never relative paths that leave the package: `@everdash/contracts/...`, `@everdash/ui/...`, and `@everdash/dashboard/...` resolve to each package's `src/` directory (see `tooling/aliases.ts`). Inside `apps/admin`, import admin modules with the `@/` alias (for example `@/components/ui/button`) instead of long relative paths; use `./` only for files in the same folder. The tablet app does not use `@/`.
 
 ## Adding or changing a feature
 
-1. Give the feature a focused directory under `src/features/`. Keep its UI, styles, data mapping, state, and behavior under that feature's ownership.
+1. Give the feature a focused directory under `packages/dashboard/src/features/`. Keep its UI, styles, data mapping, state, and behavior under that feature's ownership.
 2. Put each component beside its CSS Module. Avoid files that combine several unrelated components or domain responsibilities. When a file grows to own distinct responsibilities, split those responsibilities into small neighboring modules.
-3. Keep feature-specific parsing and mapping with the feature that owns the data. Put a helper in `src/shared/` only when multiple features use the same behavior and it has no dependency on a feature.
-4. Keep `src/app/App.tsx` as the composition point: it may connect app-wide state and callbacks to features, but feature internals belong near their components and data modules.
+3. Keep feature-specific parsing and mapping with the feature that owns the data. Put a helper in `packages/dashboard/src/shared/` only when multiple features use the same behavior and it has no dependency on a feature.
+4. Keep `apps/tablet/src/app/App.tsx` as the composition point: it may connect app-wide state and callbacks to features, but feature internals belong near their components and data modules.
 5. Keep component props and store/API contracts narrow. Preserve existing Home Assistant polling, cancellation, command ordering, optimistic updates, unavailable states, saved preference keys, and translation behavior unless the task explicitly changes them.
 6. Preserve existing components, including currently unused ones. Remove obsolete non-component code only when references and behavior confirm it is no longer needed; update its consumers and fixtures in the same change.
 7. Update imports, documentation, and relevant existing fixtures when files move. Do not add runtime dependencies without a clear need.
@@ -40,6 +49,8 @@ Use blank lines to separate distinct steps and make component logic easy to scan
 
 ## iOS 12 and Safari 12 compatibility
 
+These rules apply to the tablet app and shared packages. `apps/admin` is exempt.
+
 - Keep the `browserslist` targets in `package.json`, Vite legacy targets, and Safari 12 CSS target aligned. Do not raise the minimum supported browser without an explicit product decision.
 - Runtime code must use APIs available in Safari 12. Prefer the existing Home Assistant client and its native `XMLHttpRequest` behavior for authenticated requests, timeouts, and cancellation. Do not introduce `fetch`, `AbortController`, or newer platform APIs that require a polyfill without checking the compatibility impact.
 - The legacy build must remain ES5 and the service worker must remain ES5. Keep the SystemJS fallback and avoid adding IE-only `core-js` polyfills.
@@ -51,18 +62,19 @@ Use blank lines to separate distinct steps and make component logic easy to scan
 Use the repository scripts and the TypeScript configurations `oxlint.config.ts` and `oxfmt.config.ts`. Ultracite is the configured lint and safe-fix entry point; Oxfmt is the formatting checker. Import sorting is intentionally disabled.
 
 ```sh
-npm run format          # Apply Ultracite safe fixes and formatting
-npm run lint            # Check lint and formatting rules
-npm run format:check    # Verify Oxfmt formatting
-npm run typecheck       # Run TypeScript without emitting files
-npm run typecheck:server # Typecheck Node.js server modules
-npm run build           # Typecheck and create production bundles
-npm run build:server    # Bundle the server entry separately
-npm run check:compat    # Run after build; inspect fresh dist output for iOS/Safari compatibility
-npm test                # Run the Node test suite
-npm run test:browser    # Run the browser smoke suite with its isolated fixtures
+pnpm dev             # Server (tsx watch) + tablet and admin Vite servers with /api proxy
+pnpm format          # Apply Ultracite safe fixes and formatting
+pnpm lint            # Check lint and formatting rules
+pnpm format:check    # Verify Oxfmt formatting
+pnpm typecheck       # Typecheck tablet, admin, and server projects
+pnpm check           # lint + format:check + typecheck + unit tests
+pnpm build           # Typecheck and create tablet, admin, and server bundles
+pnpm check:compat    # Run after build; inspect fresh dist output for iOS/Safari compatibility
+pnpm smoke:server    # Run after build; start the server bundle and probe it
+pnpm test            # Run the Node test suite
+pnpm test:browser    # Run the tablet and admin browser suites with isolated fixtures
 ```
 
-After editing source, run `npm run format`, `npm run lint`, `npm run format:check`, and `npm run typecheck`. For production or browser-compatibility changes, also run `npm run build` followed by `npm run check:compat`; the compatibility script reads generated files from `dist/`, so run it against a fresh build. Run the relevant existing tests when the task calls for test verification. Do not add tests solely to satisfy a lint or formatting change.
+After editing source, run `pnpm format`, `pnpm lint`, `pnpm format:check`, and `pnpm typecheck`. For production or browser-compatibility changes, also run `pnpm build` followed by `pnpm check:compat`; the compatibility script reads generated files from `dist/`, so run it against a fresh build. Run the relevant existing tests when the task calls for test verification. Do not add tests solely to satisfy a lint or formatting change.
 
 Keep the compatibility check clean: it validates ES5 legacy bundles and service worker syntax, unsupported CSS, Apple web-app metadata, manifest values, and local precache entries. The browser smoke suite uses isolated test configuration and does not require physical devices. Changes that affect iOS-specific input, TLS, Home Screen installation, or offline launch still need validation on the target iPad when available.

@@ -1,0 +1,24 @@
+.sheet {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 560px;
+  max-height: none;
+  border-radius: 0;
+}
+.back {
+  min-height: 44px;
+  border: 1px solid var(--border, #d9dfe4);
+  border-radius: 8px;
+  padding: 0 12px;
+  color: inherit;
+  background: var(--card, #fff);
+  font: inherit;
+  cursor: pointer;
+}
+.back:focus {
+  outline: 2px solid var(--primary, #087f8c);
+  outline-offset: 2px;
+}

@@ -10,21 +10,23 @@ export default defineConfig({
   overrides: [
     {
       files: [
-        'src/shared/ui/Modal/Modal.tsx',
-        'src/features/energy/components/EnergyCard/EnergyCard.tsx',
-        'src/features/energy/components/PriceChart.tsx',
+        'packages/ui/src/ui/Modal/Modal.tsx',
+        'packages/dashboard/src/features/energy/components/EnergyCard/EnergyCard.tsx',
+        'packages/dashboard/src/features/energy/components/PriceChart.tsx',
       ],
       rules: { 'jsx-a11y/prefer-tag-over-role': 'off' },
     },
     {
-      files: ['admin/src/ui/AdminApp.tsx'],
+      // Vendored shadcn/ui sources: keep them close to upstream.
+      files: ['apps/admin/src/components/ui/**', 'apps/admin/src/hooks/use-mobile.ts'],
       rules: {
-        // This screen intentionally launches async loads from lifecycle effects,
-        // and the lint React Compiler does not yet understand guarded finally blocks.
         'eslint/no-use-before-define': 'off',
-        'eslint/no-void': 'off',
+        'jsx-a11y/prefer-tag-over-role': 'off',
+        'react/button-has-type': 'off',
+        'react/hook-use-state': 'off',
+        'react/purity': 'off',
         'react/set-state-in-effect': 'off',
-        'react/todo': 'off',
+        'unicorn/no-document-cookie': 'off',
       },
     },
   ],
@@ -44,6 +46,21 @@ export default defineConfig({
     'eslint/no-param-reassign': 'off',
     'eslint/no-plusplus': 'off',
     'eslint/no-promise-executor-return': 'off',
+    'eslint/no-restricted-imports': [
+      'error',
+      {
+        patterns: [
+          {
+            group: ['**/packages/*/src/**'],
+            message: 'Import workspace packages as @everdash/<pkg>/…',
+          },
+          {
+            group: ['../**/contracts/src/**', '../**/ui/src/**', '../**/dashboard/src/**'],
+            message: 'Import workspace packages as @everdash/<pkg>/…',
+          },
+        ],
+      },
+    ],
     'eslint/no-shadow': 'off',
     'eslint/prefer-destructuring': 'off',
     'eslint/prefer-named-capture-group': 'off',

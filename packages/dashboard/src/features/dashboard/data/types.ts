@@ -1,0 +1,34 @@
+import type { ConfiguredBadge, ConfiguredCard, ConfiguredView } from '@everdash/contracts/config';
+import type { ClimateBinding } from '../../climate/data/model';
+import type { CardConfig } from '../../accessories/data/model';
+
+export interface ResolvedSource {
+  status: 'resolved' | 'missing';
+  entityId: string;
+}
+export type ResolvedCard = ConfiguredCard & {
+  name: string;
+  defaultTitle?: boolean;
+  resolution: ResolvedSource;
+};
+/** Cards drawn in the accessory grid. A hero value card is a widget instead. */
+export type ResolvedAccessory = Extract<
+  ResolvedCard,
+  { type: 'light' | 'outlet' | 'toggle' | 'scene' | 'value' }
+>;
+export type ResolvedWidget = Extract<
+  ResolvedCard,
+  { type: 'pstryk' | 'weather' | 'climate' | 'value' }
+>;
+export interface ResolvedView extends Omit<ConfiguredView, 'cards' | 'badges'> {
+  cards: readonly ResolvedCard[];
+  badges: readonly (ConfiguredBadge & { name: string })[];
+}
+export interface ResolvedDashboard {
+  views: readonly ResolvedView[];
+  cards: readonly CardConfig[];
+  climates: readonly ClimateBinding[];
+  sun?: ResolvedSource;
+  observationIds: readonly string[];
+}
+export type { Entity, EntityReadings } from '../../../shared/home-assistant/entities';

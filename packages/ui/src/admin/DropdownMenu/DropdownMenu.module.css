@@ -1,0 +1,46 @@
+.root {
+  position: relative;
+  display: inline-block;
+}
+.trigger {
+  min-height: 44px;
+}
+.content {
+  position: absolute;
+  z-index: 20;
+  top: 100%;
+  min-width: 180px;
+  margin-top: 5px;
+  padding: 4px;
+  border: 1px solid var(--border, #d9dfe4);
+  border-radius: 8px;
+  color: var(--foreground, #20252e);
+  background: var(--card, #fff);
+}
+.start {
+  left: 0;
+}
+.end {
+  right: 0;
+}
+.item {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 4px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+}
+.item:disabled {
+  opacity: 0.5;
+}
+.trigger:focus,
+.item:focus {
+  outline: 2px solid var(--primary, #087f8c);
+  outline-offset: 2px;
+}

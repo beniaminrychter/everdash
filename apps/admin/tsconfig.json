@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "strict": true,
+    "paths": {
+      "@everdash/dashboard/editor/mountDashboardCanvas": ["./src/types/mountDashboardCanvas.d.ts"],
+      "@everdash/contracts/*": ["../../packages/contracts/src/*"],
+      "@everdash/ui/*": ["../../packages/ui/src/*"],
+      "@everdash/dashboard/*": ["../../packages/dashboard/src/*"],
+      "@/*": ["./src/*"]
+    },
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "types": ["vite/client"]
+  },
+  "include": [
+    "src",
+    "vite.config.ts",
+    "../../tooling/aliases.ts",
+    "../../packages/contracts/src/config/types.ts",
+    "../../packages/contracts/src/config/validate.ts",
+    "../../packages/contracts/src/config/normalize.ts",
+    "../../packages/contracts/src/iconNames.ts"
+  ]
+}

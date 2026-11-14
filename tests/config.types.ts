@@ -1,4 +1,4 @@
-import { defineConfig } from '../src/shared/config';
+import { defineConfig } from '@everdash/contracts/config';
 
 // Checked by tsc, never bundled or executed. Comments stay beside the rejected card.
 function configTypeChecks() {

@@ -1,0 +1,44 @@
+# Standalone Home Assistant login and tablet PIN
+
+Approved implementation plan, 2026-11-12. The approved conversation specification is authoritative.
+
+## Global Constraints
+
+- One standalone Docker service on port 8095, tablet at `/`, Preact administration at `/admin/`, same-origin `/api`. No Supervisor, ingress, HACS, pairing, EverDash accounts, device lists, direct TLS, or bootstrap code.
+- npm workspaces: apps/tablet, apps/admin, apps/server; packages/dashboard, packages/contracts, packages/ui. Internal packages use TypeScript source. Preserve all existing components, including the fourteen administration primitives, by porting them to Preact and CSS Modules. Remove React, Base UI, Tailwind, and React plugins after ports. Use framework-neutral qrcode-generator and existing icons.
+- Preserve explicit configured entity/service policy, v1 config/revision/previous recovery, tablet preference keys, polling, cancellation, optimistic updates, command ordering, unavailable states, and translations. Never manufacture production readings. No frontend credential, token, PIN/session secret, export secret, or secret logging.
+- Tablet remains Safari/iOS 12 compatible: ES5 legacy bundles and service worker, SystemJS fallback, XHR transport, CSS Modules, no unsupported gap/container queries or ResizeObserver-only measurement. Admin preference namespace is everdash:admin:.
+- HA login uses authorization code OAuth, browser/container-reachable HTTP(S) origin only, same-origin callback supporting private LAN IP/custom port, random single-use browser-bound state and ten-minute HttpOnly SameSite=Lax transaction cookie. Verify administrator through auth/current_user on short-lived native Node WebSocket. First verified administrator atomically pins origin. Persist household refresh token and original client_id restrictively/atomically under /data. Subsequent login-only credentials are revoked after identity validation. Local admin logout never revokes household connector. Explicit reconnect replaces credentials only after success for the pinned origin.
+- Admin session: separate HttpOnly SameSite=Strict cookie, eight-hour server expiry, bound user/origin/connection generation; fresh OAuth login verifies role. Credential provider serializes refresh, discards stale generation responses, retries only once after explicit 401, and never retries control after timeout/network errors. HA outage must leave admin repair reachable.
+- Optional PIN is 4–6 ASCII digits, leading zero retained, salted scrypt hash only. Opaque full-screen gate with centered modal, masked input, large keypad, delete, explicit Unlock (no four-digit auto-submit), keyboard accessible. Successful signed tablet session cookie is HttpOnly SameSite=Strict with no expiry/max-age, survives reload, explicit Lock clears it. Persistent signer and PIN generation invalidate old unlocks on enable/replace. Admin session never implies tablet unlock. Disable opens dashboard. No promise Safari close always locks.
+- All tablet data/control including bootstrap/forecasts is guarded when PIN enabled. Public shell/access status leaks no readings. No PIN permits only saved configured entity/services. Failed attempts: five/IP/minute and fifty global/minute, bounded store, Retry-After, actual peer unless explicit trusted proxy CIDRs. Imported previously paired config with absent access settings fails closed until first HA admin chooses access; fresh setup defaults no PIN. Ignore old devices files without changing them.
+- Exact auth routes: POST /api/manage/auth/start; GET /api/manage/auth/callback; GET /api/manage/auth/session; POST /api/manage/auth/logout; GET /api/access; POST /api/access/unlock; POST /api/access/lock; GET/PUT /api/manage/access. Configuration, entity catalog, and preview snapshot APIs require administrator. Mutation Origin and request-header checks remain strict; default forwarded trust is disabled.
+- Shared renderer modes: control callbacks for tablet; read-only no-ops; edit selects/edits/deletes/reorders with zero device-control callbacks. Administration uses real state and forecast snapshots for unsaved draft. weather.get_forecasts is read-only permitted service POST. Remove iframe preview entry/build/static/postMessage/nonce/resize machinery.
+- One draft reducer, stable editor-local keys for duplicate entity cards, no serialized IDs in v1. Add/remove/edit/reorder views/cards/badges; drag handles and accessible move buttons with keyboard/touch fallback. Sequential responsive layout, Save/Discard/dirty navigation/validation/import/export/revision conflict/previous recovery. Measure actual canvas width on mount/resize/orientation/panel changes; preserve 899/699/360 breakpoints without container queries or ResizeObserver-only.
+- Solid light/dark/auto surfaces, borders, strong contrast, restrained teal accent, no gradients/decorative shadows. Preserve meaningful device colors; 4.5 text/3 large and non-text contrast, visible focus and touch targets. Scope reset/theme to each surface.
+- Docker runs unprivileged, persistent /data, graceful shutdown, health independent of HA, one port. Optional external HTTPS proxy with explicit trusted CIDRs. Optional public URL for QR, never container private IP; localhost admin requires LAN address for QR. Keep real owner/repository coordinates, amd64+arm64 release checks, no publish. Service worker bypasses /admin, admin assets, /api; public-shell-only precache. Isolated fixture only for development/tests.
+- All code/test/config modifications use gpt-6.1-terra; Sol plans/orchestrates/reviews; Luna bounded simple searches only. Sequential code agents. Commit coherent Conventional Commits milestones; do not push, merge, or publish. Current feature branch is the approved workspace.
+
+## Task 1: Workspace and Preact foundation
+
+Move source to specified npm workspaces and packages, align imports/tooling/tests/build scripts, port all fourteen admin primitives and all admin React UI to Preact/CSS Modules preserving exports, replace QR package, remove React/Base UI/Tailwind. Keep current behavior compilable before OAuth replacement. Read local dependencies before installing. Run baseline first and preserve legacy compatibility. Save focused and full verification evidence, commit milestone.
+
+## Task 2: Standalone server and Home Assistant OAuth
+
+Replace Supervisor/bootstrap login with the exact OAuth, identity, session, persistence, credential refresh/reconnect/logout policy in Global Constraints. Establish standalone server configuration/serving. Tests cover non-admin, malformed/replayed/state-expired login, origin binding, refresh serialization/stale generations/retry semantics, reconnect and household after logout. Use isolated dummy HA fixture only. Commit milestone.
+
+## Task 3: Tablet PIN and server access policy
+
+Replace pairing/device APIs and UI with optional PIN settings, signed browser-session unlock, full-screen gate, lock, rate limit, access migration and guards in Global Constraints. Preserve configured service subset and unavailable behavior. Tests cover leading zeros, lengths, explicit submission, limiter, all tablet routes, no-PIN, admin separation, persisted signer across restart and migration. Commit milestone.
+
+## Task 4: Direct shared renderer and editor
+
+Remove iframe preview and integrate shared Preact renderer in admin, with read-only/edit capability boundaries, real snapshots for unsaved drafts, one draft reducer and stable local card keys, full view/card/badge editing/reordering, accessible keyboard/touch movement, dirty/save/discard/import/export/conflict/recovery, actual canvas measurement in Global Constraints. Tests demonstrate duplicate entities, no device commands, all card types, ordering, recovery and responsive browser interactions. Commit milestone.
+
+## Task 5: Flat design and browser validation
+
+Apply approved solid light/dark/auto design to tablet and admin with scoped CSS, restrained teal and meaningful device colors; preserve touch/focus/contrast and iOS layout constraints. Use frontend testing skill and actual browser verification. Commit milestone.
+
+## Task 6: Docker, documentation, CI, final verification
+
+Finish standalone Docker/configuration/development fixture/health/proxy/QR policy; remove add-on metadata, obsolete Supervisor/ingress/HACS/direct TLS/options paths, update deployment/recovery/migration/security documents and release/CI checks. Preserve real release coordinates, multiarch checks and no-publish instruction. Test fresh/restart/migration/proxy/offline and service worker boundaries. Run npm run format, lint, format:check, typecheck, typecheck:server, test, build, check:compat, build:server, test:browser, test:admin-browser. Complete independent Sol whole-branch review and corrections. Report exact evidence and physical iPad limitation.

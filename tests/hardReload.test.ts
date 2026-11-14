@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { clearAppShell, reloadUrl } from '../src/app/hardReload';
+import { clearAppShell, reloadUrl } from '../apps/tablet/src/app/hardReload';
 
 test('hard reload removes only this app’s scoped worker and caches', async () => {
   const scope = 'https://home.example/local/my-home/';

@@ -1,0 +1,193 @@
+/* The lock screen uses the dashboard's theme tokens (App.module.css), so it follows light and dark. */
+.gate {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: var(--wallpaper);
+  color: var(--text);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 320px;
+  max-width: 100%;
+  margin: auto;
+  text-align: center;
+}
+
+.badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 20px;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--accent);
+}
+
+.lockIcon {
+  width: 28px;
+  height: 28px;
+}
+
+.title {
+  margin: 0 0 6px;
+  font-size: 26px;
+  font-weight: 650;
+  letter-spacing: -0.4px;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.dots {
+  display: flex;
+  justify-content: center;
+  margin-top: 28px;
+}
+
+.dot {
+  width: 14px;
+  height: 14px;
+  margin: 0 8px;
+  border: 2px solid var(--muted);
+  border-radius: 50%;
+  transition:
+    background-color 0.12s ease,
+    border-color 0.12s ease,
+    transform 0.12s ease;
+}
+
+.filled {
+  border-color: var(--text);
+  background: var(--text);
+  transform: scale(1.1);
+}
+
+.shake {
+  animation: pinShake 0.4s ease;
+}
+
+.shake .dot {
+  border-color: var(--danger);
+}
+
+@keyframes pinShake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-10px);
+  }
+  40%,
+  80% {
+    transform: translateX(10px);
+  }
+}
+
+/* Reserves its line so the keypad does not jump when a message appears. */
+.message {
+  min-height: 22px;
+  margin: 14px 0 10px;
+  color: var(--danger);
+  font-size: 15px;
+  line-height: 22px;
+}
+
+.keypad {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 288px;
+  max-width: 100%;
+}
+
+.key {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 76px;
+  height: 76px;
+  margin: 8px 10px;
+  border: 0;
+  border-radius: 50%;
+  padding: 0;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 30px;
+  font-weight: 400;
+  line-height: 1;
+  transition:
+    background-color 0.1s ease,
+    opacity 0.1s ease;
+}
+
+.key:active:not(:disabled) {
+  background: var(--surface-strong);
+  opacity: 1;
+}
+
+.key:disabled {
+  cursor: default;
+}
+
+.action {
+  background: transparent;
+  color: var(--muted);
+}
+
+.action:disabled {
+  opacity: 0.35;
+}
+
+.unlock:not(:disabled) {
+  background: var(--accent);
+  color: var(--background);
+}
+
+.keyIcon {
+  width: 28px;
+  height: 28px;
+}
+
+.setupLink {
+  display: inline-block;
+  margin-top: 24px;
+  border-radius: 14px;
+  padding: 14px 22px;
+  background: var(--accent);
+  color: var(--background);
+  font-size: 17px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+@media (max-height: 640px) {
+  .badge {
+    display: none;
+  }
+
+  .key {
+    width: 64px;
+    height: 64px;
+    margin: 6px 12px;
+  }
+}

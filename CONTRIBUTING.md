@@ -4,28 +4,23 @@ Thanks for helping make older screens useful again. Please open an issue to disc
 
 ## Development setup
 
-- Use Node.js 22.12+ and npm.
-- Run `npm ci` and `npm run dev` for local development.
+- Use Node.js 22.12+ and pnpm (enable it with `corepack enable`; the version is pinned in `packageManager`).
+- Run `pnpm install --frozen-lockfile` and `pnpm dev` for local development (see the README for URLs and the Home Assistant sign-in address).
 - Keep the Safari 12 / iOS 12 target in mind for authored JavaScript, CSS, dependencies, and build output.
 - Keep entity IDs explicit. Do not add fabricated readings, hidden entity discovery, browser-side Home Assistant credentials, or automatic service calls.
-- Place feature components and styles together under their owning `src/features/` directory. Keep shared modules independent of feature code.
+- Place feature components and styles together under their owning `packages/dashboard/src/features/` directory. Keep shared modules independent of feature code.
 
 ## Validation
 
 Run the relevant checks before submitting:
 
 ```sh
-npm run format
-npm run lint
-npm run format:check
-npm run typecheck
-npm run typecheck:server
-npm test
-npm run build
-npm run check:compat
-npm run build:server
-npm run smoke:server
-npm run test:browser
+pnpm format
+pnpm check          # lint, format check, typecheck, unit tests
+pnpm build
+pnpm check:compat
+pnpm smoke:server
+pnpm test:browser
 ```
 
 Browser/server tests use isolated fixtures. Never run test commands with a real Home Assistant token or real entity service endpoint: a control test can operate real equipment. Changes to touch, TLS, Home Screen, or offline behavior need a physical iOS 12 check where hardware is available.

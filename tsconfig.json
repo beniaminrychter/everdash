@@ -8,6 +8,12 @@
     "jsx": "react-jsx",
     "jsxImportSource": "preact",
     "strict": true,
+    "paths": {
+      "@everdash/contracts/*": ["./packages/contracts/src/*"],
+      "@everdash/ui/*": ["./packages/ui/src/*"],
+      "@everdash/dashboard/*": ["./packages/dashboard/src/*"],
+      "@/*": ["./apps/tablet/src/*"]
+    },
     "noEmit": true,
     "skipLibCheck": true,
     "isolatedModules": true,
@@ -15,11 +21,14 @@
     "types": ["vite/client"]
   },
   "include": [
-    "src",
+    "apps/tablet/src",
+    "packages",
     "preview",
     "tests/config.types.ts",
+    "tests/canvasBoundary.types.ts",
     "vite.config.ts",
     "vite.preview.config.ts",
+    "tooling/aliases.ts",
     "scripts/export-config.ts"
   ]
 }

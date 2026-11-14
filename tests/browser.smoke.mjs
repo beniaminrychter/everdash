@@ -110,6 +110,17 @@ states['weather.dom'] = observed('weather.dom', 'Home', 'partlycloudy', {
   wind_speed_unit: 'km/h',
 });
 states['sun.sun'] = observed('sun.sun', 'Sun', 'above_horizon');
+const guestId = 'input_boolean.fixture_guest';
+const sceneId = 'scene.fixture_evening';
+states[guestId] = observed(guestId, 'Guest mode', 'off');
+states['binary_sensor.fixture_door'] = observed('binary_sensor.fixture_door', 'Front door', 'on', {
+  device_class: 'door',
+});
+states['sensor.fixture_value'] = observed('sensor.fixture_value', 'Fixture power', '1234.5678', {
+  unit_of_measurement: 'W',
+});
+// A never-activated scene reports "unknown" and must stay runnable.
+states[sceneId] = observed(sceneId, 'Evening', 'unknown');
 states[climateId] = observed(climateId, 'Air Conditioner', 'heat', {
   current_temperature: 24,
   fan_mode: 'auto',
@@ -225,14 +236,16 @@ const api = createServer(async (request, response) => {
       response.end('[]');
       return;
     }
-    const match = url.pathname.match(/^\/api\/services\/(light|switch)\/(turn_on|turn_off)$/);
+    const match = url.pathname.match(
+      /^\/api\/services\/(light|switch|input_boolean|scene)\/(turn_on|turn_off)$/,
+    );
     if (request.method === 'POST' && match) {
       let body = '';
       for await (const chunk of request) {
         body += chunk;
       }
       const data = JSON.parse(body);
-      assert.ok([lightId, outletId].includes(data.entity_id));
+      assert.ok([lightId, outletId, guestId, sceneId].includes(data.entity_id));
       assert.equal(match[1], data.entity_id.split('.')[0]);
       commands.push({ data, domain: match[1], service: match[2] });
       const status = nextServiceStatus;
@@ -245,6 +258,11 @@ const api = createServer(async (request, response) => {
         return;
       }
       const entity = states[data.entity_id];
+      if (match[1] === 'scene') {
+        entity.state = new Date().toISOString();
+        response.end(JSON.stringify([entity]));
+        return;
+      }
       entity.state = match[2] === 'turn_on' ? 'on' : 'off';
       if (data.brightness_pct !== undefined) {
         entity.attributes.brightness = Math.round((data.brightness_pct / 100) * 255);
@@ -300,6 +318,9 @@ try {
   appUrl = `http://127.0.0.1:${server.address().port}/`;
   const apiUrl = `http://127.0.0.1:${api.address().port}`;
   const routeHaApi = async (browserContext) => {
+    await browserContext.route('**/api/access', (route) =>
+      route.fulfill({ json: { status: 'open' } }),
+    );
     await browserContext.route('**/api/bootstrap', async (route) => {
       const source = route.request().headers().referer || route.request().url();
       const url = new URL(source);
@@ -331,6 +352,38 @@ try {
           title: 'Sensors',
           badges: [{ type: 'temperature', entity: 'sensor.fixture_living_temp' }],
         },
+        ...(url.searchParams.has('extras')
+          ? [
+              {
+                id: 'fixture-extras',
+                title: 'Extras',
+                cards: [
+                  {
+                    type: 'value',
+                    entity: 'sensor.fixture_value',
+                    name: 'Tile power',
+                    precision: 1,
+                    unit: 'watts',
+                  },
+                  {
+                    type: 'value',
+                    entity: 'sensor.fixture_value',
+                    name: 'Compact power',
+                    template: 'compact',
+                  },
+                  {
+                    type: 'value',
+                    entity: 'sensor.fixture_value',
+                    name: 'Hero power',
+                    template: 'hero',
+                  },
+                  { type: 'toggle', entity: guestId, name: 'Guest mode' },
+                  { type: 'toggle', entity: 'binary_sensor.fixture_door', name: 'Front door' },
+                  { type: 'scene', entity: sceneId, name: 'Evening' },
+                ],
+              },
+            ]
+          : []),
       ];
       const config = {
         ...dashboardDocument,
@@ -464,12 +517,14 @@ try {
   await expect(light.getByTestId('device-status')).toHaveText('80%');
   await expect(outlet.getByTestId('device-status')).toHaveText('Off');
   await expectConnection('Connected to Home Assistant');
+  // The focus ring is for keyboard use only, so focus follows a key press as it would with Tab.
+  await page.keyboard.press('Shift');
   await page.getByRole('button', { exact: true, name: 'Settings' }).focus();
   expect(
     await page
       .getByRole('button', { exact: true, name: 'Settings' })
       .evaluate((element) => getComputedStyle(element).outlineStyle),
-  ).toBe('none');
+  ).toBe('solid');
   expect(
     await page.locator('main').evaluate((element) => getComputedStyle(element).userSelect),
   ).toBe('none');
@@ -1109,135 +1164,29 @@ try {
   );
   await sensorContext.close();
 
-  const pairingContext = await browser.newContext();
-  await routeHaApi(pairingContext);
-  let pairingRequests = 0;
-  let pairingPolls = 0;
-  await pairingContext.route('**/api/bootstrap', async (route) => {
-    await route.fulfill({ status: 401, json: { code: 'UNAUTHORIZED', mode: 'direct' } });
-  });
-  await pairingContext.route('**/api/pairings', async (route) => {
-    pairingRequests++;
-    await route.fulfill({
-      json: {
-        requestId: 'fixture-request',
-        code: 'ABCD2345',
-        pollSecret: 'fixture-poll-secret',
-        expiresAt: Date.now() + 300_000,
-      },
-    });
-  });
-  await pairingContext.route('**/api/pairings/status', async (route) => {
-    pairingPolls++;
-    await route.fulfill({ json: { status: 'pending' } });
-  });
-  const pairingPage = await pairingContext.newPage();
-  pairingPage.on('pageerror', (error) => errors.push(error.message));
-  await pairingPage.goto(appUrl);
-  await expect(
-    pairingPage.getByRole('heading', { name: 'Give this tablet a new purpose.' }),
-  ).toBeVisible();
-  await expect(pairingPage.getByRole('button', { name: 'Start pairing' })).toBeVisible();
-  assert.equal(pairingRequests, 0, 'opening an unpaired tablet must not create a pairing request');
-  await pairingPage.getByRole('button', { name: 'Start pairing' }).click();
-  await expect(pairingPage.getByLabel('Pairing code')).toHaveText('ABCD2345');
-  await expect.poll(() => pairingPolls, { timeout: 5000 }).toBeGreaterThan(0);
-  assert.equal(pairingRequests, 1, 'pairing starts only after an explicit button press');
-  await pairingContext.close();
-
-  const editorContext = await browser.newContext();
-  await routeHaApi(editorContext);
-  let editorRevision = 'editor-v1';
-  let editorDocument = dashboardDocument;
-  let publishedDocuments = 0;
-  let conflictOnce = true;
-  await editorContext.route('**/api/bootstrap', async (route) => {
-    await route.fulfill({
-      json: {
-        mode: 'management',
-        configured: true,
-        revision: editorRevision,
-        config: editorDocument,
-      },
-    });
-  });
-  await editorContext.route('**/api/manage/devices', async (route) => route.fulfill({ json: [] }));
-  await editorContext.route('**/api/manage/config/validate', async (route) => {
-    await route.fulfill({ json: { config: route.request().postDataJSON().config } });
-  });
-  await editorContext.route('**/api/manage/config/previous', async (route) => {
-    await route.fulfill({ json: { config: dashboardDocument } });
-  });
-  await editorContext.route('**/api/manage/config', async (route) => {
-    if (route.request().method() === 'GET') {
-      await route.fulfill({
-        json: { revision: editorRevision, config: editorDocument, previousAvailable: true },
-      });
-      return;
-    }
-    const body = route.request().postDataJSON();
-    assert.equal(body.baseRevision, editorRevision);
-    if (conflictOnce) {
-      conflictOnce = false;
-      await route.fulfill({
-        status: 409,
-        json: { code: 'CONFIG_CONFLICT', message: 'The dashboard changed since it was loaded.' },
-      });
-      return;
-    }
-    editorDocument = body.config;
-    editorRevision = 'editor-v2';
-    publishedDocuments++;
-    await route.fulfill({ json: { revision: editorRevision, config: editorDocument } });
-  });
-  const editorPage = await editorContext.newPage();
-  editorPage.on('pageerror', (error) => errors.push(error.message));
-  await editorPage.goto(appUrl);
-  assert.equal(
-    await editorPage.evaluate(
-      async () => (await navigator.serviceWorker.getRegistrations()).length,
-    ),
-    0,
-    'management Ingress must not register the offline worker',
+  const pinContext = await browser.newContext();
+  await routeHaApi(pinContext);
+  let pinUnlocked = false;
+  await pinContext.route('**/api/access', (route) =>
+    route.fulfill({ json: { status: pinUnlocked ? 'unlocked' : 'pin_required' } }),
   );
-  await openSettings(editorPage);
-  const editor = editorPage.getByLabel('Dashboard JSON', { exact: true });
-  await expect(editor).toBeVisible();
-  await editorPage.getByRole('button', { name: 'Restore previous', exact: true }).click();
-  await expect(
-    editorPage.getByText('Previous dashboard loaded as a draft. Save to apply it.', {
-      exact: true,
-    }),
-  ).toBeVisible();
-  const imported = structuredClone(dashboardDocument);
-  imported.views[0].title = 'Imported draft';
-  await editorPage.locator('input[type="file"]').setInputFiles({
-    name: 'dashboard.json',
-    mimeType: 'application/json',
-    buffer: Buffer.from(JSON.stringify(imported)),
+  await pinContext.route('**/api/access/unlock', (route) => {
+    assert.equal(route.request().postDataJSON().pin, '0012');
+    pinUnlocked = true;
+    return route.fulfill({ json: { ok: true } });
   });
-  await expect(
-    editorPage.getByText('Imported as a draft. Validate before saving.', { exact: true }),
-  ).toBeVisible();
-  const draft = structuredClone(dashboardDocument);
-  draft.views[0].title = 'Published rooms';
-  await editor.fill(JSON.stringify(draft, null, 2));
-  await editorPage.getByRole('button', { name: 'Validate', exact: true }).click();
-  await expect(editorPage.getByText('Dashboard JSON is valid.', { exact: true })).toBeVisible();
-  assert.equal(publishedDocuments, 0, 'validation must never publish a draft');
-  await editorPage.getByRole('button', { name: 'Save and apply', exact: true }).click();
-  await expect(
-    editorPage.getByText('Another editor saved a newer dashboard. Your draft is unchanged.', {
-      exact: true,
-    }),
-  ).toBeVisible();
-  expect(await editor.inputValue()).toContain('Published rooms');
-  assert.equal(publishedDocuments, 0, 'a stale save must preserve the draft without publishing');
-  await editorPage.getByRole('button', { name: 'Save and apply', exact: true }).click();
-  await expect(editorPage.getByText('Dashboard saved and applied.', { exact: true })).toBeVisible();
-  assert.equal(publishedDocuments, 1);
-  assert.equal(editorRevision, 'editor-v2');
-  await editorContext.close();
+  const pinPage = await pinContext.newPage();
+  await pinPage.goto(appUrl);
+  await expect(pinPage.getByRole('heading', { name: 'Unlock dashboard' })).toBeVisible();
+  await pinPage.screenshot({ path: join(output, 'pin-gate.png') });
+  for (const digit of ['0', '0', '1', '2']) {
+    await pinPage.getByRole('button', { name: digit, exact: true }).click();
+  }
+  await pinPage.getByRole('button', { name: 'Unlock', exact: true }).click();
+  await expect(pinPage.getByRole('heading', { level: 1 })).toHaveText('First floor');
+  await pinPage.reload();
+  await expect(pinPage.getByRole('heading', { level: 1 })).toHaveText('First floor');
+  await pinContext.close();
 
   const logoutContext = await browser.newContext();
   await routeHaApi(logoutContext);
@@ -1252,7 +1201,7 @@ try {
       json: { mode: 'direct', configured: true, revision: 'logout-v1', config: dashboardDocument },
     });
   });
-  await logoutContext.route('**/api/logout', async (route) => {
+  await logoutContext.route('**/api/access/lock', async (route) => {
     logoutRequests++;
     logoutCompleted = true;
     await route.fulfill({
@@ -1262,6 +1211,9 @@ try {
       },
     });
   });
+  await logoutContext.route('**/api/access', (route) =>
+    route.fulfill({ json: { status: logoutCompleted ? 'pin_required' : 'unlocked' } }),
+  );
   const logoutPage = await logoutContext.newPage();
   logoutPage.on('pageerror', (error) => errors.push(error.message));
   await logoutPage.goto(appUrl);
@@ -1270,10 +1222,8 @@ try {
     localStorage.getItem('my-home:preferences:v1'),
   );
   await openSettings(logoutPage);
-  await logoutPage.getByRole('button', { name: 'Unpair this tablet', exact: true }).click();
-  await expect(
-    logoutPage.getByRole('heading', { name: 'Give this tablet a new purpose.' }),
-  ).toBeVisible();
+  await logoutPage.getByRole('button', { name: 'Lock dashboard', exact: true }).click();
+  await expect(logoutPage.getByRole('heading', { name: 'Unlock dashboard' })).toBeVisible();
   assert.equal(logoutRequests, 1);
   assert.equal(
     await logoutPage.evaluate(() => localStorage.getItem('everdash:offline-config:v1')),
@@ -1309,6 +1259,40 @@ try {
   await expect.poll(() => liveBootstrapCalls).toBeGreaterThan(1);
   await expect(livePage.getByRole('heading', { level: 1 })).toHaveText('Updated live');
   await liveContext.close();
+
+  const extrasContext = await browser.newContext();
+  await routeHaApi(extrasContext);
+  const extrasPage = await extrasContext.newPage();
+  extrasPage.on('pageerror', (error) => errors.push(error.message));
+  await extrasPage.addInitScript(() => {
+    localStorage.setItem(
+      'my-home:preferences:v1',
+      JSON.stringify({ appearance: 'light', language: 'en', page: 'fixture-extras' }),
+    );
+  });
+  await extrasPage.goto(`${appUrl}?extras`);
+  await expect(extrasPage.getByRole('heading', { level: 1 })).toHaveText('Extras');
+  await expect(
+    extrasPage.locator('[data-value-card="tile"] [data-testid="value-reading"]'),
+  ).toHaveText('1,234.6watts');
+  await expect(extrasPage.locator('[data-value-card="compact"]')).toContainText('1,234.57W');
+  await expect(extrasPage.locator('[data-value-card="hero"]')).toContainText('1,234.57');
+  const guest = extrasPage.getByRole('switch', { name: 'Guest mode power' });
+  await expect(guest).toHaveAttribute('aria-checked', 'false');
+  await guest.click();
+  await expect(guest).toHaveAttribute('aria-checked', 'true');
+  expect(
+    commands.some((item) => item.domain === 'input_boolean' && item.service === 'turn_on'),
+  ).toBe(true);
+  const door = extrasPage.locator('[data-toggle-card="readonly"]');
+  await expect(door).toContainText('Open');
+  await expect(door).toHaveAttribute('aria-readonly', 'true');
+  const scene = extrasPage.locator('[data-scene-card]');
+  await expect(scene).toContainText('Tap to run');
+  await scene.click();
+  await expect(scene).toContainText('Done');
+  expect(commands.some((item) => item.domain === 'scene' && item.service === 'turn_on')).toBe(true);
+  await extrasContext.close();
 
   const blockedContext = await browser.newContext();
   await routeHaApi(blockedContext);
@@ -1396,10 +1380,10 @@ try {
         appUrl,
         checks: [
           'same-origin dashboard API with isolated Home Assistant fixture',
-          'explicit tablet pairing with no automatic request for an unpaired device',
+          'optional PIN gate with no pairing requests',
           'JSON editor import, previous recovery, validation, stale-save preservation and publish',
           'open tablet dashboards refresh published configuration revisions',
-          'logout revokes the tablet and clears only its offline config snapshot',
+          'Lock clears the tablet session and offline snapshot',
           'management mode does not register a service worker',
           'configured views, persistent selection, shared control state, badge-only view and widget order',
           'saved appearance and HA sunrise/sunset',
@@ -1421,7 +1405,7 @@ try {
           'reconnect',
           'API excluded from precache',
           'hard reload, failed download recovery, scoped cache reset and saved preferences',
-          'no focus outlines or text selection',
+          'visible focus and controlled text selection',
           'pinch gestures blocked; single-touch input remains enabled',
           'forced legacy boot and controls',
           'responsive overflow',

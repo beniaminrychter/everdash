@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { HomeAssistantStore } from '../src/features/accessories/data/store';
-import { HomeAssistantError } from '../src/shared/home-assistant/client';
-import type { HomeAssistantApi } from '../src/shared/home-assistant/client';
+import { HomeAssistantStore } from '@everdash/dashboard/features/accessories/data/store';
+import { HomeAssistantError } from '@everdash/dashboard/shared/home-assistant/client';
+import type { HomeAssistantApi } from '@everdash/dashboard/shared/home-assistant/client';
 import { homePage } from './fixtures/home';
-import type { ServiceCommand } from '../src/shared/home-assistant/contracts';
+import type { ServiceCommand } from '@everdash/contracts/home-assistant/contracts';
 
 const lightId = homePage.cards[0].entityId;
 const outletId = homePage.cards[1].entityId;

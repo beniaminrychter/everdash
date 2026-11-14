@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createDevices } from '../src/features/legacy-home/data/data.ts';
-import { homeReducer } from '../src/home/reducer.ts';
-import type { HomeState } from '../src/home/reducer.ts';
+import { createDevices } from '@everdash/dashboard/features/legacy-home/data/data.ts';
+import { homeReducer } from '@everdash/dashboard/home/reducer.ts';
+import type { HomeState } from '@everdash/dashboard/home/reducer.ts';
 
 function initial(): HomeState {
   return { activeScene: null, devices: createDevices() };

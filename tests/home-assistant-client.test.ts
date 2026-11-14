@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test, { afterEach } from 'node:test';
-import { createClient } from '../src/shared/home-assistant/client';
+import { createClient } from '@everdash/dashboard/shared/home-assistant/client';
 
 class FakeXmlHttpRequest {
   static requests: FakeXmlHttpRequest[] = [];

@@ -3,8 +3,8 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { buildApp } from '../server/app';
-import { ConfigRepository } from '../server/config/repository';
+import { buildApp } from '../apps/server/src/app';
+import { ConfigRepository } from '../apps/server/src/config/repository';
 
 const first = { schemaVersion: 1, views: [{ id: 'home', title: 'Home', cards: [] }] };
 const second = { schemaVersion: 1, views: [{ id: 'home', title: 'Rooms', cards: [] }] };
@@ -12,19 +12,16 @@ const second = { schemaVersion: 1, views: [{ id: 'home', title: 'Rooms', cards: 
 test('management config routes validate drafts, publish with revision checks and expose previous as draft data', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'everdash-config-routes-'));
   const config = new ConfigRepository({ directory });
-  const app = await buildApp(
-    {
-      config,
-      authorize: async (_request, mode) => mode === 'management',
-      expectedOrigin: () => 'http://ha.local',
-      homeAssistant: {
-        getState: async () => ({}),
-        getStates: async () => [],
-        callService: async () => null,
-      },
+  const app = await buildApp({
+    config,
+    access: { isAdmin: () => true, isTablet: () => true },
+    expectedOrigin: () => 'http://ha.local',
+    homeAssistant: {
+      getState: async () => ({}),
+      getStates: async () => [],
+      callService: async () => null,
     },
-    'management',
-  );
+  });
   const headers = { origin: 'http://ha.local', 'x-everdash-request': '1' };
   try {
     const initial = config.read();

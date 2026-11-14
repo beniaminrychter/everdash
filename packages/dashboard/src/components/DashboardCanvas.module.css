@@ -1,0 +1,29 @@
+/*
+ * The admin preview must match the tablet. These are the tablet's light-theme values from
+ * apps/tablet/src/app/App.module.css (:root plus html[data-theme='light']); keep them in sync.
+ */
+.mainContent {
+  padding: 20px;
+  color: var(--text);
+  background: var(--background);
+  min-width: 0;
+  --text: #1d2533;
+  --muted: #596574;
+  --accent: #a97b00;
+  --amber: #ffd60a;
+  --off-icon: #927000;
+  --mint: #126a49;
+  --background: #e4eaf1;
+  --surface: #ffffff;
+  --surface-strong: #eaf0f4;
+  --line: rgba(255, 255, 255, 0.4);
+  --sheet: #f8fafc;
+  --icon-bg: rgba(0, 0, 0, 0.045);
+  --success: #126a49;
+  --danger: #b6313a;
+  --wallpaper: var(--background);
+  --on-bg: #ffefb8;
+  --on-text: #18202b;
+  --on-status: #5b4600;
+  --on-ring: #d9a400;
+}

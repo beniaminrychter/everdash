@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { validateDashboard } from '../src/shared/config/validate';
+import { validateDashboard } from '@everdash/contracts/config/validate';
 
 const sourcePath = resolve(process.argv[2] || '.local/home.config.ts');
 const outputPath = resolve(process.argv[3] || '.local/dashboard.json');
@@ -12,6 +12,7 @@ const defaults: Record<string, string> = {
   light: 'bulb',
   outlet: 'outlet',
   pstryk: 'plug',
+  scene: 'sparkle',
   temperature: 'thermometer',
   weather: 'sun',
 };
@@ -26,7 +27,7 @@ for (const view of input.views) {
     if (card.icon === defaults[card.type]) {
       delete card.icon;
     }
-    if (!['light', 'outlet'].includes(card.type)) {
+    if (!['light', 'outlet', 'value', 'toggle', 'scene'].includes(card.type)) {
       delete card.icon;
     }
   }

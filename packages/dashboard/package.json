@@ -1,0 +1,14 @@
+{
+  "name": "@everdash/dashboard",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/*"
+  },
+  "dependencies": {
+    "@everdash/contracts": "workspace:*",
+    "@everdash/ui": "workspace:*",
+    "preact": "^10.29.8"
+  }
+}

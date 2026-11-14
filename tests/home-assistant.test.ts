@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createCommand, createDevice, mapState } from '../src/features/accessories/data/model';
+import {
+  createCommand,
+  createDevice,
+  mapState,
+} from '@everdash/dashboard/features/accessories/data/model';
 import { homePage } from './fixtures/home';
 
 const light = homePage.cards[0];

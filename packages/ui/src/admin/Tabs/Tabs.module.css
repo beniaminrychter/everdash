@@ -1,0 +1,27 @@
+.list {
+  display: flex;
+  border-bottom: 1px solid var(--border, #d9dfe4);
+}
+.trigger {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 10px 12px;
+  color: var(--muted-foreground, #596574);
+  background: transparent;
+  cursor: pointer;
+}
+.trigger[aria-selected='true'] {
+  border-bottom-color: var(--primary, #087f8c);
+  color: var(--foreground, #27313b);
+}
+.trigger:focus-visible {
+  outline: 2px solid var(--primary, #087f8c);
+  outline-offset: -2px;
+}
+.trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+.content[hidden] {
+  display: none;
+}

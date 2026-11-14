@@ -5,9 +5,7 @@
 node_modules
 dist
 dist-admin
-dist-preview
 dist-server
-dist-local-server
 test-results
 playwright-report
 tests

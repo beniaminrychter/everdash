@@ -1,0 +1,60 @@
+.root {
+  position: relative;
+}
+.input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--border, #d9dfe4);
+  border-radius: 8px;
+  padding: 9px 10px;
+  color: var(--foreground, #20252e);
+  background: var(--card, #fff);
+  font-size: 13px;
+}
+.input:focus {
+  outline: 2px solid var(--primary, #087f8c);
+  outline-offset: 2px;
+}
+.popup {
+  position: absolute;
+  z-index: 10;
+  top: 100%;
+  right: 0;
+  left: 0;
+  margin-top: 4px;
+  border: 1px solid var(--border, #d9dfe4);
+  border-radius: 8px;
+  background: var(--card, #fff);
+  color: var(--foreground, #20252e);
+}
+.list {
+  position: relative;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.active {
+  background: var(--muted, #edf2f3);
+}
+.option strong,
+.option small {
+  display: block;
+}
+.option small {
+  overflow-wrap: break-word;
+}
+.option em {
+  margin-left: 10px;
+  font-size: 12px;
+}
+.empty {
+  padding: 12px 10px;
+}
