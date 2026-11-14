@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
 import { useDraft } from '@/app/DraftContext';
 import { BadgeInspector } from './BadgeInspector';
@@ -71,6 +72,8 @@ export function Inspector({
 }: InspectorProps) {
   const { state, dispatch } = useDraft();
   const desktop = useMediaQuery('(min-width: 1024px)');
+  // The sheet has no trigger, so it hands focus back to whatever opened it, such as a canvas button.
+  const opener = useRef<HTMLElement | null>(null);
 
   if (desktop) {
     return (
@@ -92,7 +95,23 @@ export function Inspector({
         dispatch({ type: 'select', selection: { kind: 'view' } });
       }}
     >
-      <SheetContent side="right" className="w-80 gap-0 p-0 sm:max-w-80">
+      <SheetContent
+        side="right"
+        className="w-80 gap-0 p-0 sm:max-w-80"
+        onOpenAutoFocus={() => {
+          opener.current = document.activeElement as HTMLElement | null;
+        }}
+        onCloseAutoFocus={(event) => {
+          const target = opener.current;
+
+          opener.current = null;
+
+          if (target?.isConnected) {
+            event.preventDefault();
+            target.focus();
+          }
+        }}
+      >
         <SheetTitle className="sr-only">Inspector</SheetTitle>
         <SheetDescription className="sr-only">Edit the selected item.</SheetDescription>
         <InspectorContent onRequestDelete={onRequestDelete} />

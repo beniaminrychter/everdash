@@ -29,27 +29,6 @@ export default defineConfig({
         'unicorn/no-document-cookie': 'off',
       },
     },
-    {
-      // Legacy Preact admin files are excluded from the admin tsconfig, so
-      // the CSS Module resolver cannot follow their imports. Later tasks port them.
-      files: [
-        'apps/admin/src/legacy/**',
-        'apps/admin/src/features/access/**',
-        'apps/admin/src/ui/**',
-      ],
-      rules: { 'css-modules/css-module-file-not-found': 'off' },
-    },
-    {
-      files: ['apps/admin/src/ui/AdminApp.tsx'],
-      rules: {
-        // This screen intentionally launches async loads from lifecycle effects,
-        // and the lint React Compiler does not yet understand guarded finally blocks.
-        'eslint/no-use-before-define': 'off',
-        'eslint/no-void': 'off',
-        'react/set-state-in-effect': 'off',
-        'react/todo': 'off',
-      },
-    },
   ],
   rules: {
     // Preserve the existing Preact and Node test conventions while migrating

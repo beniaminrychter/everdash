@@ -120,3 +120,83 @@
     @apply bg-background text-foreground;
   }
 }
+
+/*
+ * The tablet canvas must look exactly as it does on the tablet. These rules are unlayered, so
+ * they beat Tailwind's preflight and the admin tokens, and :where() keeps their specificity at
+ * zero so the canvas's own CSS Modules still win. They undo the preflight resets the tablet
+ * never had, then restore the tablet's global baseline (apps/tablet/src/app/App.module.css).
+ */
+[data-canvas-island] {
+  font:
+    normal 16px/normal -apple-system,
+    BlinkMacSystemFont,
+    'Helvetica Neue',
+    Arial,
+    sans-serif;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: normal;
+  text-align: start;
+  text-transform: none;
+}
+
+:where([data-canvas-island] *, [data-canvas-island] *::before, [data-canvas-island] *::after) {
+  box-sizing: border-box;
+  margin: revert;
+  padding: revert;
+  border: 0 none;
+  outline-color: currentcolor;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+:where([data-canvas-island] :is(img, svg, video, canvas, audio, iframe, embed, object)) {
+  display: revert;
+  vertical-align: revert;
+  max-width: revert;
+}
+
+:where([data-canvas-island] :is(h1, h2, h3, h4, h5, h6)) {
+  font-size: revert;
+  font-weight: revert;
+}
+
+:where([data-canvas-island] :is(ol, ul, menu)) {
+  list-style: revert;
+}
+
+:where([data-canvas-island] a) {
+  color: revert;
+  text-decoration: revert;
+}
+
+:where([data-canvas-island] :is(button, input, select, textarea)) {
+  font: inherit;
+  background-color: revert;
+  border-radius: revert;
+  opacity: revert;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:where([data-canvas-island] button) {
+  cursor: pointer;
+  color: inherit;
+  background: none;
+}
+
+:where([data-canvas-island] :focus) {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+:where([data-canvas-island] :is(h2, h3, p)) {
+  margin: 0;
+}
+
+:where([data-canvas-island] h2) {
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.3px;
+}

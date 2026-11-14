@@ -202,6 +202,7 @@ export function DashboardCards({
               {group.cards.map((card, cardIndex) => {
                 const device = devices.find((candidate) => candidate.id === card.entity);
                 const index = view.cards.indexOf(card);
+                const selected = editorMode && selectedIndex === index;
                 if (!device) {
                   return null;
                 }
@@ -209,15 +210,11 @@ export function DashboardCards({
                   <div
                     class={
                       editorMode
-                        ? `${styles.editorItem}${
-                            selectedIndex === view.cards.indexOf(card)
-                              ? ` ${styles.selectedItem}`
-                              : ''
-                          }`
+                        ? `${styles.editorItem}${selected ? ` ${styles.selectedItem}` : ''}`
                         : undefined
                     }
-                    key={editorKeys?.[view.cards.indexOf(card)] ?? cardIndex}
-                    data-editor-index={view.cards.indexOf(card)}
+                    key={editorKeys?.[index] ?? cardIndex}
+                    data-editor-index={index}
                   >
                     <AccessoryCard
                       device={{ ...device, icon: card.icon, name: card.name, room: view.title }}
@@ -253,15 +250,19 @@ export function DashboardCards({
           >
             {group.cards.map((card, cardIndex) => {
               const titleId = `widget-${encodeURIComponent(view.id)}-${groupIndex}-${cardIndex}`;
+              const index = view.cards.indexOf(card);
+              const selected = editorMode && selectedIndex === index;
               return (
                 <div
-                  class={`${card.type === 'weather' ? styles.wide : ''} ${editorMode ? styles.editorItem : ''}${
-                    editorMode && selectedIndex === view.cards.indexOf(card)
-                      ? ` ${styles.selectedItem}`
-                      : ''
-                  }`}
-                  key={editorKeys?.[view.cards.indexOf(card)] ?? cardIndex}
-                  data-editor-index={view.cards.indexOf(card)}
+                  class={[
+                    card.type === 'weather' ? styles.wide : '',
+                    editorMode ? styles.editorItem : '',
+                    selected ? styles.selectedItem : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  key={editorKeys?.[index] ?? cardIndex}
+                  data-editor-index={index}
                   data-card={card.type}
                   data-card-entity={card.entity}
                 >
@@ -311,7 +312,7 @@ export function DashboardCards({
                   )}
                   {editorMode && (
                     <EditorFooter
-                      index={view.cards.indexOf(card)}
+                      index={index}
                       count={view.cards.length}
                       name={card.name}
                       onAction={onEditorAction}

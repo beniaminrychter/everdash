@@ -28,6 +28,5 @@
     "../../packages/contracts/src/config/validate.ts",
     "../../packages/contracts/src/config/normalize.ts",
     "../../packages/contracts/src/iconNames.ts"
-  ],
-  "exclude": ["src/ui/**", "src/features/access/**", "src/legacy/**"]
+  ]
 }
