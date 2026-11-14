@@ -94,6 +94,20 @@ test('PIN unlock issues a session cookie and lock clears it', async () => {
     });
     assert.equal(unlocked.statusCode, 200);
     assert.match(String(unlocked.headers['set-cookie']), /HttpOnly/);
+
+    // The issued session must be accepted on the next requests, or the tablet stays on the PIN gate.
+    const session = /everdash_tablet=([^;]+)/.exec(String(unlocked.headers['set-cookie']))?.[1];
+    assert.ok(session);
+    const cookie = `everdash_tablet=${session}`;
+    const status = await app.inject({ method: 'GET', url: '/api/access', headers: { cookie } });
+    assert.deepEqual(status.json(), { status: 'unlocked' });
+    const bootstrap = await app.inject({
+      method: 'GET',
+      url: '/api/bootstrap',
+      headers: { cookie },
+    });
+    assert.notEqual(bootstrap.statusCode, 401);
+
     const locked = await app.inject({ method: 'POST', url: '/api/access/lock', headers });
     assert.equal(locked.statusCode, 200);
     assert.match(String(locked.headers['set-cookie']), /Max-Age=0/);

@@ -1,7 +1,8 @@
 export const TRANSACTION_COOKIE = 'everdash_oauth';
 export const ADMIN_COOKIE = 'everdash_admin';
 
-const OPAQUE = /^[A-Za-z0-9_-]+$/;
+// Cookie-safe token characters. Tablet sessions are dot-separated (generation.nonce.signature).
+const OPAQUE = /^[A-Za-z0-9._-]+$/;
 
 function cookie(
   name: string,
