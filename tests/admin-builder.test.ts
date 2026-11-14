@@ -32,6 +32,9 @@ test('builder can start every supported card type with a valid domain placeholde
   assert.deepEqual(createCard('climate'), { type: 'climate', entity: 'climate.select_entity' });
   assert.deepEqual(createCard('weather'), { type: 'weather', entity: 'weather.select_entity' });
   assert.deepEqual(createCard('pstryk'), { type: 'pstryk', entity: 'sensor.select_entity' });
+  assert.deepEqual(createCard('value'), { type: 'value', entity: 'sensor.select_entity' });
+  assert.deepEqual(createCard('toggle'), { type: 'toggle', entity: 'input_boolean.select_entity' });
+  assert.deepEqual(createCard('scene'), { type: 'scene', entity: 'scene.select_entity' });
 });
 
 test('builder creates a configured card only for an explicit entity of its domain', () => {
@@ -41,6 +44,20 @@ test('builder creates a configured card only for an explicit entity of its domai
   });
   assert.throws(() => createConfiguredCard('light', ''), /valid light entity/);
   assert.throws(() => createConfiguredCard('light', 'switch.kitchen'), /valid light entity/);
+  assert.deepEqual(createConfiguredCard('value', 'input_number.target'), {
+    type: 'value',
+    entity: 'input_number.target',
+  });
+  assert.deepEqual(createConfiguredCard('toggle', 'binary_sensor.door'), {
+    type: 'toggle',
+    entity: 'binary_sensor.door',
+  });
+  assert.deepEqual(createConfiguredCard('scene', 'script.goodnight'), {
+    type: 'scene',
+    entity: 'script.goodnight',
+  });
+  assert.throws(() => createConfiguredCard('scene', 'light.kitchen'), /scene or script/);
+  assert.throws(() => createConfiguredCard('toggle', 'sensor.door'), /valid input_boolean/);
 });
 
 test('card editor accepts only current-view intents with a matching nonce and generation', () => {

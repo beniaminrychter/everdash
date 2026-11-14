@@ -17,8 +17,8 @@ import { cn } from '@/lib/utils';
 interface EntityComboboxProps {
   id?: string;
   value: string;
-  /** Home Assistant domain the search is restricted to. */
-  domain: string;
+  /** Home Assistant domain, or domains, the search is restricted to. */
+  domain: string | readonly string[];
   onChange: (entityId: string) => void;
   /** Adds a "No entity" row, for optional sources. */
   clearable?: boolean;
@@ -35,6 +35,7 @@ function describeState(option: EntityOption): string {
 }
 
 export function EntityCombobox({ id, value, domain, onChange, clearable }: EntityComboboxProps) {
+  const domainLabel = typeof domain === 'string' ? domain : domain.join(' or ');
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [options, setOptions] = useState<EntityOption[]>([]);
@@ -134,7 +135,7 @@ export function EntityCombobox({ id, value, domain, onChange, clearable }: Entit
             className="w-full justify-between font-normal"
           >
             <span className={cn('truncate', !value && 'text-muted-foreground')}>
-              {value || `Search ${domain} entities`}
+              {value || `Search ${domainLabel} entities`}
             </span>
             <ChevronsUpDownIcon className="text-muted-foreground" />
           </Button>
@@ -144,7 +145,7 @@ export function EntityCombobox({ id, value, domain, onChange, clearable }: Entit
             <CommandInput
               value={query}
               onValueChange={setQuery}
-              placeholder={`Search ${domain} by name or ID`}
+              placeholder={`Search ${domainLabel} by name or ID`}
             />
             <CommandList>
               <CommandEmpty>

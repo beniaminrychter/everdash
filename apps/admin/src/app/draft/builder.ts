@@ -1,4 +1,4 @@
-import { cardEntityDomain } from '@everdash/contracts/config/cardDomains';
+import { cardEntityDomains, isCardEntity } from '@everdash/contracts/config/cardDomains';
 import type { CardConfig, DashboardDocument, ViewConfig } from '@everdash/contracts/config/types';
 
 export type CardKind = CardConfig['type'];
@@ -67,6 +67,15 @@ export function createCard(type: CardKind): CardConfig {
     case 'pstryk': {
       return { type, entity: 'sensor.select_entity' };
     }
+    case 'value': {
+      return { type, entity: 'sensor.select_entity' };
+    }
+    case 'toggle': {
+      return { type, entity: 'input_boolean.select_entity' };
+    }
+    case 'scene': {
+      return { type, entity: 'scene.select_entity' };
+    }
     default: {
       throw new Error(`Unsupported card type: ${String(type)}`);
     }
@@ -74,9 +83,10 @@ export function createCard(type: CardKind): CardConfig {
 }
 
 export function createConfiguredCard(type: CardKind, entity: string): CardConfig {
-  const domain = cardEntityDomain(type);
-  if (!new RegExp(`^${domain}\\.[a-z0-9_]+$`).test(entity)) {
-    throw new Error(`Choose a valid ${domain} entity before adding the card.`);
+  if (!isCardEntity(type, entity)) {
+    throw new Error(
+      `Choose a valid ${cardEntityDomains(type).join(' or ')} entity before adding the card.`,
+    );
   }
   return { ...createCard(type), entity } as CardConfig;
 }

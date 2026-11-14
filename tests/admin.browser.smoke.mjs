@@ -105,7 +105,7 @@ const server = createServer(async (request, response) => {
           deviceClass: 'temperature',
           icon: null,
         },
-      ].filter((entity) => !domain || entity.domain === domain);
+      ].filter((entity) => !domain || domain.split(',').includes(entity.domain));
       sendJson(200, { entities, total: entities.length });
       return;
     }
@@ -321,6 +321,34 @@ try {
   ).toBeDisabled();
   await preview.getByRole('button', { name: 'Increase Living Room Climate temperature' }).click();
   assert.equal(deviceCommandCount, 0, 'editor card content must not send device commands');
+  await page.getByRole('button', { name: '+ Add card' }).click();
+  await page.getByRole('button', { name: /^Value/ }).click();
+  await page.getByLabel('Home Assistant entity').click();
+  await page.getByPlaceholder('Search sensor or input_number by name or ID').fill('Lounge');
+  await page.getByRole('option', { name: /Lounge Temperature/ }).click();
+  await expect(page.getByRole('button', { name: 'Tile', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await page.getByRole('button', { name: 'Hero', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Hero', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await page.getByLabel('Display name').fill('Power meter');
+  await page.getByLabel('Unit', { exact: true }).fill('deg');
+  await page.getByRole('combobox', { name: 'Decimal places' }).click();
+  await page.getByRole('option', { name: '1', exact: true }).click();
+  await page.getByRole('button', { name: 'Add card', exact: true }).click();
+  await expect(preview.getByRole('button', { name: 'Edit Power meter' })).toBeVisible();
+  await page.getByRole('button', { name: '+ Add card' }).click();
+  await page.getByRole('button', { name: /^Switch/ }).click();
+  await expect(page.getByLabel('Home Assistant entity')).toBeVisible();
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await page.getByRole('button', { name: '+ Add card' }).click();
+  await page.getByRole('button', { name: /^Scene/ }).click();
+  await expect(page.getByLabel('Home Assistant entity')).toBeVisible();
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await page.getByRole('button', { name: '+ Badge' }).click();
   await page.getByLabel('Temperature sensor').click();
   await page.getByPlaceholder('Search sensor by name or ID').fill('Lounge');

@@ -62,6 +62,36 @@ test('management entity search is bounded, domain filtered and returns builder m
   }
 });
 
+test('management entity search accepts a short list of comma-separated domains', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'everdash-entity-domains-'));
+  const app = await buildApp({
+    config: new ConfigRepository({ directory }),
+    access: { isAdmin: () => true, isTablet: () => true },
+    homeAssistant: {
+      getState: async () => ({}),
+      getStates: async () => [
+        { entity_id: 'sensor.power', state: '1', attributes: {} },
+        { entity_id: 'input_number.target', state: '2', attributes: {} },
+        { entity_id: 'light.kitchen', state: 'on', attributes: {} },
+      ],
+      callService: async () => null,
+    },
+  });
+  try {
+    const result = await app.inject('/api/manage/entities?domain=sensor,input_number');
+    assert.equal(result.statusCode, 200);
+    assert.deepEqual(
+      result.json().entities.map((entity: { entityId: string }) => entity.entityId),
+      ['input_number.target', 'sensor.power'],
+    );
+    const invalid = await app.inject('/api/manage/entities?domain=sensor,,light');
+    assert.equal(invalid.statusCode, 400);
+  } finally {
+    await app.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test('the direct tablet listener never exposes the management entity catalogue', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'everdash-direct-entities-'));
   const app = await buildApp({

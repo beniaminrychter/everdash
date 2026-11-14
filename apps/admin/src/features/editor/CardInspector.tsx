@@ -1,5 +1,5 @@
 import { ArrowDownIcon, ArrowUpIcon, Trash2Icon } from 'lucide-react';
-import type { CardConfig } from '@everdash/contracts/config/types';
+import type { CardConfig, ValueTemplate } from '@everdash/contracts/config/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -25,6 +25,14 @@ interface CardInspectorProps {
   onRequestDelete: (target: DeleteTarget) => void;
 }
 
+const valueTemplates: readonly { value: ValueTemplate; label: string }[] = [
+  { value: 'tile', label: 'Tile' },
+  { value: 'compact', label: 'Compact' },
+  { value: 'hero', label: 'Hero' },
+];
+
+const precisionOptions = ['auto', '0', '1', '2', '3'] as const;
+
 const pstrykSources = [
   ['sellPrice', 'Sell price sensor'],
   ['nextPrice', 'Next price sensor'],
@@ -48,8 +56,8 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
 
   const info = cardKindInfo(card.type);
   const pending = selection.kind === 'pending-card';
-  const entityInvalid = card.entity.length > 0 && !isEntityForDomain(card.entity, info.domain);
-  const canAdd = isEntityForDomain(card.entity, info.domain);
+  const entityInvalid = card.entity.length > 0 && !isEntityForDomain(card.entity, info.domains);
+  const canAdd = isEntityForDomain(card.entity, info.domains);
 
   function change(next: CardConfig) {
     if (selection.kind === 'pending-card') {
@@ -115,12 +123,12 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
       <InspectorField
         label="Home Assistant entity"
         htmlFor="card-entity"
-        error={entityInvalid ? `Choose a ${info.domain} entity.` : undefined}
+        error={entityInvalid ? `Choose a ${info.domains.join(' or ')} entity.` : undefined}
       >
         <EntityCombobox
           id="card-entity"
           value={card.entity}
-          domain={info.domain}
+          domain={info.domains}
           onChange={(entity) => change(patch(card, { entity }))}
         />
       </InspectorField>
@@ -132,7 +140,11 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
           onChange={(event) => change(patch(card, { name: event.target.value || undefined }))}
         />
       </InspectorField>
-      {(card.type === 'light' || card.type === 'outlet') && (
+      {(card.type === 'light' ||
+        card.type === 'outlet' ||
+        card.type === 'value' ||
+        card.type === 'toggle' ||
+        card.type === 'scene') && (
         <InspectorField label="Icon">
           <IconGrid
             label="Card icon"
@@ -140,6 +152,61 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
             onChange={(icon) => change(patch(card, { icon }))}
           />
         </InspectorField>
+      )}
+      {card.type === 'value' && (
+        <>
+          <InspectorField label="Template">
+            <fieldset className="grid grid-cols-3 gap-1.5">
+              <legend className="sr-only">Template</legend>
+              {valueTemplates.map(({ value, label }) => {
+                const selected = (card.template ?? 'tile') === value;
+
+                return (
+                  <Button
+                    key={value}
+                    type="button"
+                    aria-pressed={selected}
+                    variant={selected ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() =>
+                      change(patch(card, { template: value === 'tile' ? undefined : value }))
+                    }
+                  >
+                    {label}
+                  </Button>
+                );
+              })}
+            </fieldset>
+          </InspectorField>
+          <InspectorField label="Unit" htmlFor="card-value-unit">
+            <Input
+              id="card-value-unit"
+              placeholder="Use Home Assistant unit"
+              maxLength={12}
+              value={card.unit ?? ''}
+              onChange={(event) => change(patch(card, { unit: event.target.value || undefined }))}
+            />
+          </InspectorField>
+          <InspectorField label="Decimal places" htmlFor="card-value-precision">
+            <Select
+              value={card.precision === undefined ? 'auto' : String(card.precision)}
+              onValueChange={(value) =>
+                change(patch(card, { precision: value === 'auto' ? undefined : Number(value) }))
+              }
+            >
+              <SelectTrigger id="card-value-precision" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {precisionOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option === 'auto' ? 'Auto' : option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </InspectorField>
+        </>
       )}
       {card.type === 'climate' && (
         <InspectorField label="Temperature unit" htmlFor="card-unit">

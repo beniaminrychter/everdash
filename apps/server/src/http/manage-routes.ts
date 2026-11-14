@@ -26,11 +26,12 @@ export function registerManageRoutes(app: FastifyInstance, dependencies: ServerD
       }
       const query = request.query.q?.trim() ?? '';
       const domain = request.query.domain?.trim() ?? '';
+      const domains = domain ? domain.split(',') : [];
       const rawLimit = request.query.limit ?? '50';
       const limit = Number(rawLimit);
       if (
         query.length > 120 ||
-        (domain && !/^[a-z_]{1,32}$/.test(domain)) ||
+        (domain && !/^[a-z_]{1,32}(,[a-z_]{1,32}){0,4}$/.test(domain)) ||
         !/^\d{1,3}$/.test(rawLimit) ||
         !Number.isInteger(limit) ||
         limit < 1 ||
@@ -65,7 +66,7 @@ export function registerManageRoutes(app: FastifyInstance, dependencies: ServerD
           return [];
         }
         const [entityDomain] = entity.entity_id.split('.');
-        if (domain && entityDomain !== domain) {
+        if (domains.length > 0 && !domains.includes(entityDomain)) {
           return [];
         }
         const attributes = entity.attributes ?? {};
