@@ -177,7 +177,11 @@ export class HomeAssistantStore {
           ) {
             return;
           }
-          pollError = this.fail(card.entityId, error);
+          const message = this.fail(card.entityId, error);
+          // A missing entity only affects its own card; it is not a connection error.
+          if (!(error instanceof HomeAssistantError && error.status === 404)) {
+            pollError = message;
+          }
         }
       }),
     );

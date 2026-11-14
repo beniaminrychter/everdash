@@ -151,8 +151,10 @@ export class ClimateStore {
             return;
           }
           const message = error instanceof Error ? error.message : 'Air conditioner unavailable.';
-          pollError = message;
           const status = error instanceof HomeAssistantError ? error.status : 0;
+          if (status !== 404) {
+            pollError = message;
+          }
           if (status === 401 || status === 403) {
             this.rejectAuthentication(message);
           } else {

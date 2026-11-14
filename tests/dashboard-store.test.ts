@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { ObservationStore } from '@everdash/dashboard/features/dashboard/data/store';
+import {
+  describeStaleness,
+  latestUpdate,
+} from '@everdash/dashboard/features/dashboard/data/staleness';
 import { defineConfig } from '@everdash/contracts/config';
 
 const config = defineConfig({
@@ -68,16 +72,63 @@ test('observations discover once and poll only resolved read-only entity IDs', a
   store.stop();
 });
 
-test('failed sensor reads are invalidated while other data sources remain usable', async () => {
+test('transport failures keep the last readings and the time of the last success', async () => {
+  let offline = false;
   const { store } = setup({
-    getState: async () => {
-      throw new HomeAssistantError('Offline');
+    getState: async (id) => {
+      if (offline) {
+        throw new HomeAssistantError('Offline');
+      }
+      return id === power.entity_id ? power : temperature;
+    },
+  });
+  await store.refresh();
+  const succeededAt = store.getSnapshot().updatedAt;
+  assert.notEqual(succeededAt, null);
+  offline = true;
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  await store.refresh();
+  const snapshot = store.getSnapshot();
+  assert.equal(snapshot.readings[temperature.entity_id]?.state, '21.5');
+  assert.equal(snapshot.readings[power.entity_id]?.state, '13586');
+  assert.match(snapshot.error!, /unavailable/i);
+  assert.equal(snapshot.updatedAt, succeededAt);
+  store.stop();
+});
+
+test('a failed catalog request keeps readings instead of blanking cards', async () => {
+  let offline = false;
+  const { store } = setup({
+    getStates: async () => {
+      if (offline) {
+        throw new HomeAssistantError('Offline');
+      }
+      return [temperature, power];
+    },
+  });
+  await store.refresh();
+  offline = true;
+  await store.refresh(true);
+  assert.equal(store.getSnapshot().readings[temperature.entity_id]?.state, '21.5');
+  assert.equal(store.getSnapshot().error, 'Offline');
+  store.stop();
+});
+
+test('a missing entity affects only its own reading and raises no connection error', async () => {
+  const { store } = setup({
+    getState: async (id) => {
+      if (id === power.entity_id) {
+        throw new HomeAssistantError('Entity not found', 404);
+      }
+      return { ...temperature, state: '22.0' };
     },
   });
   await store.refresh();
   await store.refresh();
-  assert.equal(store.getSnapshot().readings[temperature.entity_id], undefined);
-  assert.match(store.getSnapshot().error!, /unavailable/i);
+  const snapshot = store.getSnapshot();
+  assert.equal(snapshot.error, null);
+  assert.equal(snapshot.readings[power.entity_id], undefined);
+  assert.equal(snapshot.readings[temperature.entity_id]?.state, '22.0');
   store.stop();
 });
 
@@ -195,14 +246,14 @@ test('hourly forecasts are cached for 15 minutes; manual refresh retries indepen
   assert.deepEqual(store.getSnapshot().forecasts['weather.home'], forecast);
   failCatalog = true;
   await store.refresh(true);
-  assert.deepEqual(store.getSnapshot().forecasts, {});
+  assert.deepEqual(store.getSnapshot().forecasts['weather.home'], forecast);
   failCatalog = false;
   await store.refresh(false, false);
-  assert.equal(calls, 5);
+  assert.equal(calls, 4);
   assert.deepEqual(store.getSnapshot().forecasts['weather.home'], forecast);
   weather.attributes.supported_features = 1;
   await store.refresh(true);
-  assert.equal(calls, 5);
+  assert.equal(calls, 4);
   assert.equal(store.getSnapshot().forecasts['weather.home'], undefined);
   store.stop();
 });
@@ -268,4 +319,19 @@ test('manual refresh queued during a forecast read retains its force-refresh int
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(calls, 2);
   store.stop();
+});
+
+test('staleness describes the age of the last successful reading', () => {
+  assert.equal(describeStaleness(null, 1000), null);
+  assert.equal(describeStaleness(0, 30_000)?.key, 'Updated less than a minute ago');
+  assert.deepEqual(describeStaleness(0, 5 * 60_000), {
+    key: 'Updated {minutes} min ago',
+    values: { minutes: 5 },
+  });
+  assert.deepEqual(describeStaleness(0, 3 * 3_600_000), {
+    key: 'Updated {hours} h ago',
+    values: { hours: 3 },
+  });
+  assert.equal(latestUpdate([null, 5, 9, 2]), 9);
+  assert.equal(latestUpdate([null]), null);
 });

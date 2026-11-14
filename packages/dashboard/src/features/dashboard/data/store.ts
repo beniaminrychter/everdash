@@ -143,23 +143,33 @@ export class ObservationStore {
         });
       } else {
         const readings: Record<string, Entity> = {};
-        let failures = 0;
+        let transportFailures = 0;
         let authenticationError: string | null = null;
         await Promise.all(
           this.snapshot.resolved.observationIds.map(async (id) => {
             try {
               const entity = await this.api.getState(id);
               if (!isEntity(entity) || entity.entity_id !== id) {
-                throw new Error('Invalid sensor response.');
+                throw new HomeAssistantError('Invalid sensor response.', 404);
               }
               readings[id] = entity;
             } catch (error) {
-              failures++;
-              if (
-                error instanceof HomeAssistantError &&
-                (error.status === 401 || error.status === 403)
-              ) {
-                authenticationError = error.message;
+              const status = error instanceof HomeAssistantError ? error.status : 0;
+              if (status === 401 || status === 403) {
+                authenticationError = error instanceof Error ? error.message : null;
+                return;
+              }
+
+              if (status === 404) {
+                // A missing entity only affects its own card or badge.
+                return;
+              }
+
+              // Transport failure: keep the last known reading for this entity.
+              transportFailures++;
+              const previous = this.snapshot.readings[id];
+              if (previous) {
+                readings[id] = previous;
               }
             }
           }),
@@ -176,8 +186,8 @@ export class ObservationStore {
           ...(authenticationError ? { forecasts: {} } : {}),
           error:
             authenticationError ||
-            (failures ? 'Some readings are unavailable. Refresh to retry.' : null),
-          updatedAt: Date.now(),
+            (transportFailures ? 'Some readings are unavailable. Refresh to retry.' : null),
+          ...(authenticationError || transportFailures ? {} : { updatedAt: Date.now() }),
         });
       }
       if (!this.authFailed) {
@@ -189,10 +199,12 @@ export class ObservationStore {
       }
       this.authFailed =
         error instanceof HomeAssistantError && (error.status === 401 || error.status === 403);
-      this.forecastChecked = {};
+      if (this.authFailed) {
+        this.forecastChecked = {};
+      }
+      // Offline or server errors keep the last known readings and forecasts.
       this.emit({
-        readings: {},
-        forecasts: {},
+        ...(this.authFailed ? { readings: {}, forecasts: {} } : {}),
         error: error instanceof Error ? error.message : 'Home Assistant data is unavailable.',
       });
     } finally {
