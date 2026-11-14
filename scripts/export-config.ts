@@ -14,8 +14,6 @@ const defaults: Record<string, string> = {
   pstryk: 'plug',
   scene: 'sparkle',
   temperature: 'thermometer',
-  toggle: 'toggle',
-  value: 'gauge',
   weather: 'sun',
 };
 

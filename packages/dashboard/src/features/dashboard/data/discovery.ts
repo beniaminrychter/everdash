@@ -105,7 +105,7 @@ export function resolveDashboard(
             type: 'toggle',
             entityId: card.entity,
             name: card.name || card.entity,
-            icon: card.icon,
+            icon: card.icon ?? 'toggle',
             room: view.title,
           } as CardConfig);
         }

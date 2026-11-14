@@ -7,6 +7,7 @@ export const iconNames = [
   'cloud',
   'coffee',
   'desk-lamp',
+  'door',
   'droplet',
   'floor-lamp',
   'gauge',

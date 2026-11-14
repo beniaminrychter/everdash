@@ -19,9 +19,9 @@ import { ValueCompact } from '../../../values/components/ValueCompact/ValueCompa
 import { ValueHero } from '../../../values/components/ValueHero/ValueHero';
 import { readValue, valueIcon } from '../../../values/data/reading';
 import { ToggleCard } from '../../../toggles/components/ToggleCard/ToggleCard';
-import { controlStatus, sensorStatus } from '../../../toggles/data/status';
+import { controlStatus, sensorStatus, toggleIcon } from '../../../toggles/data/status';
 import { SceneCard } from '../../../scenes/components/SceneCard/SceneCard';
-import { hasState } from '../../../../shared/dashboard/readings';
+import { sceneUnavailable } from '../../../scenes/data/availability';
 import styles from './DashboardCards.module.css';
 
 interface Props {
@@ -203,7 +203,7 @@ export function DashboardCards({
           return (
             <ToggleCard
               name={card.name}
-              icon={card.icon}
+              icon={toggleIcon(card.icon, undefined)}
               entityId={card.entity}
               status={translateText(status.text, t)}
               on={status.on}
@@ -214,12 +214,13 @@ export function DashboardCards({
           );
         }
 
-        const status = sensorStatus(reading(card.entity), { online, ready }, locale);
+        const sensor = reading(card.entity);
+        const status = sensorStatus(sensor, { online, ready }, locale);
 
         return (
           <ToggleCard
             name={card.name}
-            icon={card.icon}
+            icon={toggleIcon(card.icon, sensor)}
             entityId={card.entity}
             status={translateText(status.text, t)}
             on={status.on}
@@ -237,7 +238,7 @@ export function DashboardCards({
             name={card.name}
             icon={card.icon}
             entityId={card.entity}
-            problem={ready && !hasState(entity)}
+            problem={sceneUnavailable(entity, ready)}
             disabled={!interactive || editorMode || !onActivate}
             onRun={(id) => onActivate?.(id) ?? Promise.reject(new Error('Unavailable'))}
           />

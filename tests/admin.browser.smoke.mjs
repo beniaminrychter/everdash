@@ -336,6 +336,13 @@ try {
     'true',
   );
   await page.getByLabel('Display name').fill('Power meter');
+  await expect(page.getByRole('button', { name: 'Auto (from the entity type)' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await page.getByLabel('Hide unit').check();
+  await expect(page.getByLabel('Unit', { exact: true })).toBeDisabled();
+  await page.getByLabel('Hide unit').uncheck();
   await page.getByLabel('Unit', { exact: true }).fill('deg');
   await page.getByRole('combobox', { name: 'Decimal places' }).click();
   await page.getByRole('option', { name: '1', exact: true }).click();

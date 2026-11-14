@@ -30,7 +30,10 @@ export function ToggleCard({
   onToggle,
 }: Props) {
   const { t } = useI18n();
-  const className = `${styles.card} ${on && !problem ? styles.isOn : ''} ${problem ? styles.isUnavailable : ''}`;
+  const active = on && !problem;
+  // Only tappable controls use the bright "on" tile; a read-only sensor just tints its icon and state.
+  const stateClass = readOnly ? (active ? styles.isActive : '') : active ? styles.isOn : '';
+  const className = `${styles.card} ${stateClass} ${problem ? styles.isUnavailable : ''}`;
   const content = (
     <>
       <span class={styles.disc}>
@@ -43,7 +46,7 @@ export function ToggleCard({
         </span>
       </span>
       {!readOnly && (
-        <span class={`${styles.track} ${on && !problem ? styles.trackOn : ''}`} aria-hidden="true">
+        <span class={`${styles.track} ${active ? styles.trackOn : ''}`} aria-hidden="true">
           <span class={styles.knob} />
         </span>
       )}

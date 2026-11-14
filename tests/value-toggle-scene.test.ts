@@ -8,7 +8,13 @@ import {
   resolveDashboard,
 } from '@everdash/dashboard/features/dashboard/data/discovery';
 import { readValue, valueIcon } from '@everdash/dashboard/features/values/data/reading';
-import { controlStatus, sensorStatus } from '@everdash/dashboard/features/toggles/data/status';
+import { sceneUnavailable } from '@everdash/dashboard/features/scenes/data/availability';
+import { staleSince } from '@everdash/dashboard/features/dashboard/data/staleness';
+import {
+  controlStatus,
+  sensorStatus,
+  toggleIcon,
+} from '@everdash/dashboard/features/toggles/data/status';
 import type { HomeAssistantApi } from '@everdash/dashboard/shared/home-assistant/client';
 import type { ServiceCommand } from '@everdash/contracts/home-assistant/contracts';
 
@@ -105,18 +111,68 @@ test('value readings apply precision and unit overrides and report unavailable s
   assert.equal(readValue(power, {}, { online: false, ready: true }, 'en-GB').status, 'offline');
 });
 
-test('generic value icons follow the device class while explicit icons are kept', () => {
+test('value icons follow the device class only when no icon is chosen', () => {
   assert.equal(
-    valueIcon('gauge', entity('sensor.t', '1', { device_class: 'temperature' })),
+    valueIcon(undefined, entity('sensor.t', '1', { device_class: 'temperature' })),
     'thermometer',
   );
   assert.equal(
-    valueIcon('gauge', entity('sensor.h', '1', { device_class: 'humidity' })),
+    valueIcon(undefined, entity('sensor.h', '1', { device_class: 'humidity' })),
     'droplet',
   );
-  assert.equal(valueIcon('gauge', entity('sensor.p', '1', { device_class: 'power' })), 'gauge');
+  assert.equal(valueIcon(undefined, entity('sensor.p', '1', { device_class: 'power' })), 'gauge');
+  assert.equal(valueIcon(undefined, undefined), 'gauge');
+  // An explicit choice, including the gauge itself, is never overridden.
+  assert.equal(
+    valueIcon('gauge', entity('sensor.t', '1', { device_class: 'temperature' })),
+    'gauge',
+  );
   assert.equal(valueIcon('moon', entity('sensor.t', '1', { device_class: 'temperature' })), 'moon');
-  assert.equal(valueIcon('gauge', undefined), 'gauge');
+});
+
+const sensor = (kind: string) => entity('binary_sensor.x', 'on', { device_class: kind });
+
+test('toggle icons follow a binary sensor device class unless chosen', () => {
+  assert.equal(toggleIcon(undefined, sensor('door')), 'door');
+  assert.equal(toggleIcon(undefined, sensor('window')), 'door');
+  assert.equal(toggleIcon(undefined, sensor('motion')), 'away');
+  assert.equal(toggleIcon(undefined, sensor('battery')), 'toggle');
+  assert.equal(toggleIcon(undefined, undefined), 'toggle');
+  assert.equal(toggleIcon('moon', sensor('door')), 'moon');
+});
+
+test('a never-activated scene (state unknown) stays runnable; only missing or unavailable is a problem', () => {
+  assert.equal(sceneUnavailable(entity('scene.evening', 'unknown'), true), false);
+  assert.equal(sceneUnavailable(entity('script.go', 'off'), true), false);
+  assert.equal(sceneUnavailable(entity('scene.evening', 'unavailable'), true), true);
+  assert.equal(sceneUnavailable(entity('scene.evening', 'Unavailable'), true), true);
+  assert.equal(sceneUnavailable(undefined, true), true);
+  assert.equal(sceneUnavailable(undefined, false), false);
+});
+
+test('staleness reports the oldest success among the stores in error', () => {
+  const stores = [
+    { error: null, updatedAt: 900 },
+    { error: 'Some readings are unavailable.', updatedAt: 100 },
+    { error: 'Offline', updatedAt: 300 },
+  ];
+  assert.equal(staleSince(stores), 100);
+  // A failing store that never succeeded is ignored, and with no failure the newest success wins.
+  assert.equal(
+    staleSince([
+      { error: 'x', updatedAt: null },
+      { error: null, updatedAt: 50 },
+    ]),
+    50,
+  );
+  assert.equal(
+    staleSince([
+      { error: null, updatedAt: 5 },
+      { error: null, updatedAt: 9 },
+    ]),
+    9,
+  );
+  assert.equal(staleSince([]), null);
 });
 
 test('binary sensor toggles use device-class labels and never look like controls', () => {
@@ -203,4 +259,29 @@ test('scenes and scripts run with only an entity_id; other entities are refused'
   await assert.rejects(() => store.activate('scene.evening; drop'));
   store.stop();
   await assert.rejects(() => store.activate('scene.evening'));
+});
+
+test('a failed input_boolean command rolls the card back and reports the failure', async () => {
+  const calls: ServiceCommand[] = [];
+  const api: HomeAssistantApi = {
+    abort() {},
+    callService: async (command) => {
+      calls.push(command);
+      throw new HomeAssistantError('Server error', 500);
+    },
+    getState: async (id) => entity(id, 'off'),
+  };
+  const store = new HomeAssistantStore(togglePage, api);
+  await store.refresh();
+  store.update('input_boolean.guest', { on: true });
+  assert.equal(store.getSnapshot().devices[0].on, true);
+  assert.equal(store.getSnapshot().devices[0].pending, true);
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  const device = store.getSnapshot().devices[0];
+  assert.equal(calls.length, 1);
+  assert.equal(device.on, false);
+  assert.equal(device.pending, false);
+  assert.equal(device.availability, 'available');
+  assert.equal(store.getSnapshot().actionFailure?.entityId, 'input_boolean.guest');
+  store.stop();
 });

@@ -1,5 +1,6 @@
 import type { LiveDevice } from '../../accessories/data/model';
 import type { Entity } from '../../../shared/home-assistant/entities';
+import type { IconName } from '@everdash/contracts/iconNames';
 import { sensorValue } from '../../sensors/data/readings';
 
 export interface ToggleStatus {
@@ -50,4 +51,22 @@ export function sensorStatus(
   }
 
   return { on: entity.state === 'on', problem: false, text: reading.value };
+}
+
+/** The icon for a toggle card: the chosen one, or one picked from a binary sensor's device class. */
+export function toggleIcon(icon: IconName | undefined, entity: Entity | undefined): IconName {
+  if (icon) {
+    return icon;
+  }
+
+  const kind = entity?.attributes.device_class;
+  if (kind === 'door' || kind === 'window' || kind === 'garage_door' || kind === 'opening') {
+    return 'door';
+  }
+
+  if (kind === 'motion' || kind === 'occupancy' || kind === 'presence') {
+    return 'away';
+  }
+
+  return 'toggle';
 }

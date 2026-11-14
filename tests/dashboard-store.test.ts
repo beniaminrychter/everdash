@@ -335,3 +335,53 @@ test('staleness describes the age of the last successful reading', () => {
   assert.equal(latestUpdate([null, 5, 9, 2]), 9);
   assert.equal(latestUpdate([null]), null);
 });
+
+test('a malformed state response is a transport failure, not a missing entity', async () => {
+  const { store } = setup({
+    getState: async () => '<html>Bad gateway</html>',
+  });
+  await store.refresh();
+  await store.refresh();
+  assert.match(store.getSnapshot().error!, /unavailable/i);
+  assert.equal(store.getSnapshot().readings[temperature.entity_id]?.state, '21.5');
+  store.stop();
+});
+
+test('forecasts kept through a catalog failure expire with the 15 minute cache window', async (t) => {
+  let now = Date.parse('2026-10-16T12:30:00Z');
+  t.mock.method(Date, 'now', () => now);
+  let offline = false;
+  const weather = {
+    attributes: { supported_features: 2, temperature: 14 },
+    entity_id: 'weather.home',
+    state: 'sunny',
+  };
+  const forecast = [{ datetime: '2026-10-16T13:00:00Z', temperature: 15 }];
+  const store = new ObservationStore(
+    defineConfig({
+      views: [{ cards: [{ type: 'weather', entity: 'weather.home' }], id: 'home', title: 'Home' }],
+    }),
+    {
+      abort() {},
+      callService: async () => {},
+      getState: async () => weather,
+      getStates: async () => {
+        if (offline) {
+          throw new HomeAssistantError('Offline');
+        }
+        return [weather];
+      },
+      getWeatherForecast: async () => ({ service_response: { 'weather.home': { forecast } } }),
+    },
+  );
+  await store.refresh();
+  offline = true;
+  now += 600_000;
+  await store.refresh(true);
+  assert.deepEqual(store.getSnapshot().forecasts['weather.home'], forecast);
+  now += 400_000;
+  await store.refresh(true);
+  assert.equal(store.getSnapshot().forecasts['weather.home'], undefined);
+  assert.equal(store.getSnapshot().readings['weather.home']?.state, 'sunny');
+  store.stop();
+});

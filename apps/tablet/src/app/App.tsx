@@ -9,7 +9,7 @@ import { useHomeAssistant } from '@everdash/dashboard/features/accessories/data/
 import { useDashboard } from '@everdash/dashboard/features/dashboard/data/useDashboard';
 import {
   describeStaleness,
-  latestUpdate,
+  staleSince,
 } from '@everdash/dashboard/features/dashboard/data/staleness';
 import { useEnvironment } from './hooks/useEnvironment';
 import { usePreferences } from '@everdash/dashboard/features/settings/hooks/usePreferences';
@@ -88,7 +88,12 @@ export function App({
     : undefined;
   const openDevice =
     openState && openDefinition
-      ? { ...openState, icon: openDefinition.icon, name: openDefinition.name, room: page.title }
+      ? {
+          ...openState,
+          icon: openDefinition.icon ?? openState.icon,
+          name: openDefinition.name,
+          room: page.title,
+        }
       : undefined;
   const showingModal = modal?.kind === 'settings' || Boolean(openDevice);
   const hasOpenDevice = Boolean(openDevice);
@@ -120,7 +125,7 @@ export function App({
     : 'You’re offline. Controls will reconnect when the network returns.';
   const connectionProblem = !online || Boolean(home.error || climate.error || dashboard.error);
   const staleness = connectionProblem
-    ? describeStaleness(latestUpdate([dashboard.updatedAt, home.updatedAt, climate.updatedAt]), now)
+    ? describeStaleness(staleSince([dashboard, home, climate]), now)
     : null;
   return (
     <LanguageProvider language={preferences.language}>

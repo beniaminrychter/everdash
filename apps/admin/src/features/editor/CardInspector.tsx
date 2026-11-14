@@ -149,6 +149,7 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
           <IconGrid
             label="Card icon"
             value={card.icon}
+            auto={card.type === 'value' || card.type === 'toggle'}
             onChange={(icon) => change(patch(card, { icon }))}
           />
         </InspectorField>
@@ -183,9 +184,20 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
               id="card-value-unit"
               placeholder="Use Home Assistant unit"
               maxLength={12}
+              disabled={card.unit === ''}
               value={card.unit ?? ''}
               onChange={(event) => change(patch(card, { unit: event.target.value || undefined }))}
             />
+            <label className="mt-2 flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={card.unit === ''}
+                onChange={(event) =>
+                  change(patch(card, { unit: event.target.checked ? '' : undefined }))
+                }
+              />
+              Hide unit
+            </label>
           </InspectorField>
           <InspectorField label="Decimal places" htmlFor="card-value-precision">
             <Select

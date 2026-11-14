@@ -15,6 +15,8 @@ export interface ObservationSnapshot {
   updatedAt: number | null;
 }
 
+const forecastTtlMs = 900_000;
+
 export class ObservationStore {
   private snapshot: ObservationSnapshot;
   private listeners = new Set<() => void>();
@@ -150,7 +152,7 @@ export class ObservationStore {
             try {
               const entity = await this.api.getState(id);
               if (!isEntity(entity) || entity.entity_id !== id) {
-                throw new HomeAssistantError('Invalid sensor response.', 404);
+                throw new HomeAssistantError('Invalid sensor response.');
               }
               readings[id] = entity;
             } catch (error) {
@@ -202,9 +204,11 @@ export class ObservationStore {
       if (this.authFailed) {
         this.forecastChecked = {};
       }
-      // Offline or server errors keep the last known readings and forecasts.
+      // Offline or server errors keep the last known readings, and forecasts inside their cache window.
       this.emit({
-        ...(this.authFailed ? { readings: {}, forecasts: {} } : {}),
+        ...(this.authFailed
+          ? { readings: {}, forecasts: {} }
+          : { forecasts: this.freshForecasts() }),
         error: error instanceof Error ? error.message : 'Home Assistant data is unavailable.',
       });
     } finally {
@@ -219,6 +223,21 @@ export class ObservationStore {
       }
     }
   }
+  /** Forecasts that are still inside the 15 minute cache window. */
+  private freshForecasts(): Record<string, readonly unknown[]> {
+    const forecasts: Record<string, readonly unknown[]> = {};
+    for (const [id, forecast] of Object.entries(this.snapshot.forecasts)) {
+      const checked = this.forecastChecked[id];
+      if (checked !== undefined && Date.now() - checked < forecastTtlMs) {
+        forecasts[id] = forecast;
+      } else {
+        delete this.forecastChecked[id];
+      }
+    }
+
+    return forecasts;
+  }
+
   private async refreshForecasts(manual: boolean, revision: number) {
     if (this.stopped || revision !== this.revision) {
       return;
@@ -244,7 +263,7 @@ export class ObservationStore {
         if (
           !manual &&
           this.forecastChecked[id] !== undefined &&
-          Date.now() - this.forecastChecked[id] < 900_000
+          Date.now() - this.forecastChecked[id] < forecastTtlMs
         ) {
           return;
         }

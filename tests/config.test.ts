@@ -215,7 +215,7 @@ const issuePaths = (card: Record<string, unknown>) => {
   return result.ok ? [] : result.issues.map((issue) => issue.path);
 };
 
-test('value, toggle and scene cards validate and receive their default icons', () => {
+test('value and toggle cards keep an unset icon (auto); scenes default to a sparkle', () => {
   const result = validateDashboard({
     schemaVersion: 1,
     views: [
@@ -239,7 +239,15 @@ test('value, toggle and scene cards validate and receive their default icons', (
     return;
   }
   const icons = result.config.views[0].cards.map((card) => card.icon);
-  assert.deepEqual(icons, ['gauge', 'gauge', 'moon', 'toggle', 'toggle', 'sparkle', 'sparkle']);
+  assert.deepEqual(icons, [
+    undefined,
+    undefined,
+    'moon',
+    undefined,
+    undefined,
+    'sparkle',
+    'sparkle',
+  ]);
 });
 
 test('value cards reject bad domains, templates, precision, units and unknown keys', () => {
@@ -258,6 +266,13 @@ test('value cards reject bad domains, templates, precision, units and unknown ke
   assert.deepEqual(issuePaths({ type: 'value', entity: 'sensor.x', unit: 'x'.repeat(13) }), [
     'views[0].cards[0].unit',
   ]);
+  for (const unit of ['   ', '\u0007', 'a\nb']) {
+    assert.deepEqual(issuePaths({ type: 'value', entity: 'sensor.x', unit }), [
+      'views[0].cards[0].unit',
+    ]);
+  }
+  // An empty unit hides the unit.
+  assert.deepEqual(issuePaths({ type: 'value', entity: 'sensor.x', unit: '' }), []);
   assert.deepEqual(issuePaths({ type: 'value', entity: 'sensor.x', sellPrice: 'sensor.y' }), [
     'views[0].cards[0].sellPrice',
   ]);

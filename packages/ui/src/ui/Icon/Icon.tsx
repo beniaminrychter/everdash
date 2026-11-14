@@ -46,6 +46,12 @@ const shapes = {
       <path d="m8 12-4 5v5m-2 0h12m-1-7-5 5" />
     </>
   ),
+  door: (
+    <>
+      <path d="M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M4 21h16" />
+      <circle cx="15" cy="12" r="1" fill="currentColor" />
+    </>
+  ),
   droplet: (
     <>
       <path d="M12 3c3 4 6 7 6 11a6 6 0 0 1-12 0c0-4 3-7 6-11Z" />

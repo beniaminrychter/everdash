@@ -29,6 +29,27 @@ const iconCardTypes = new Set(['light', 'outlet', 'value', 'toggle', 'scene']);
 const valueTemplates = new Set(['tile', 'hero', 'compact']);
 const iconSet = new Set<string>(iconNames);
 
+function hasControlCharacter(value: string): boolean {
+  for (let index = 0; index < value.length; index++) {
+    const code = value.codePointAt(index) ?? 0;
+    if (code < 32 || code === 127) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/** A unit may be empty (hide it) but never only whitespace, nor contain control characters. */
+function isValidUnit(unit: unknown): boolean {
+  return (
+    typeof unit === 'string' &&
+    unit.length <= 12 &&
+    (unit === '' || unit.trim() !== '') &&
+    !hasControlCharacter(unit)
+  );
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -210,13 +231,11 @@ export function validateDashboard(input: unknown): DashboardValidation {
                   message: 'Expected tile, compact or hero.',
                 });
               }
-              if (
-                card.unit !== undefined &&
-                (typeof card.unit !== 'string' || card.unit.length > 12)
-              ) {
+              if (card.unit !== undefined && !isValidUnit(card.unit)) {
                 issues.push({
                   path: `${cardPath}.unit`,
-                  message: 'Expected a unit of at most 12 characters.',
+                  message:
+                    'Expected a unit of at most 12 printable characters, or an empty string to hide it.',
                 });
               }
               if (

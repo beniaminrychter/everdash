@@ -25,6 +25,14 @@
 .isUnavailable {
   background: var(--icon-bg);
 }
+.isActive .disc {
+  background: #3489fa;
+  color: #fff;
+}
+.isActive .status {
+  color: var(--accent);
+  font-weight: 600;
+}
 .disc {
   display: flex;
   align-items: center;

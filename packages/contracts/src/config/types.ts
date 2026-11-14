@@ -91,7 +91,9 @@ export interface DashboardDocument extends HomeConfig {
   schemaVersion: 1;
 }
 
-export type ConfiguredCard = CardConfig & { icon: IconName };
+/** Value and toggle cards may leave the icon unset, meaning it is chosen from the entity's device class. */
+type WithIcon<Card> = Card extends { type: 'value' | 'toggle' } ? Card : Card & { icon: IconName };
+export type ConfiguredCard = WithIcon<CardConfig>;
 export type ConfiguredBadge = BadgeConfig & { icon: IconName };
 
 export interface ConfiguredView extends Omit<ViewConfig, 'badges' | 'cards'> {

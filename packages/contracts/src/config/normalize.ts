@@ -2,15 +2,16 @@ import { isCardEntity } from './cardDomains';
 import type { AppConfig, BadgeConfig, CardConfig, HomeConfig } from './types';
 import type { IconName } from '../iconNames';
 
-const icons: Record<CardConfig['type'] | BadgeConfig['type'], IconName> = {
+const icons: Record<
+  Exclude<CardConfig['type'], 'value' | 'toggle'> | BadgeConfig['type'],
+  IconName
+> = {
   climate: 'thermometer',
   light: 'bulb',
   outlet: 'outlet',
   pstryk: 'plug',
   scene: 'sparkle',
   temperature: 'thermometer',
-  toggle: 'toggle',
-  value: 'gauge',
   weather: 'sun',
 };
 
@@ -70,15 +71,15 @@ export function defineConfig(config: HomeConfig): AppConfig {
           }
         }
       }
+      // Value and toggle cards keep an unset icon so the tablet can pick one from the device class.
+      if (card.type === 'value' || card.type === 'toggle') {
+        return { ...card };
+      }
+
       return {
         ...card,
         icon:
-          (card.type === 'light' ||
-            card.type === 'outlet' ||
-            card.type === 'value' ||
-            card.type === 'toggle' ||
-            card.type === 'scene') &&
-          card.icon
+          (card.type === 'light' || card.type === 'outlet' || card.type === 'scene') && card.icon
             ? card.icon
             : icons[card.type],
       };

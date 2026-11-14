@@ -119,7 +119,8 @@ states['binary_sensor.fixture_door'] = observed('binary_sensor.fixture_door', 'F
 states['sensor.fixture_value'] = observed('sensor.fixture_value', 'Fixture power', '1234.5678', {
   unit_of_measurement: 'W',
 });
-states[sceneId] = observed(sceneId, 'Evening', '2026-10-16T18:00:00+00:00');
+// A never-activated scene reports "unknown" and must stay runnable.
+states[sceneId] = observed(sceneId, 'Evening', 'unknown');
 states[climateId] = observed(climateId, 'Air Conditioner', 'heat', {
   current_temperature: 24,
   fan_mode: 'auto',

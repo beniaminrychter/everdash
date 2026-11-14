@@ -17,16 +17,13 @@ export interface ValueReading {
   unit: string;
 }
 
-/** The generic icon that normalize assigns; it is replaced by a device-class icon when known. */
-const genericIcon: IconName = 'gauge';
-
-/** Picks a device-class icon for a value card that still uses the generic default icon. */
-export function valueIcon(icon: IconName, entity: Entity | undefined): IconName {
-  if (icon !== genericIcon || !entity) {
+/** The icon for a value card: the chosen one, or one picked from the entity's device class. */
+export function valueIcon(icon: IconName | undefined, entity: Entity | undefined): IconName {
+  if (icon) {
     return icon;
   }
 
-  const kind = entity.attributes.device_class;
+  const kind = entity?.attributes.device_class;
   if (kind === 'temperature') {
     return 'thermometer';
   }
@@ -35,7 +32,7 @@ export function valueIcon(icon: IconName, entity: Entity | undefined): IconName 
     return 'droplet';
   }
 
-  return icon;
+  return 'gauge';
 }
 
 function isPlainNumber(entity: Entity): boolean {

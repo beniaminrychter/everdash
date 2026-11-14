@@ -32,3 +32,23 @@ export function latestUpdate(times: readonly (number | null)[]): number | null {
 
   return latest;
 }
+
+export interface StoreFreshness {
+  error: string | null;
+  updatedAt: number | null;
+}
+
+/**
+ * When the data that is currently failing was last good: the oldest success among the stores in
+ * error. With no failing store (for example while offline) it falls back to the newest success.
+ */
+export function staleSince(stores: readonly StoreFreshness[]): number | null {
+  const failing = stores
+    .filter((store) => store.error && store.updatedAt !== null)
+    .map((store) => store.updatedAt);
+  if (failing.length > 0) {
+    return Math.min(...(failing as number[]));
+  }
+
+  return latestUpdate(stores.map((store) => store.updatedAt));
+}
