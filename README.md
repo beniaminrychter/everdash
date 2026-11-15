@@ -44,6 +44,14 @@ pnpm dev
 
 Both Vite servers proxy `/api` to the server. Data is kept in `.local/everdash` (git-ignored). The server runs on your machine, so sign in with `http://localhost:8123` when Home Assistant runs locally or in a container that publishes port 8123. Override `EVERDASH_PORT` or `EVERDASH_DATA_DIR` if needed.
 
+For an iPad running iOS 12, keep `pnpm dev` running and start this in another terminal:
+
+```sh
+pnpm dev:ipad
+```
+
+Open `http://YOUR-COMPUTER-IP:5175/` on the iPad. Port 5173 serves Vite's modern development runtime, which Safari 12 cannot parse. The iPad preview serves the production build's ES5 legacy path and proxies `/api` to the running server. Source changes rebuild automatically; wait for the build to finish, then reload the iPad. Output stays in `.local/ipad-preview`, separate from production `dist/`. Override `EVERDASH_IPAD_PORT` or `EVERDASH_API_URL` if needed; `EVERDASH_PORT` also selects the backend port.
+
 To run a production build without a container: `pnpm build`, then `pnpm start` (port 8095, data in `.local/everdash`; set `EVERDASH_PORT` if a container already uses 8095).
 
 ### Changing the Home Assistant instance

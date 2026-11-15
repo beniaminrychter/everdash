@@ -86,7 +86,7 @@ self.addEventListener('fetch', function (event) {
 
 const api = process.env.EVERDASH_API_URL ?? 'http://127.0.0.1:8790';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   root: resolve('apps/tablet'),
   resolve: { alias: workspaceAliases(resolve('apps/tablet/src')) },
   server: {
@@ -109,9 +109,12 @@ export default defineConfig({
       targets: ['ios_saf >= 12', 'Safari >= 12', 'ie >= 11'],
       modernTargets: ['ios_saf >= 12', 'Safari >= 12'],
       renderLegacyChunks: true,
+      // Rollup watch writes outputs concurrently; the dual-output legacy plugin
+      // needs sequential writes. The iPad preview exercises only its ES5 path.
+      renderModernChunks: mode !== 'ipad',
       // All application APIs exist in iOS 12. Keep SystemJS, omit IE-only core-js.
       polyfills: false,
     }),
     offlineShell(),
   ],
-});
+}));
