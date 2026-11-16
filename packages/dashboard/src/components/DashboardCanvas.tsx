@@ -118,12 +118,9 @@ export function DashboardCanvas({
           badges={view.badges}
           readings={model.readings}
           online
-          editorMode={currentSnapshot.editor}
+          editor={currentSnapshot.editor ? editorKit : undefined}
           selectedIndex={selection?.kind === 'badge' ? selection.index : undefined}
-          onEdit={(index) => currentSnapshot.editor && postEditorAction('badge.edit', { index })}
-          onDelete={(index) =>
-            currentSnapshot.editor && postEditorAction('badge.delete', { index })
-          }
+          onEditorEvent={(event) => currentSnapshot.editor && postCardEvent(event)}
         />
         <DashboardCards
           view={view}

@@ -282,6 +282,113 @@ test('canvas can select a view, edit a badge, and move a card', () => {
   assert.equal(moved.generation, generation + 1);
 });
 
+const badge = (entity: string, name?: string) => ({
+  type: 'temperature' as const,
+  entity: entity as `sensor.${string}`,
+  ...(name ? { name } : {}),
+});
+
+function badgeState(...badges: ReturnType<typeof badge>[]): DraftState {
+  return initialDraft({
+    ...structuredClone(fixture),
+    views: [{ id: 'home', title: 'Home', cards: [], badges }],
+  });
+}
+
+const badgeOrder = (state: DraftState) =>
+  state.document.views[0]!.badges!.map((item) => item.name ?? item.entity);
+
+test('a canvas duplicate puts a copy of the badge after it and selects the copy', () => {
+  const state = badgeState(badge('sensor.a'), badge('sensor.b'), badge('sensor.c'));
+  const copied = draftReducer(
+    state,
+    canvas(state, { type: 'everdash.editor.badge.duplicate', index: 0 }),
+  );
+  const badges = copied.document.views[0]!.badges!;
+
+  assert.deepEqual(badgeOrder(copied), ['sensor.a', 'sensor.a', 'sensor.b', 'sensor.c']);
+  assert.deepEqual(badges[1], badges[0]);
+  assert.notEqual(badges[1], badges[0]);
+  assert.deepEqual(copied.selection, { kind: 'badge', index: 1 });
+  assert.equal(copied.generation, state.generation + 1);
+});
+
+test('a canvas move reorders badges by offset or to an index and selects the moved badge', () => {
+  const state = badgeState(badge('sensor.a'), badge('sensor.b'), badge('sensor.c'));
+  const byOffset = draftReducer(
+    state,
+    canvas(state, { type: 'everdash.editor.badge.move', index: 0, offset: 1 }),
+  );
+
+  assert.deepEqual(badgeOrder(byOffset), ['sensor.b', 'sensor.a', 'sensor.c']);
+  assert.deepEqual(byOffset.selection, { kind: 'badge', index: 1 });
+  assert.equal(byOffset.generation, state.generation + 1);
+
+  const toIndex = draftReducer(
+    state,
+    canvas(state, { type: 'everdash.editor.badge.move', index: 0, to: 2 }),
+  );
+
+  assert.deepEqual(badgeOrder(toIndex), ['sensor.b', 'sensor.c', 'sensor.a']);
+  assert.deepEqual(toIndex.selection, { kind: 'badge', index: 2 });
+
+  for (const message of [
+    { index: 0, offset: -1 },
+    { index: 2, offset: 1 },
+    { index: 0, to: 9 },
+    { index: 0, to: 0 },
+    { index: 9, offset: 1 },
+    { index: 0, to: 1.5 },
+    { index: 0 },
+  ]) {
+    assert.equal(
+      draftReducer(state, canvas(state, { type: 'everdash.editor.badge.move', ...message })),
+      state,
+    );
+  }
+});
+
+test('badges on the same entity keep their own place when duplicated and moved', () => {
+  const state = badgeState(badge('sensor.a', 'first'), badge('sensor.a', 'second'));
+  const copied = draftReducer(
+    state,
+    canvas(state, { type: 'everdash.editor.badge.duplicate', index: 0 }),
+  );
+
+  assert.deepEqual(badgeOrder(copied), ['first', 'first', 'second']);
+
+  const moved = draftReducer(
+    copied,
+    canvas(copied, { type: 'everdash.editor.badge.move', index: 2, to: 0 }),
+  );
+
+  assert.deepEqual(badgeOrder(moved), ['second', 'first', 'first']);
+});
+
+test('a badge that is still being added survives a canvas move', () => {
+  const state = draftReducer(badgeState(badge('sensor.a'), badge('sensor.b')), {
+    type: 'start-badge',
+  });
+  const moved = draftReducer(
+    state,
+    canvas(state, { type: 'everdash.editor.badge.move', index: 0, offset: 1 }),
+  );
+
+  assert.deepEqual(badgeOrder(moved), ['sensor.b', 'sensor.a']);
+  assert.equal(moved.selection.kind, 'pending-badge');
+});
+
+test('the move-badge and duplicate-badge actions do what the canvas messages do', () => {
+  const state = badgeState(badge('sensor.a'), badge('sensor.b'));
+  const moved = draftReducer(state, { type: 'move-badge', index: 0, to: 1 });
+  const copied = draftReducer(state, { type: 'duplicate-badge', index: 1 });
+
+  assert.deepEqual(badgeOrder(moved), ['sensor.b', 'sensor.a']);
+  assert.deepEqual(badgeOrder(copied), ['sensor.a', 'sensor.b', 'sensor.b']);
+  assert.deepEqual(copied.selection, { kind: 'badge', index: 2 });
+  assert.equal(draftReducer(state, { type: 'move-badge', index: 0, to: 5 }), state);
+});
+
 test('canvas delete messages select the item and never delete it', () => {
   const state = start();
   const generation = state.generation;

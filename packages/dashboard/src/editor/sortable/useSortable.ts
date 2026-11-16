@@ -13,6 +13,8 @@ import type { RefObject } from 'preact';
 /** Cards (and the areas they are in) are sorted with the same `group`, so they move between areas. */
 export const cardGroup = 'everdash-cards';
 export const sectionGroup = 'everdash-sections';
+/** Badges only sort among themselves, never into a card area. */
+export const badgeGroup = 'everdash-badges';
 
 /** Marks anything inside a card that must not start a drag (its menu and buttons). */
 export const noDragSelector = '[data-editor-nodrag]';
@@ -45,12 +47,13 @@ export function baseOptions(): Options {
 export function restoreDrop(event: SortableEvent) {
   const { item, from, oldIndex } = event;
 
-  const next = from.children[oldIndex ?? 0];
-
   item.remove();
 
-  // `next` is the card that followed the dragged one before the drag, now at its index again.
-  if (next && next !== item) {
+  // With the dragged node out, the list is what it was before the drag minus that node, so the
+  // node that followed it is at its old index again, whether it was dropped in this list or another.
+  const next = from.children[oldIndex ?? 0];
+
+  if (next) {
     next.before(item);
   } else {
     from.append(item);

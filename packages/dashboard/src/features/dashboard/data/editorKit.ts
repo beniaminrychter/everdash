@@ -66,10 +66,29 @@ export interface AddCardButtonProps {
   onEvent: EditorHandler;
 }
 
+export interface BadgeListProps {
+  class: string;
+  onEvent: EditorHandler;
+  children?: ComponentChildren;
+}
+
+export interface EditorBadgeProps {
+  index: number;
+  count: number;
+  name: string;
+  selected: boolean;
+  /** The tablet's own class for a badge, so the editor lays a badge out as the tablet does. */
+  class?: string;
+  onEvent: EditorHandler;
+  children?: ComponentChildren;
+}
+
 export interface EditorKit {
   CardList: ComponentType<CardListProps>;
   Card: ComponentType<EditorCardProps>;
   SectionList: ComponentType<SectionListProps>;
   SectionHeading: ComponentType<SectionHeadingProps>;
   AddCardButton: ComponentType<AddCardButtonProps>;
+  BadgeList: ComponentType<BadgeListProps>;
+  Badge: ComponentType<EditorBadgeProps>;
 }

@@ -476,14 +476,19 @@ try {
   await page.getByLabel('Display name').fill('Lounge temp');
   await page.getByRole('button', { name: 'Add badge', exact: true }).click();
   await expect(preview.getByRole('button', { name: 'Edit Lounge temp' })).toBeVisible();
-  await expect(preview.getByRole('button', { name: 'Delete Lounge temp' })).toBeVisible();
-  const badgeWrapper = preview.locator('[data-sensor="sensor.lounge_temperature"]').locator('..');
-  const badgeBox = await preview.locator('[data-sensor="sensor.lounge_temperature"]').boundingBox();
-  // Edit is the badge itself; the remaining action sits underneath it.
-  const badgeActionsBox = await badgeWrapper
-    .getByRole('button', { name: 'Delete Lounge temp' })
-    .boundingBox();
-  assert.ok(badgeBox && badgeActionsBox && badgeActionsBox.y >= badgeBox.y + badgeBox.height);
+  // A badge has no delete button of its own: hovering it shows a ⋮ on its top right corner.
+  await expect(preview.getByRole('button', { name: 'Delete Lounge temp' })).toHaveCount(0);
+  const loungePill = preview.locator('[data-sensor="sensor.lounge_temperature"]');
+  await preview.getByRole('button', { name: 'Edit Lounge temp', exact: true }).hover();
+  const loungeMenu = preview.getByRole('button', { name: 'More actions for Lounge temp' });
+  await expect(loungeMenu).toBeVisible();
+  const loungeBox = await loungePill.boundingBox();
+  const loungeMenuBox = await loungeMenu.boundingBox();
+  assert.ok(
+    loungeMenuBox.y + loungeMenuBox.height / 2 <= loungeBox.y + 4,
+    'the menu button sits on the pill corner, not over its value',
+  );
+  await page.mouse.move(5, 5);
 
   // A rejected save keeps the draft, shows the error, and a second save succeeds.
   await expect(page.getByText(/unsaved change/)).toBeVisible();
@@ -633,6 +638,73 @@ try {
   await rowsPage.getByRole('button', { name: 'Save', exact: true }).click();
   await expect.poll(() => 'rows' in savedConfig.views[0].cards[0]).toBe(false);
   await rowsPage.close();
+
+  // Badges are edited like cards: click to edit, a ⋮ menu, and drag and drop to reorder.
+  savedConfig = {
+    schemaVersion: 1,
+    views: [
+      {
+        id: 'home',
+        title: 'Home',
+        cards: [],
+        badges: ['Alpha', 'Bravo', 'Charlie'].map((name) => ({
+          type: 'temperature',
+          entity: 'sensor.lounge_temperature',
+          name,
+        })),
+      },
+    ],
+  };
+  const badgePage = await openPage({ width: 1440, height: 900 });
+  const badgeNames = () =>
+    badgePage
+      .locator('[data-editor-badge] [data-editor-select]')
+      .evaluateAll((layers) =>
+        layers.map((layer) => layer.getAttribute('aria-label').replace('Edit ', '')),
+      );
+  const badgeLayer = (name) =>
+    badgePage.getByRole('button', { exact: true, name: `Edit ${name}` }).first();
+  const openBadgeMenu = async (name) => {
+    await badgeLayer(name).hover();
+    await badgePage
+      .getByRole('button', { exact: true, name: `More actions for ${name}` })
+      .first()
+      .click();
+  };
+  const chooseBadgeItem = async (name, item) => {
+    await openBadgeMenu(name);
+    await badgePage.getByRole('menuitem', { exact: true, name: item }).click();
+  };
+  await expect.poll(badgeNames).toEqual(['Alpha', 'Bravo', 'Charlie']);
+  await badgeLayer('Bravo').click();
+  await expect(badgeLayer('Bravo')).toHaveAttribute('aria-pressed', 'true');
+  await expect(badgePage.getByLabel('Display name')).toHaveValue('Bravo');
+
+  await chooseBadgeItem('Alpha', 'Move later');
+  await expect.poll(badgeNames).toEqual(['Bravo', 'Alpha', 'Charlie']);
+  await openBadgeMenu('Bravo');
+  await expect(badgePage.getByRole('menuitem', { name: 'Move earlier' })).toBeDisabled();
+  await badgePage.keyboard.press('Escape');
+
+  const charlie = center(await badgeLayer('Charlie').boundingBox());
+  const first = await badgeLayer('Bravo').boundingBox();
+  await dragTo(badgePage, charlie, { x: first.x + 6, y: first.y + first.height / 2 });
+  await expect.poll(badgeNames).toEqual(['Charlie', 'Bravo', 'Alpha']);
+
+  await chooseBadgeItem('Alpha', 'Duplicate');
+  await expect.poll(badgeNames).toEqual(['Charlie', 'Bravo', 'Alpha', 'Alpha']);
+
+  await chooseBadgeItem('Bravo', 'Delete');
+  const badgeDialog = badgePage.getByRole('alertdialog', { name: 'Delete this badge?' });
+  await expect(badgeDialog).toBeVisible();
+  await badgeDialog.getByRole('button', { name: 'Delete badge' }).click();
+  await expect.poll(badgeNames).toEqual(['Charlie', 'Alpha', 'Alpha']);
+
+  await badgePage.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect
+    .poll(() => savedConfig.views[0].badges.map((badge) => badge.name))
+    .toEqual(['Charlie', 'Alpha', 'Alpha']);
+  await badgePage.close();
 
   // Sections, hover chrome and SortableJS drag and drop.
   const shots = process.env.EVERDASH_SMOKE_SHOTS;
@@ -1092,7 +1164,9 @@ try {
           'view deletion preserves the final view',
           'domain-filtered searchable entity selection',
           'climate unit editing; the hover pencil and ⋮ menu replace the controls under cards',
-          'temperature badge selection and editor-only badge actions',
+          'temperature badge selection; a badge has a hover ⋮ menu and no delete button of its own',
+          'weather card rows toggle',
+          'badges: click to edit, menu move later, drag to reorder, duplicate and delete with confirmation',
           'a rejected save keeps the draft and shows an Alert, then a second save succeeds',
           'Save publishes the schema-v1 draft',
           'a new card is a draggable, deletable card of the canvas and blocks Save until finished',

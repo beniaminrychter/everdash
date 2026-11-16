@@ -90,6 +90,10 @@ export type DraftAction =
   | { type: 'delete-section'; id: string; cards: SectionCards }
   | { type: 'update-badge'; index: number; badge: BadgeConfig }
   | { type: 'delete-badge'; index: number }
+  /** Inserts a copy of a badge right after it and selects the copy. */
+  | { type: 'duplicate-badge'; index: number }
+  /** Moves a badge to a final position among the badges and selects it there. */
+  | { type: 'move-badge'; index: number; to: number }
   | { type: 'update-home'; home: Partial<HomeConfig> };
 
 const viewSelection: Selection = { kind: 'view' };
@@ -530,6 +534,41 @@ function duplicateCard(state: DraftState, location: CardLocation): DraftState {
   });
 }
 
+/** Inserts a copy of a badge right after it and selects the copy. */
+function duplicateBadge(state: DraftState, index: number): DraftState {
+  const badges = currentView(state)?.badges ?? [];
+
+  if (!inRange(index, badges.length)) {
+    return state;
+  }
+
+  const copies = [...badges];
+
+  copies.splice(index + 1, 0, structuredClone(badges[index]!));
+
+  return changeCurrentView(state, (view) => ({ ...view, badges: copies }), {
+    selection: { kind: 'badge', index: index + 1 },
+  });
+}
+
+/** Moves a badge to a final index of the badge list and selects it there. */
+function moveBadge(state: DraftState, index: number, to: number): DraftState {
+  const badges = currentView(state)?.badges ?? [];
+
+  if (!inRange(index, badges.length) || !inRange(to, badges.length) || index === to) {
+    return state;
+  }
+
+  const moved = [...badges];
+  const [badge] = moved.splice(index, 1);
+
+  moved.splice(to, 0, badge!);
+
+  return changeCurrentView(state, (view) => ({ ...view, badges: moved }), {
+    selection: { kind: 'badge', index: to },
+  });
+}
+
 /** Finishes a card that was being added, if the dashboard is valid with it in. */
 function finishNewCard(state: DraftState, location: CardLocation): DraftState {
   const view = currentView(state);
@@ -726,6 +765,34 @@ function reduceCanvasMessage(state: DraftState, value: unknown): DraftState {
     }
 
     return keepingPending(state, (current) => moveSection(current, id, message.offset as -1 | 1));
+  }
+
+  if (message.type === 'everdash.editor.badge.duplicate') {
+    if (!inRange(index, (view.badges ?? []).length)) {
+      return state;
+    }
+
+    return keepingPending(state, (current) => duplicateBadge(current, index));
+  }
+
+  if (message.type === 'everdash.editor.badge.move') {
+    if (!inRange(index, (view.badges ?? []).length)) {
+      return state;
+    }
+
+    // A move names its destination as an offset from the badge or as a final index.
+    const to =
+      typeof message.to === 'number'
+        ? message.to
+        : message.offset === -1 || message.offset === 1
+          ? index + message.offset
+          : undefined;
+
+    if (to === undefined) {
+      return state;
+    }
+
+    return keepingPending(state, (current) => moveBadge(current, index, to));
   }
 
   if (
@@ -1062,6 +1129,14 @@ export function draftReducer(state: DraftState, action: DraftAction): DraftState
           { selection: viewSelection },
         ),
       );
+    }
+
+    case 'duplicate-badge': {
+      return keepingPending(state, (current) => duplicateBadge(current, action.index));
+    }
+
+    case 'move-badge': {
+      return keepingPending(state, (current) => moveBadge(current, action.index, action.to));
     }
 
     case 'update-home': {

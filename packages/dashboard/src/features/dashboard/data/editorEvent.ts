@@ -20,6 +20,14 @@ export type EditorEvent =
       toEnd?: boolean;
     }
   | { type: 'card.add'; section: string | null }
+  | { type: 'badge.edit' | 'badge.delete' | 'badge.duplicate'; index: number }
+  | {
+      type: 'badge.move';
+      index: number;
+      /** Moves by this many places, or to this final index when `to` is given. */
+      offset?: number;
+      to?: number;
+    }
   | { type: 'section.edit' | 'section.rename' | 'section.delete'; section: string }
   | {
       type: 'section.move';

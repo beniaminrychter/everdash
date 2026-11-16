@@ -1,99 +1,84 @@
 import { useI18n } from '@everdash/ui/i18n/index';
 import type { ResolvedView, EntityReadings } from '../../../dashboard/data/types';
+import type { EditorHandler } from '../../../dashboard/data/editorEvent';
+import type { EditorKit } from '../../../dashboard/data/editorKit';
 import { sensorValue } from '../../data/readings';
 import { Icon } from '@everdash/ui/ui/Icon/Icon';
 import styles from './SensorBadges.module.css';
 
-/** The delete (trash) icon in the editor's badge actions. */
-function BadgeActionIcon() {
-  return (
-    <svg
-      class={styles.actionIcon}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="1.8"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M3 6h18M8 6V4h8v2m3 0-1 15H6L5 6M10 11v6m4-6v6" />
-    </svg>
-  );
-}
+const ignoreEditorEvent: EditorHandler = () => undefined;
 
 export function SensorBadges({
   badges,
   readings,
   online,
-  editorMode = false,
+  editor,
   selectedIndex,
-  onEdit,
-  onDelete,
+  onEditorEvent = ignoreEditorEvent,
 }: {
   badges: ResolvedView['badges'];
   readings: EntityReadings;
   online: boolean;
-  editorMode?: boolean;
+  /** The editor's chrome; only the editor passes it, so the tablet bundles none of it. */
+  editor?: EditorKit;
   /** Editor only: index of the badge to outline as selected. */
   selectedIndex?: number;
-  onEdit?: (index: number) => void;
-  onDelete?: (index: number) => void;
+  onEditorEvent?: EditorHandler;
 }) {
   const { t, locale } = useI18n();
+  const items = badges.map((badge, index) => {
+    const entity = readings[badge.entity];
+    const value = sensorValue(online ? entity : undefined, locale);
+    const key = `${badge.entity}#${badges.slice(0, index).filter((other) => other.entity === badge.entity).length}`;
+    const pill = (
+      <div
+        class={styles.badge}
+        data-sensor={badge.entity}
+        aria-label={t('{name}: {value}', {
+          name: badge.name,
+          value: value.available ? value.value + value.unit : t('Unavailable'),
+        })}
+      >
+        <Icon name={badge.icon} className={styles.icon} />
+        <span>{badge.name}</span>
+        <strong>{value.available ? `${value.value}${value.unit}` : '—'}</strong>
+      </div>
+    );
+
+    if (!editor) {
+      return (
+        <div class={styles.item} key={key}>
+          {pill}
+        </div>
+      );
+    }
+
+    return (
+      <editor.Badge
+        key={key}
+        index={index}
+        count={badges.length}
+        name={badge.name}
+        selected={selectedIndex === index}
+        class={styles.item}
+        onEvent={onEditorEvent}
+      >
+        {pill}
+      </editor.Badge>
+    );
+  });
+
+  if (editor) {
+    return (
+      <editor.BadgeList class={styles.badges} onEvent={onEditorEvent}>
+        {items}
+      </editor.BadgeList>
+    );
+  }
+
   return (
     <div class={styles.badges} aria-label={t('Sensors')}>
-      {badges.map((badge, index) => {
-        const entity = readings[badge.entity];
-        const value = sensorValue(online ? entity : undefined, locale);
-        return (
-          <div
-            class={
-              editorMode && selectedIndex === index
-                ? `${styles.item} ${styles.selectedItem}`
-                : styles.item
-            }
-            key={`${badge.entity}#${badges.slice(0, index).filter((other) => other.entity === badge.entity).length}`}
-          >
-            <div
-              class={styles.badge}
-              data-sensor={badge.entity}
-              aria-label={t('{name}: {value}', {
-                name: badge.name,
-                value: value.available ? value.value + value.unit : t('Unavailable'),
-              })}
-            >
-              <Icon name={badge.icon} className={styles.icon} />
-              <span>{badge.name}</span>
-              <strong>{value.available ? `${value.value}${value.unit}` : '—'}</strong>
-              {editorMode && (
-                // Covers the badge, so a click anywhere on it opens the badge in the inspector.
-                <button
-                  type="button"
-                  class={styles.selectLayer}
-                  data-editor-select=""
-                  onClick={() => onEdit?.(index)}
-                  aria-label={`Edit ${badge.name}`}
-                  aria-pressed={selectedIndex === index}
-                  title={`Edit ${badge.name}`}
-                />
-              )}
-            </div>
-            {editorMode && (
-              <fieldset class={styles.editorActions} aria-label={`${badge.name} badge actions`}>
-                <button
-                  type="button"
-                  onClick={() => onDelete?.(index)}
-                  aria-label={`Delete ${badge.name}`}
-                  title="Delete"
-                >
-                  <BadgeActionIcon />
-                </button>
-              </fieldset>
-            )}
-          </div>
-        );
-      })}
+      {items}
     </div>
   );
 }

@@ -1,0 +1,24 @@
+/* Where the badge will land: a pill-sized dashed outline with a faint tint, its content hidden. */
+.ghost {
+  border-radius: 24px;
+  outline: 2px dashed #2563eb;
+  outline-offset: -2px;
+  background: rgba(37, 99, 235, 0.08);
+}
+.ghost > * {
+  visibility: hidden;
+}
+
+/* The copy that follows the pointer, lifted off the page. */
+.lifted {
+  z-index: 1000;
+  border-radius: 24px;
+  opacity: 0.96;
+  box-shadow:
+    0 12px 28px rgba(15, 23, 42, 0.28),
+    0 3px 8px rgba(15, 23, 42, 0.18);
+  cursor: grabbing;
+}
+.lifted [data-editor-nodrag] {
+  display: none;
+}
