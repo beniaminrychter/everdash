@@ -113,7 +113,7 @@ export function DashboardCanvas({
 
   return (
     <LanguageProvider language="en">
-      <main class={styles.mainContent}>
+      <main class={styles.mainContent} data-theme="light">
         <SensorBadges
           badges={view.badges}
           readings={model.readings}
