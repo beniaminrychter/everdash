@@ -19,11 +19,17 @@ const sizeClasses: Record<CardSize, string> = {
   full: styles.full,
 };
 
+const displayClasses: Record<ClockDisplay, string> = {
+  datetime: styles.datetime,
+  time: styles.timeOnly,
+  date: styles.dateOnly,
+};
+
 export function ClockCard({ title, titleId, display, size }: Props) {
   const { t, locale } = useI18n();
   const now = useMinuteClock();
   const text = formatClock(now, display, locale);
-  const classes = [styles.clock, sizeClasses[size], display === 'date' ? styles.dateOnly : '']
+  const classes = [styles.clock, sizeClasses[size], displayClasses[display]]
     .filter(Boolean)
     .join(' ');
 
@@ -32,7 +38,7 @@ export function ClockCard({ title, titleId, display, size }: Props) {
       <h2 id={titleId} class={title ? styles.title : styles.hiddenTitle}>
         {title || t('Time and date')}
       </h2>
-      <time dateTime={new Date(now).toISOString()}>
+      <time class={styles.time} dateTime={new Date(now).toISOString()}>
         <strong class={styles.primary}>{text.primary}</strong>
         {text.secondary && <span class={styles.secondary}>{text.secondary}</span>}
       </time>

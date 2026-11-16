@@ -23,31 +23,33 @@
 .day {
   position: relative;
   flex: 0 0 auto;
-  width: 58px;
-  margin-right: 6px;
+  width: 48px;
+  margin-right: 4px;
   text-align: center;
 }
 .day {
-  width: 64px;
+  width: 52px;
 }
 .hour time,
 .day time {
   display: block;
-  font-size: 13px;
+  font-size: 11px;
+  line-height: 1.2;
   color: var(--muted);
   white-space: nowrap;
 }
 .icon {
   display: block;
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   color: #dfae42;
-  margin: 9px auto;
+  margin: 4px auto;
 }
 .hour strong,
 .day strong {
   display: block;
-  font-size: 14px;
+  font-size: 12px;
+  line-height: 1.2;
   font-weight: 600;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
@@ -55,22 +57,19 @@
 .low,
 .precipitation {
   display: block;
-  margin-top: 3px;
-  font-size: 12px;
+  margin-top: 1px;
+  font-size: 10.5px;
+  line-height: 1.15;
   color: var(--muted);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
-}
-.precipitation {
-  margin-top: 5px;
-  font-size: 11px;
 }
 .dayBreak {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  margin-right: 6px;
-  padding: 0 10px 0 8px;
+  margin-right: 4px;
+  padding: 0 8px 0 6px;
   border-left: 1px solid var(--line);
   font-size: 11px;
   font-weight: 650;

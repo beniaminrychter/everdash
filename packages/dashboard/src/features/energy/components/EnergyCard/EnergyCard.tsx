@@ -66,6 +66,7 @@ export function EnergyCard({
     <Widget
       title={title || t('Energy')}
       titleId={titleId}
+      className={chartOpen ? undefined : styles.card}
       headerAction={
         <button
           type="button"

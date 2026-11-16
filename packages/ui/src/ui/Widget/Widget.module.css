@@ -1,5 +1,5 @@
 .widget {
-  padding: 20px;
+  padding: 14px 18px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 26px;
@@ -14,12 +14,16 @@
   min-width: 0;
   margin-right: 12px;
   color: var(--text);
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 650;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 @media (max-width: 599px) {
   .widget {
-    padding: 18px;
+    padding: 12px 14px;
     border-radius: 24px;
   }
 }

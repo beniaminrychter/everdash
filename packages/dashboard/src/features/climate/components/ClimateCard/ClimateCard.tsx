@@ -51,7 +51,7 @@ export function ClimateCard({
           : ''
     : 'Offline';
   return (
-    <Widget title={title} titleId={titleId}>
+    <Widget title={title} titleId={titleId} className={styles.card}>
       <div class={styles.setpoint}>
         <button
           type="button"

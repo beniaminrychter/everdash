@@ -128,37 +128,50 @@ export function WeatherCard({
       : t('Daily forecast unavailable. Showing the hourly forecast.');
 
   return (
-    <Widget title={title || t('Current weather')} titleId={titleId}>
+    <Widget title={title || t('Current weather')} titleId={titleId} className={styles.card}>
       <div class={`${styles.strip} ${sizeClasses[size]}`}>
         <div class={styles.summary}>
           <div class={styles.current}>
             <Icon name={reading.icon} className={styles.currentIcon} />
             <div class={styles.readout}>
-              <strong class={styles.temperature} data-testid="weather-temperature">
-                {available && reading.temperature !== null ? temperature(reading.temperature) : '—'}
-              </strong>
-              <p class={styles.condition}>
-                {available
-                  ? translateText(reading.condition, t)
-                  : online
-                    ? t('Weather unavailable')
-                    : t('Offline')}
-              </p>
-              {available && reading.feelsLike !== null && (
-                <p class={styles.note} data-testid="weather-feels-like">
-                  {t('Feels like {value}', { value: temperature(reading.feelsLike) })}
+              <div class={styles.primaryRow}>
+                <strong class={styles.temperature} data-testid="weather-temperature">
+                  {available && reading.temperature !== null
+                    ? temperature(reading.temperature)
+                    : '—'}
+                </strong>
+                <p class={styles.condition}>
+                  {available
+                    ? translateText(reading.condition, t)
+                    : online
+                      ? t('Weather unavailable')
+                      : t('Offline')}
                 </p>
-              )}
-              {available && (reading.todayHigh !== null || reading.todayLow !== null) && (
-                <p class={styles.range} data-testid="weather-range">
-                  {reading.todayHigh !== null && (
-                    <span>{t('High {value}', { value: temperature(reading.todayHigh) })}</span>
-                  )}
-                  {reading.todayLow !== null && (
-                    <span>{t('Low {value}', { value: temperature(reading.todayLow) })}</span>
-                  )}
-                </p>
-              )}
+              </div>
+              {available &&
+                (reading.feelsLike !== null ||
+                  reading.todayHigh !== null ||
+                  reading.todayLow !== null) && (
+                  <div class={styles.metaRow}>
+                    {reading.feelsLike !== null && (
+                      <p class={styles.note} data-testid="weather-feels-like">
+                        {t('Feels like {value}', { value: temperature(reading.feelsLike) })}
+                      </p>
+                    )}
+                    {(reading.todayHigh !== null || reading.todayLow !== null) && (
+                      <p class={styles.range} data-testid="weather-range">
+                        {reading.todayHigh !== null && (
+                          <span>
+                            {t('High {value}', { value: temperature(reading.todayHigh) })}
+                          </span>
+                        )}
+                        {reading.todayLow !== null && (
+                          <span>{t('Low {value}', { value: temperature(reading.todayLow) })}</span>
+                        )}
+                      </p>
+                    )}
+                  </div>
+                )}
             </div>
           </div>
           {details.length > 0 && (
