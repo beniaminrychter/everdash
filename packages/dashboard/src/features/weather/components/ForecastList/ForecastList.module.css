@@ -1,0 +1,49 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.2;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.row time {
+  width: 44px;
+  white-space: nowrap;
+}
+.icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+.glyph {
+  display: block;
+  width: 18px;
+  height: 18px;
+  color: #dfae42;
+}
+.row strong {
+  min-width: 44px;
+  text-align: right;
+  color: var(--text);
+  font-weight: 650;
+  white-space: nowrap;
+}
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}

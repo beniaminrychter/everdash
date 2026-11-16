@@ -21,6 +21,18 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.titleless {
+  position: relative;
+}
+.hiddenTitle {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
 @media (max-width: 599px) {
   .widget {
     padding: 12px 14px;

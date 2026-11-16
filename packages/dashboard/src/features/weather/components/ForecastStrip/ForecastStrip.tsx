@@ -3,7 +3,7 @@ import { formatNumber, translateText, useI18n } from '@everdash/ui/i18n/index';
 import type { ForecastType } from '@everdash/contracts/config/weatherForecast';
 import { Icon } from '@everdash/ui/ui/Icon/Icon';
 import { formatTemperature } from '../../../../shared/dashboard/readings';
-import { forecastDayLabel } from '../../data/forecast';
+import { forecastDayLabel, forecastTimeLabel } from '../../data/forecast';
 import type { ForecastEntry } from '../../data/forecast';
 import { useScrollEdges } from '../../hooks/useScrollEdges';
 import styles from './ForecastStrip.module.css';
@@ -13,9 +13,27 @@ interface Props {
   type: ForecastType;
   temperatureUnit: string;
   timeZone?: string;
+  /** Shows only the first entries. */
+  limit?: number;
+  /** The entries share the width and do not scroll: a few next to the current conditions. */
+  fit?: boolean;
+  /** Larger cells, for a card with room to spare. */
+  roomy?: boolean;
+  /** Time, icon and temperature only: no low or chance of precipitation. */
+  compact?: boolean;
 }
 
-export function ForecastStrip({ entries, type, temperatureUnit, timeZone }: Props) {
+export function ForecastStrip({
+  entries: allEntries,
+  type,
+  temperatureUnit,
+  timeZone,
+  limit,
+  fit = false,
+  roomy = false,
+  compact = false,
+}: Props) {
+  const entries = limit === undefined ? allEntries : allEntries.slice(0, limit);
   const { t, locale } = useI18n();
   const { edges, ref, update } = useScrollEdges<HTMLOListElement>(`${type}:${entries.length}`);
   const temperature = (value: number | null) =>
@@ -28,6 +46,9 @@ export function ForecastStrip({ entries, type, temperatureUnit, timeZone }: Prop
     );
   const classes = [
     styles.box,
+    fit ? styles.fit : '',
+    roomy ? styles.roomy : '',
+    compact ? styles.compact : '',
     edges.start ? styles.moreBefore : '',
     edges.end ? styles.moreAfter : '',
   ]
@@ -45,7 +66,7 @@ export function ForecastStrip({ entries, type, temperatureUnit, timeZone }: Prop
       >
         {entries.map((entry, index) => {
           const title = translateText(entry.condition, t);
-          const newDay = index > 0 && entries[index - 1].day !== entry.day;
+          const newDay = !fit && index > 0 && entries[index - 1].day !== entry.day;
 
           if (type === 'daily') {
             return (
@@ -71,11 +92,7 @@ export function ForecastStrip({ entries, type, temperatureUnit, timeZone }: Prop
               )}
               <li class={styles.hour} data-forecast-hour={entry.time}>
                 <time dateTime={new Date(entry.time).toISOString()}>
-                  {new Date(entry.time).toLocaleTimeString(locale, {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    timeZone,
-                  })}
+                  {forecastTimeLabel(entry.time, locale, timeZone)}
                 </time>
                 <span title={title}>
                   <Icon name={entry.icon} className={styles.icon} />
@@ -88,8 +105,8 @@ export function ForecastStrip({ entries, type, temperatureUnit, timeZone }: Prop
           );
         })}
       </ol>
-      <span class={`${styles.fade} ${styles.fadeBefore}`} aria-hidden="true" />
-      <span class={`${styles.fade} ${styles.fadeAfter}`} aria-hidden="true" />
+      {!fit && <span class={`${styles.fade} ${styles.fadeBefore}`} aria-hidden="true" />}
+      {!fit && <span class={`${styles.fade} ${styles.fadeAfter}`} aria-hidden="true" />}
     </div>
   );
 }

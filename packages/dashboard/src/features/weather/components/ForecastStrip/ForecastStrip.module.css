@@ -102,6 +102,44 @@
 .moreAfter .fadeAfter {
   opacity: 1;
 }
+/* A few entries that share the width and never scroll. */
+.fit .strip {
+  overflow: hidden;
+}
+.fit .hour,
+.fit .day {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+  margin-right: 0;
+}
+/* Compact: only the time, the icon and the temperature, so an entry fits one row of tiles. */
+.compact .low,
+.compact .precipitation {
+  display: none;
+}
+/* Roomy: more space around larger entries. */
+.roomy .hour,
+.roomy .day {
+  width: 56px;
+}
+.roomy .day {
+  width: 60px;
+}
+.roomy .hour time,
+.roomy .day time {
+  font-size: 11.5px;
+}
+.roomy .icon {
+  width: 22px;
+  height: 22px;
+  margin: 6px auto;
+}
+.roomy .hour strong,
+.roomy .day strong {
+  font-size: 14px;
+  font-weight: 650;
+}
 .hidden {
   position: absolute;
   width: 1px;

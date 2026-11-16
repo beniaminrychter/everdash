@@ -128,6 +128,16 @@ const server = createServer(async (request, response) => {
           deviceClass: 'temperature',
           icon: null,
         },
+        {
+          entityId: 'weather.home',
+          name: 'Home Weather',
+          domain: 'weather',
+          state: 'Available',
+          available: true,
+          unit: null,
+          deviceClass: null,
+          icon: null,
+        },
       ].filter((entity) => !domain || domain.split(',').includes(entity.domain));
       sendJson(200, { entities, total: entities.length });
       return;
@@ -596,6 +606,33 @@ try {
   await expect(pendingSave).toBeEnabled();
   assert.equal(saveCount, savesBefore, 'nothing was saved');
   await pendingPage.close();
+
+  // A weather card is one or two rows high; two is the default and is not written to the config.
+  savedConfig = {
+    schemaVersion: 1,
+    views: [
+      {
+        id: 'home',
+        title: 'Home',
+        cards: [{ type: 'weather', entity: 'weather.home', name: 'Forecast' }],
+        badges: [],
+      },
+    ],
+  };
+  const rowsPage = await openPage({ width: 1440, height: 900 });
+  await rowsPage.getByRole('button', { name: 'Select Forecast', exact: true }).click();
+  const rowsField = rowsPage.getByRole('group', { name: 'Rows', exact: true });
+  await expect(rowsField.getByRole('button', { name: '2 rows' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await rowsField.getByRole('button', { name: '1 row', exact: true }).click();
+  await rowsPage.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect.poll(() => savedConfig.views[0].cards[0].rows).toBe(1);
+  await rowsField.getByRole('button', { name: '2 rows' }).click();
+  await rowsPage.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect.poll(() => 'rows' in savedConfig.views[0].cards[0]).toBe(false);
+  await rowsPage.close();
 
   // Sections, hover chrome and SortableJS drag and drop.
   const shots = process.env.EVERDASH_SMOKE_SHOTS;

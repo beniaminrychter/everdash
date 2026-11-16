@@ -385,6 +385,54 @@ try {
           title: 'Sensors',
           badges: [{ type: 'temperature', entity: 'sensor.fixture_living_temp' }],
         },
+        ...(url.searchParams.has('weather')
+          ? [
+              {
+                id: 'fixture-weather',
+                title: 'Weather layouts',
+                cards: [
+                  { type: 'weather', entity: 'weather.dom', name: 'Full two rows' },
+                  { type: 'weather', entity: 'weather.dom', name: 'Half two rows', size: 'half' },
+                  {
+                    type: 'weather',
+                    entity: 'weather.dom',
+                    name: 'Daily half two rows',
+                    size: 'half',
+                    forecast: 'daily',
+                  },
+                  {
+                    type: 'weather',
+                    entity: 'weather.dom',
+                    name: 'Quarter two rows',
+                    size: 'quarter',
+                  },
+                  { type: 'weather', entity: 'weather.dom', name: 'Full one row', rows: 1 },
+                  {
+                    type: 'weather',
+                    entity: 'weather.dom',
+                    name: 'Half one row',
+                    size: 'half',
+                    rows: 1,
+                  },
+                  {
+                    type: 'weather',
+                    entity: 'weather.dom',
+                    name: 'Daily half one row',
+                    size: 'half',
+                    forecast: 'daily',
+                    rows: 1,
+                  },
+                  {
+                    type: 'weather',
+                    entity: 'weather.dom',
+                    name: 'Quarter one row',
+                    size: 'quarter',
+                    rows: 1,
+                  },
+                ],
+              },
+            ]
+          : []),
         ...(url.searchParams.has('extras')
           ? [
               {
@@ -1455,6 +1503,114 @@ try {
   await expect(scene).toContainText('Done');
   expect(commands.some((item) => item.domain === 'scene' && item.service === 'turn_on')).toBe(true);
   await extrasContext.close();
+
+  // Weather cards: every width and row count fills its height and keeps inside its card.
+  const weatherContext = await browser.newContext({ viewport: { height: 1400, width: 1024 } });
+  await routeHaApi(weatherContext);
+  const weatherPage = await weatherContext.newPage();
+  weatherPage.on('pageerror', (error) => errors.push(error.message));
+  await weatherPage.addInitScript(() => {
+    localStorage.setItem(
+      'my-home:preferences:v1',
+      JSON.stringify({ appearance: 'light', language: 'en', page: 'fixture-weather' }),
+    );
+  });
+  await weatherPage.goto(`${appUrl}?weather`);
+  await expect(weatherPage.getByRole('heading', { level: 1 })).toHaveText('Weather layouts');
+  const weatherCard = (name) => weatherPage.getByRole('region', { exact: true, name });
+  const cardHeight = async (name) => Math.round((await weatherCard(name).boundingBox()).height);
+  // The card's own title stays the region's name but takes no room on the card.
+  const titleWidth = async (name) =>
+    (await weatherCard(name).getByRole('heading', { name }).boundingBox()).width;
+  // Whether a part of the card lies inside the card's box.
+  const insideCard = (name, selector) =>
+    weatherCard(name).evaluate((card, inner) => {
+      const box = card.getBoundingClientRect();
+      const part = card.querySelector(inner).getBoundingClientRect();
+
+      return (
+        part.left >= box.left - 1 &&
+        part.right <= box.right + 1 &&
+        part.top >= box.top - 1 &&
+        part.bottom <= box.bottom + 1
+      );
+    }, selector);
+  const details = (name) => weatherCard(name).getByTestId('weather-details').locator('li');
+  const hours = (name) => weatherCard(name).locator('[data-forecast-hour]');
+
+  expect(await cardHeight('Full two rows')).toBe(224);
+  expect(await titleWidth('Full two rows')).toBeLessThanOrEqual(1);
+  await expect(weatherCard('Full two rows').getByTestId('weather-feels-like')).toBeVisible();
+  await expect(weatherCard('Full two rows').getByTestId('weather-range')).toBeVisible();
+  await expect(details('Full two rows')).toHaveCount(4);
+  expect(await hours('Full two rows').count()).toBeGreaterThanOrEqual(36);
+
+  expect(await cardHeight('Half two rows')).toBe(224);
+  await expect(weatherCard('Half two rows').getByTestId('weather-temperature')).toBeVisible();
+  await expect(details('Half two rows')).toHaveCount(4);
+  await expect(hours('Half two rows')).toHaveCount(4);
+  expect(await insideCard('Half two rows', '[data-forecast-hour]:last-of-type')).toBe(true);
+
+  await expect(weatherCard('Daily half two rows').locator('[data-forecast-day]')).toHaveCount(4);
+
+  expect(await cardHeight('Quarter two rows')).toBe(224);
+  await expect(weatherCard('Quarter two rows').getByTestId('weather-temperature')).toBeVisible();
+  await expect(weatherCard('Quarter two rows').getByTestId('weather-details')).toHaveCount(0);
+  await expect(hours('Quarter two rows')).toHaveCount(4);
+  expect(await insideCard('Quarter two rows', '[data-forecast-hour]:last-of-type')).toBe(true);
+
+  // One row is as tall as an accessory tile and nothing in it spills out of the card.
+  const oneRow = ['Full one row', 'Half one row', 'Daily half one row', 'Quarter one row'];
+  const spills = (name) =>
+    weatherCard(name).evaluate((card) => card.scrollHeight > card.clientHeight + 1);
+  const textInside = async (name, text) => {
+    const box = await weatherCard(name).boundingBox();
+    const part = await weatherCard(name).getByText(text).boundingBox();
+
+    return (
+      part.x >= box.x - 1 &&
+      part.x + part.width <= box.x + box.width + 1 &&
+      part.y >= box.y - 1 &&
+      part.y + part.height <= box.y + box.height + 1
+    );
+  };
+  for (const name of oneRow) {
+    expect(await cardHeight(name)).toBe(104);
+    expect(await titleWidth(name)).toBeLessThanOrEqual(1);
+    expect(await spills(name)).toBe(false);
+    expect(await insideCard(name, '[data-testid="weather-temperature"]')).toBe(true);
+  }
+  await expect(details('Full one row')).toHaveCount(4);
+  await expect(hours('Full one row')).toHaveCount(5);
+  expect(await insideCard('Full one row', '[data-forecast-hour]:last-of-type')).toBe(true);
+  await expect(hours('Half one row')).toHaveCount(3);
+  expect(await insideCard('Half one row', '[data-forecast-hour]:last-of-type')).toBe(true);
+  await expect(weatherCard('Daily half one row').locator('[data-forecast-day]')).toHaveCount(3);
+  expect(await insideCard('Daily half one row', '[data-forecast-day]:last-of-type')).toBe(true);
+  await expect(weatherCard('Quarter one row').getByTestId('weather-range')).toBeVisible();
+  await expect(weatherCard('Quarter one row').getByTestId('weather-details')).toHaveCount(0);
+  await expect(hours('Quarter one row')).toHaveCount(0);
+
+  // Without a forecast the one-row cards say so inside the card.
+  forecastStatus = 500;
+  await weatherPage.reload();
+  await expect(weatherCard('Half one row').getByText('Hourly forecast unavailable')).toBeVisible();
+  expect(await textInside('Half one row', 'Hourly forecast unavailable')).toBe(true);
+  expect(await textInside('Full one row', 'Hourly forecast unavailable')).toBe(true);
+  for (const name of oneRow) {
+    expect(await spills(name)).toBe(false);
+  }
+  forecastStatus = 200;
+  await weatherPage.reload();
+  await expect(hours('Half one row')).toHaveCount(3);
+
+  // A quarter that no longer fits a column is drawn as the full row, still one row high.
+  await resize(weatherPage, { height: 1400, width: 600 });
+  await expect(details('Quarter one row')).toHaveCount(4);
+  await expect(hours('Quarter one row')).toHaveCount(5);
+  expect(await cardHeight('Quarter one row')).toBe(104);
+  expect(await spills('Quarter one row')).toBe(false);
+  await weatherContext.close();
 
   const blockedContext = await browser.newContext();
   await routeHaApi(blockedContext);

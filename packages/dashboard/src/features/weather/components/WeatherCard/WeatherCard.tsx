@@ -1,14 +1,18 @@
-import { useI18n, translateText } from '@everdash/ui/i18n/index';
+import { useI18n } from '@everdash/ui/i18n/index';
+import type { CardRows } from '@everdash/contracts/config/cardRows';
+import { defaultCardRows } from '@everdash/contracts/config/cardRows';
 import type { CardSize } from '@everdash/contracts/config/cardSize';
 import { defaultForecastType } from '@everdash/contracts/config/weatherForecast';
 import type { ForecastType } from '@everdash/contracts/config/weatherForecast';
-import { formatTemperature } from '../../../../shared/dashboard/readings';
 import { mapWeather } from '../../data/forecast';
+import { weatherView } from '../../data/view';
+import type { WeatherView } from '../../data/view';
 import type { Entity } from '../../../../shared/home-assistant/entities';
 import { Widget } from '@everdash/ui/ui/Widget/Widget';
-import { Icon } from '@everdash/ui/ui/Icon/Icon';
-import type { IconName } from '@everdash/ui/ui/Icon/Icon';
+import { ForecastList } from '../ForecastList/ForecastList';
 import { ForecastStrip } from '../ForecastStrip/ForecastStrip';
+import { WeatherCurrent } from '../WeatherCurrent/WeatherCurrent';
+import { WeatherDetails } from '../WeatherDetails/WeatherDetails';
 import styles from './WeatherCard.module.css';
 
 interface Props {
@@ -24,25 +28,24 @@ interface Props {
   online: boolean;
   now: number;
   timeZone?: string;
-  /** Narrower than the full row, the forecast moves below the current conditions. */
+  /** How wide the card is drawn; each size has its own layout. */
   size?: CardSize;
+  /** One row is as tall as an accessory tile, two rows as two tiles. */
+  rows?: CardRows;
 }
 
-interface Detail {
-  key: string;
-  icon: IconName;
-  label: string;
-  value: string;
-}
+/** How a layout shows the forecast: a short vertical list, a few entries across, or the full strip. */
+type ForecastKind = 'list' | 'fit' | 'strip';
 
-const sizeClasses: Record<CardSize, string> = {
+/** The entries a short forecast shows. */
+const shortForecast = 4;
+
+const layoutClasses: Record<CardSize, string> = {
   quarter: styles.quarter,
   half: styles.half,
   full: styles.full,
 };
-
-const formatReading = (value: number, locale: string, digits = 0) =>
-  value.toLocaleString(locale, { maximumFractionDigits: digits, useGrouping: false });
+const rowClasses: Record<CardRows, string> = { 1: styles.oneRow, 2: styles.twoRows };
 
 export function WeatherCard({
   entity,
@@ -55,6 +58,7 @@ export function WeatherCard({
   title,
   titleId = 'weather-title',
   size = 'full',
+  rows = defaultCardRows,
 }: Props) {
   const { t, locale } = useI18n();
   const reading = mapWeather(entity, rawForecast, now, {
@@ -62,144 +66,92 @@ export function WeatherCard({
     timeZone,
     type: forecastType,
   });
-  const available = online && reading.available;
-  const entries = available ? reading.forecast : [];
-  const unit = reading.temperatureUnit;
-  const temperature = (value: number) => `${formatTemperature(value, locale)}${unit}`;
-  const details: Detail[] = [];
+  const view = weatherView({ forecastType, locale, online, reading, t });
 
-  if (available) {
-    if (reading.humidity !== null) {
-      details.push({
-        icon: 'humidity',
-        key: 'humidity',
-        label: t('Humidity'),
-        value: `${formatReading(reading.humidity, locale)}%`,
-      });
+  const forecast = (kind: ForecastKind, view: WeatherView, limit = shortForecast) => {
+    if (view.entries.length === 0 || !view.forecastType) {
+      return <p class={styles.unavailable}>{view.unavailable}</p>;
     }
-    if (reading.windSpeed !== null) {
-      details.push({
-        icon: 'wind',
-        key: 'wind',
-        label: t('Wind'),
-        value: [
-          reading.windDirection,
-          `${formatReading(reading.windSpeed, locale, 1)} ${reading.windUnit}`.trim(),
-        ]
-          .filter(Boolean)
-          .join(' '),
-      });
-    }
-    if (reading.pressure !== null) {
-      details.push({
-        icon: 'gauge',
-        key: 'pressure',
-        label: t('Pressure'),
-        value: `${formatReading(reading.pressure, locale)} ${reading.pressureUnit}`.trim(),
-      });
-    }
-    if (reading.precipitationProbability !== null) {
-      details.push({
-        icon: 'umbrella',
-        key: 'precipitation',
-        label: t('Chance of precipitation'),
-        value: `${formatReading(reading.precipitationProbability, locale)}%`,
-      });
-    } else if (reading.precipitation !== null) {
-      details.push({
-        icon: 'umbrella',
-        key: 'precipitation',
-        label: t('Precipitation'),
-        value:
-          `${formatReading(reading.precipitation, locale, 1)} ${reading.precipitationUnit}`.trim(),
-      });
-    }
-  }
 
-  const shownType = reading.forecastType ?? forecastType;
-  const unavailable = !online
-    ? t('Forecast unavailable offline')
-    : shownType === 'daily'
-      ? t('Daily forecast unavailable')
-      : t('Hourly forecast unavailable');
-  const fallbackNote =
-    shownType === 'daily'
-      ? t('Hourly forecast unavailable. Showing the daily forecast.')
-      : t('Daily forecast unavailable. Showing the hourly forecast.');
+    const common = {
+      temperatureUnit: reading.temperatureUnit,
+      timeZone,
+      type: view.forecastType,
+    };
+
+    return (
+      <div class={styles.forecast}>
+        {kind === 'list' && (
+          <ForecastList entries={view.entries.slice(0, shortForecast)} {...common} />
+        )}
+        {kind === 'fit' && (
+          <ForecastStrip
+            entries={view.entries}
+            limit={limit}
+            fit
+            compact={rows === 1}
+            {...common}
+          />
+        )}
+        {kind === 'strip' && <ForecastStrip entries={view.entries} roomy {...common} />}
+        {view.fellBack && <p class={styles.fallback}>{view.note}</p>}
+      </div>
+    );
+  };
 
   return (
-    <Widget title={title || t('Current weather')} titleId={titleId} className={styles.card}>
-      <div class={`${styles.strip} ${sizeClasses[size]}`}>
-        <div class={styles.summary}>
-          <div class={styles.current}>
-            <Icon name={reading.icon} className={styles.currentIcon} />
-            <div class={styles.readout}>
-              <div class={styles.primaryRow}>
-                <strong class={styles.temperature} data-testid="weather-temperature">
-                  {available && reading.temperature !== null
-                    ? temperature(reading.temperature)
-                    : '—'}
-                </strong>
-                <p class={styles.condition}>
-                  {available
-                    ? translateText(reading.condition, t)
-                    : online
-                      ? t('Weather unavailable')
-                      : t('Offline')}
-                </p>
-              </div>
-              {available &&
-                (reading.feelsLike !== null ||
-                  reading.todayHigh !== null ||
-                  reading.todayLow !== null) && (
-                  <div class={styles.metaRow}>
-                    {reading.feelsLike !== null && (
-                      <p class={styles.note} data-testid="weather-feels-like">
-                        {t('Feels like {value}', { value: temperature(reading.feelsLike) })}
-                      </p>
-                    )}
-                    {(reading.todayHigh !== null || reading.todayLow !== null) && (
-                      <p class={styles.range} data-testid="weather-range">
-                        {reading.todayHigh !== null && (
-                          <span>
-                            {t('High {value}', { value: temperature(reading.todayHigh) })}
-                          </span>
-                        )}
-                        {reading.todayLow !== null && (
-                          <span>{t('Low {value}', { value: temperature(reading.todayLow) })}</span>
-                        )}
-                      </p>
-                    )}
-                  </div>
-                )}
-            </div>
+    <Widget
+      title={title || t('Current weather')}
+      titleId={titleId}
+      className={`${styles.card} ${layoutClasses[size]} ${rowClasses[rows]}`}
+      hideTitle
+    >
+      {rows === 1 && size === 'quarter' && (
+        <WeatherCurrent view={view} variant="glance" size="quarter" />
+      )}
+      {rows === 1 && size === 'half' && (
+        <div class={styles.row}>
+          <div class={styles.zone}>
+            <WeatherCurrent view={view} variant="glance" size="half" />
           </div>
-          {details.length > 0 && (
-            <ul class={styles.details} data-testid="weather-details">
-              {details.map((detail) => (
-                <li key={detail.key} title={detail.label}>
-                  <Icon name={detail.icon} className={styles.detailIcon} />
-                  <span class={styles.hidden}>{detail.label}</span>
-                  <span>{detail.value}</span>
-                </li>
-              ))}
-            </ul>
-          )}
+          {forecast('fit', view, 3)}
         </div>
-        {entries.length > 0 && reading.forecastType ? (
-          <div class={styles.forecast}>
-            <ForecastStrip
-              entries={entries}
-              type={reading.forecastType}
-              temperatureUnit={unit}
-              timeZone={timeZone}
-            />
-            {reading.forecastFellBack && <p class={styles.fallback}>{fallbackNote}</p>}
+      )}
+      {rows === 1 && size === 'full' && (
+        <div class={styles.row}>
+          <div class={styles.zone}>
+            <WeatherCurrent view={view} variant="inline" size="full" />
           </div>
-        ) : (
-          <p class={styles.unavailable}>{unavailable}</p>
-        )}
-      </div>
+          <div class={styles.rowDetails}>
+            <WeatherDetails details={view.details} layout="grid" />
+          </div>
+          {forecast('fit', view, 5)}
+        </div>
+      )}
+      {rows === 2 && size === 'quarter' && (
+        <>
+          <WeatherCurrent view={view} variant="inline" size="quarter" />
+          <div class={styles.list}>{forecast('list', view)}</div>
+        </>
+      )}
+      {rows === 2 && size === 'half' && (
+        <>
+          <WeatherCurrent view={view} variant="inline" size="half" />
+          <div class={styles.details}>
+            <WeatherDetails details={view.details} layout="grid" />
+          </div>
+          {forecast('fit', view)}
+        </>
+      )}
+      {rows === 2 && size === 'full' && (
+        <>
+          <div class={styles.top}>
+            <WeatherCurrent view={view} variant="large" size="full" />
+            <WeatherDetails details={view.details} layout="row" />
+          </div>
+          {forecast('strip', view)}
+        </>
+      )}
     </Widget>
   );
 }

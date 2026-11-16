@@ -1,4 +1,5 @@
 import type { IconName } from '../iconNames';
+import type { CardRows } from './cardRows';
 import type { CardSize } from './cardSize';
 import type { ForecastType } from './weatherForecast';
 
@@ -26,6 +27,8 @@ export interface WeatherConfig extends Pick<DisplayOptions, 'name'> {
   entity: EntityId<'weather'>;
   /** Defaults to 'full'. */
   size?: CardSize;
+  /** Defaults to 2. */
+  rows?: CardRows;
   /** Defaults to 'hourly'. */
   forecast?: ForecastType;
 }

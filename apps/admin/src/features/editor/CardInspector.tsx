@@ -1,5 +1,7 @@
 import { ArrowDownIcon, ArrowUpIcon, Trash2Icon } from 'lucide-react';
 import { hasCardEntity } from '@everdash/contracts/config/cardDomains';
+import { defaultCardRows } from '@everdash/contracts/config/cardRows';
+import type { CardRows } from '@everdash/contracts/config/cardRows';
 import { defaultCardSize } from '@everdash/contracts/config/cardSize';
 import type { CardSize } from '@everdash/contracts/config/cardSize';
 import type { CardConfig, ClockDisplay, ValueTemplate } from '@everdash/contracts/config/types';
@@ -20,6 +22,7 @@ import { isIncomplete } from '@/app/draft/incomplete';
 import type { CardKind } from '@/app/draft/builder';
 import { cardKindInfo, cardKinds, isEntityForDomain } from './cardKinds';
 import type { DeleteTarget } from './DeleteItemDialog';
+import { CardRowsField } from './CardRowsField';
 import { CardSizeField } from './CardSizeField';
 import { EntityCombobox } from './EntityCombobox';
 import { IconGrid } from './IconGrid';
@@ -105,6 +108,9 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
 
   const setSize = (size: CardSize) =>
     change(patch(card, { size: size === defaultCardSize(card.type) ? undefined : size }));
+
+  const setRows = (rows: CardRows) =>
+    change(patch(card, { rows: rows === defaultCardRows ? undefined : rows }));
 
   const footer = pending ? (
     <>
@@ -313,6 +319,9 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
       )}
       {(card.type === 'clock' || card.type === 'weather') && (
         <CardSizeField value={card.size ?? defaultCardSize(card.type)} onChange={setSize} />
+      )}
+      {card.type === 'weather' && (
+        <CardRowsField value={card.rows ?? defaultCardRows} onChange={setRows} />
       )}
       {card.type === 'value' && (
         <>

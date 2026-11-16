@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { dashboardSchema, defineConfig, viewCards } from '@everdash/contracts/config';
+import { defaultCardRows } from '@everdash/contracts/config/cardRows';
 import { validateDashboard } from '@everdash/contracts/config/validate';
 import { isWidget, resolveDashboard } from '@everdash/dashboard/features/dashboard/data/discovery';
 import type { ResolvedWidget } from '@everdash/dashboard/features/dashboard/data/types';
@@ -475,6 +476,19 @@ test('weather cards accept an hourly or daily forecast and reject other values a
   assert.deepEqual(issuePaths({ type: 'light', entity: 'light.kitchen', forecast: 'daily' }), [
     'views[0].cards[0].forecast',
   ]);
+});
+
+test('weather cards accept rows 1 or 2 and reject other values and cards', () => {
+  assert.equal(defaultCardRows, 2);
+  assert.equal(withCard({ type: 'weather', entity: 'weather.home', rows: 1 }).ok, true);
+  assert.equal(withCard({ type: 'weather', entity: 'weather.home', rows: 2 }).ok, true);
+  assert.deepEqual(issuePaths({ type: 'weather', entity: 'weather.home', rows: 3 }), [
+    'views[0].cards[0].rows',
+  ]);
+  assert.deepEqual(issuePaths({ type: 'weather', entity: 'weather.home', rows: '1' }), [
+    'views[0].cards[0].rows',
+  ]);
+  assert.deepEqual(issuePaths({ type: 'clock', rows: 1 }), ['views[0].cards[0].rows']);
 });
 
 test('the forecast option survives the schema, validation and defineConfig unchanged', () => {

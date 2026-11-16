@@ -1,4 +1,5 @@
 import { useRef } from 'preact/hooks';
+import { defaultCardRows } from '@everdash/contracts/config/cardRows';
 import { defaultForecastType, forecastKey } from '@everdash/contracts/config/weatherForecast';
 import { translateText, useI18n } from '@everdash/ui/i18n/index';
 import { createClimate } from '../../../climate/data/model';
@@ -250,6 +251,7 @@ export function DashboardCards({
             online={online}
             now={now}
             size={effectiveSize(widgetSize(card), width)}
+            rows={card.rows ?? defaultCardRows}
           />
         );
       }

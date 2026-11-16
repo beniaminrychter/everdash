@@ -6,16 +6,27 @@ interface WidgetProps {
   titleId: string;
   headerAction?: ComponentChildren;
   className?: string;
+  /** Keeps the title as the card's accessible name but takes no room for it. */
+  hideTitle?: boolean;
   children: ComponentChildren;
 }
 
-export function Widget({ title, titleId, headerAction, className, children }: WidgetProps) {
+export function Widget({
+  title,
+  titleId,
+  headerAction,
+  className,
+  hideTitle = false,
+  children,
+}: WidgetProps) {
   const classes = [styles.widget, className].filter(Boolean).join(' ');
 
   return (
     <section class={classes} aria-labelledby={titleId}>
-      <div class={styles.header}>
-        <h2 id={titleId}>{title}</h2>
+      <div class={hideTitle ? `${styles.header} ${styles.titleless}` : styles.header}>
+        <h2 id={titleId} class={hideTitle ? styles.hiddenTitle : undefined}>
+          {title}
+        </h2>
         {headerAction}
       </div>
       {children}

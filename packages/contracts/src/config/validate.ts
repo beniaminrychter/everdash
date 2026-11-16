@@ -1,4 +1,5 @@
 import { cardEntityDomains, isCardEntity } from './cardDomains';
+import { isCardRows } from './cardRows';
 import { isCardSize } from './cardSize';
 import { isForecastType } from './weatherForecast';
 import { defineConfig } from './normalize';
@@ -27,7 +28,7 @@ const cardKeys: Record<string, string[]> = {
   scene: ['type', 'entity', 'name', 'icon'],
   toggle: ['type', 'entity', 'name', 'icon'],
   value: ['type', 'entity', 'name', 'icon', 'template', 'unit', 'precision'],
-  weather: ['type', 'entity', 'name', 'size', 'forecast'],
+  weather: ['type', 'entity', 'name', 'size', 'rows', 'forecast'],
 };
 const iconCardTypes = new Set(['light', 'outlet', 'value', 'toggle', 'scene']);
 const valueTemplates = new Set(['tile', 'hero', 'compact']);
@@ -130,6 +131,12 @@ function validateCards(cards: unknown, path: string, issues: ConfigIssue[]) {
       issues.push({
         path: `${cardPath}.size`,
         message: 'Expected quarter, half or full.',
+      });
+    }
+    if (cardKeys[card.type].includes('rows') && card.rows !== undefined && !isCardRows(card.rows)) {
+      issues.push({
+        path: `${cardPath}.rows`,
+        message: 'Expected 1 or 2.',
       });
     }
     if (card.type === 'weather' && card.forecast !== undefined && !isForecastType(card.forecast)) {

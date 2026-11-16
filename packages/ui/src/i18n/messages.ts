@@ -117,6 +117,8 @@ export const polish = {
   'Feels like {value}': 'Odczuwalna {value}',
   'High {value}': 'Maks. {value}',
   'Low {value}': 'Min. {value}',
+  'H {value}': 'Maks. {value}',
+  'L {value}': 'Min. {value}',
   Humidity: 'Wilgotność',
   Wind: 'Wiatr',
   Pressure: 'Ciśnienie',

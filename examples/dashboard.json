@@ -8,7 +8,13 @@
       "cards": [
         { "type": "clock", "display": "datetime", "size": "quarter" },
         { "type": "weather", "entity": "weather.home", "size": "half" },
-        { "type": "weather", "entity": "weather.home", "forecast": "daily", "size": "half" }
+        {
+          "type": "weather",
+          "entity": "weather.home",
+          "forecast": "daily",
+          "size": "half",
+          "rows": 1
+        }
       ],
       "sections": [
         {

@@ -204,6 +204,15 @@ export function mapDailyForecast(
   return [...days.values()].sort((a, b) => a.dayOffset - b.dayOffset).slice(0, maxDailyEntries);
 }
 
+/** The clock time of an hourly entry, in the card's time zone and the app language. */
+export function forecastTimeLabel(time: number, locale: string, timeZone?: string): string {
+  return new Date(time).toLocaleTimeString(locale, {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone,
+  });
+}
+
 /** "Today", "Tomorrow", then the short weekday of the calendar day in the app language. */
 export function forecastDayLabel(
   entry: Pick<ForecastEntry, 'day' | 'dayOffset'>,

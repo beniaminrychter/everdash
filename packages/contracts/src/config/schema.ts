@@ -10,6 +10,7 @@ const icon = {
   enum: [...iconNames],
 };
 const cardSize = { enum: ['quarter', 'half', 'full'] };
+const cardRows = { enum: [1, 2] };
 const sensor = entity('sensor');
 const entityIn = (...domains: string[]) => entity(`(?:${domains.join('|')})`);
 
@@ -62,6 +63,7 @@ const cards = {
           entity: entity('weather'),
           name: displayName,
           size: cardSize,
+          rows: cardRows,
           forecast: { enum: ['hourly', 'daily'] },
         },
       },
