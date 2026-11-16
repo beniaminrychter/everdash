@@ -1,4 +1,6 @@
+import { viewCards } from '@everdash/contracts/config/sections';
 import type { AppConfig, CardConfig } from '@everdash/contracts/config/types';
+import { isForecastType } from '@everdash/contracts/config/weatherForecast';
 import { PolicyError } from './policy-error';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -14,7 +16,11 @@ export function configuredEntityIds(config: AppConfig): Set<string> {
     for (const badge of view.badges) {
       entityIds.add(badge.entity);
     }
-    for (const card of view.cards) {
+    for (const card of viewCards(view)) {
+      if (card.type === 'clock') {
+        continue;
+      }
+
       entityIds.add(card.entity);
       if (card.type === 'pstryk') {
         for (const id of [card.sellPrice, card.nextPrice, card.usage, card.schedule]) {
@@ -45,7 +51,9 @@ function isConfiguredCard(
   types: readonly CardConfig['type'][],
 ): boolean {
   return config.views.some((view) =>
-    view.cards.some((card) => card.entity === entityId && types.includes(card.type)),
+    viewCards(view).some(
+      (card) => card.type !== 'clock' && card.entity === entityId && types.includes(card.type),
+    ),
   );
 }
 
@@ -167,8 +175,8 @@ export function validateServiceCommand(
   if (domain === 'weather' && service === 'get_forecasts') {
     assertKeys(input, ['entity_id', 'type']);
     assertEntity(input, 'weather', config, ['weather']);
-    if (input.type !== 'hourly') {
-      throw new PolicyError('Only hourly weather forecasts are supported.');
+    if (!isForecastType(input.type)) {
+      throw new PolicyError('Only hourly and daily weather forecasts are supported.');
     }
     return { entity_id: input.entity_id, type: input.type };
   }

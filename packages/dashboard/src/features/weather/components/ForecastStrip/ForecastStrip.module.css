@@ -1,0 +1,113 @@
+/* A strip that scrolls must not widen its card: it adds no width of its own, then fills the card. */
+.box {
+  position: relative;
+  width: 0;
+  min-width: 100%;
+}
+.strip {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.strip::-webkit-scrollbar {
+  display: none;
+}
+.hour,
+.day {
+  position: relative;
+  flex: 0 0 auto;
+  width: 58px;
+  margin-right: 6px;
+  text-align: center;
+}
+.day {
+  width: 64px;
+}
+.hour time,
+.day time {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.icon {
+  display: block;
+  width: 22px;
+  height: 22px;
+  color: #dfae42;
+  margin: 9px auto;
+}
+.hour strong,
+.day strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.low,
+.precipitation {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.precipitation {
+  margin-top: 5px;
+  font-size: 11px;
+}
+.dayBreak {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  margin-right: 6px;
+  padding: 0 10px 0 8px;
+  border-left: 1px solid var(--line);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+/* A soft edge over the end of the strip that still has more to scroll to. */
+.fade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 28px;
+  background: var(--surface);
+  opacity: 0;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to right, #000, transparent);
+  mask-image: linear-gradient(to right, #000, transparent);
+}
+.fadeBefore {
+  left: 0;
+}
+.fadeAfter {
+  right: 0;
+  -webkit-mask-image: linear-gradient(to left, #000, transparent);
+  mask-image: linear-gradient(to left, #000, transparent);
+}
+.moreBefore .fadeBefore,
+.moreAfter .fadeAfter {
+  opacity: 1;
+}
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}

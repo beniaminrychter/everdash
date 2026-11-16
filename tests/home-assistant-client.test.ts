@@ -93,11 +93,23 @@ test('sends one constrained write with the anti-CSRF header and preserves weathe
   request.respond(200, []);
   await pending;
 
-  const forecast = client.getWeatherForecast('weather.local');
+  const forecast = client.getWeatherForecast('weather.local', 'hourly');
   const forecastRequest = FakeXmlHttpRequest.requests[1];
+  assert.deepEqual(JSON.parse(forecastRequest.body ?? 'null'), {
+    entity_id: 'weather.local',
+    type: 'hourly',
+  });
   forecastRequest.respond(200, { service_response: { forecast: [{ temperature: 20 }] } });
   assert.deepEqual(await forecast, { service_response: { forecast: [{ temperature: 20 }] } });
   assert.equal(FakeXmlHttpRequest.requests.length, 2);
+
+  const daily = client.getWeatherForecast('weather.local', 'daily');
+  assert.deepEqual(JSON.parse(FakeXmlHttpRequest.requests[2].body ?? 'null'), {
+    entity_id: 'weather.local',
+    type: 'daily',
+  });
+  FakeXmlHttpRequest.requests[2].respond(200, { service_response: { forecast: [] } });
+  await daily;
 });
 
 test('keeps abort ownership local to each client and does not retry a failed write', async () => {

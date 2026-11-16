@@ -1,25 +1,28 @@
+/* Stacked: the current conditions, then the forecast strip, as a half or third of the row needs. */
 .strip {
-  display: flex;
-  align-items: center;
   margin-top: 14px;
+}
+.summary {
+  min-width: 0;
 }
 .current {
   display: flex;
   align-items: center;
-  flex: 0 0 30%;
   min-width: 0;
-  padding-right: 20px;
 }
 .currentIcon {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   color: #dfae42;
   flex-shrink: 0;
   margin-right: 14px;
 }
+.readout {
+  min-width: 0;
+}
 .temperature {
   display: block;
-  font-size: 32px;
+  font-size: 30px;
   font-weight: 650;
   letter-spacing: -1px;
   white-space: nowrap;
@@ -30,78 +33,126 @@
   font-size: 12px;
   color: var(--muted);
 }
-.forecast {
-  display: flex;
-  flex: 1;
-  min-width: 0;
-  list-style: none;
-  margin: 0;
-  padding: 0 0 0 20px;
-  border-left: 1px solid var(--line);
-}
-.forecast li {
-  flex: 1;
-  min-width: 0;
-  text-align: center;
-}
-.forecast time {
-  font-size: 13px;
+.note {
+  margin-top: 3px;
+  font-size: 12px;
   color: var(--muted);
-  display: block;
 }
-.hourIcon {
-  display: block;
-  width: 22px;
-  height: 22px;
-  color: #dfae42;
-  margin: 9px auto;
-}
-.forecast strong {
-  font-size: 14px;
+.range {
+  margin-top: 3px;
+  font-size: 12px;
   font-weight: 600;
-  white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.note {
-  flex: 1;
+.range span {
+  margin-right: 10px;
+  white-space: nowrap;
+}
+.details {
+  display: flex;
+  flex-wrap: wrap;
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+}
+.details li {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin: 0 14px 6px 0;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.detailIcon {
+  width: 14px;
+  height: 14px;
+  margin-right: 5px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.forecast {
+  min-width: 0;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.fallback {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.unavailable {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
   color: var(--muted);
   font-size: 12px;
-  text-align: center;
   line-height: 1.5;
 }
-@media (max-width: 699px) {
-  .strip {
-    display: block;
+/* A half is about 330px or wider: the details row has room for larger type. */
+.half .temperature {
+  font-size: 32px;
+}
+.half .details li {
+  margin-right: 18px;
+  font-size: 13px;
+}
+.half .detailIcon {
+  width: 15px;
+  height: 15px;
+}
+/* A third is about 220px wide: tighter type and a details row that wraps. */
+.third .currentIcon {
+  width: 28px;
+  height: 28px;
+  margin-right: 10px;
+}
+.third .temperature {
+  font-size: 26px;
+}
+.third .details {
+  margin-top: 10px;
+}
+.third .details li {
+  margin-right: 10px;
+  font-size: 11px;
+}
+.third .detailIcon {
+  width: 12px;
+  height: 12px;
+  margin-right: 4px;
+}
+/* A full row has room for the current conditions beside the forecast. */
+@media (min-width: 700px) {
+  .full {
+    display: flex;
+    align-items: center;
   }
-  .current {
-    padding: 0;
+  .full .summary {
+    flex: 0 0 36%;
+    padding-right: 20px;
   }
-  .currentIcon {
-    width: 32px;
-    height: 32px;
+  .full .currentIcon {
+    width: 36px;
+    height: 36px;
   }
-  .temperature {
-    font-size: 30px;
+  .full .temperature {
+    font-size: 32px;
   }
-  .forecast {
-    border-left: 0;
-    border-top: 1px solid var(--line);
-    margin-top: 16px;
-    padding: 14px 0 0;
+  .full .forecast,
+  .full .unavailable {
+    flex: 1;
+    margin-top: 0;
+    padding: 0 0 0 20px;
+    border-top: 0;
+    border-left: 1px solid var(--line);
   }
-  .forecast strong {
-    font-size: 12px;
-  }
-  .forecast time {
-    font-size: 12px;
-  }
-  .note {
-    margin-top: 16px;
-    text-align: left;
+  .full .unavailable {
+    text-align: center;
   }
 }
-
-.conditionLabel {
+.hidden {
   position: absolute;
   width: 1px;
   height: 1px;
