@@ -5,7 +5,9 @@ import type { CardSize } from '@everdash/contracts/config/cardSize';
 import { defaultForecastType } from '@everdash/contracts/config/weatherForecast';
 import type { ForecastType } from '@everdash/contracts/config/weatherForecast';
 import { mapWeather } from '../../data/forecast';
+import { fullRowZones, halfRowEntries } from '../../data/fit';
 import { weatherView } from '../../data/view';
+import { useElementWidth } from '../../hooks/useElementWidth';
 import type { WeatherView } from '../../data/view';
 import type { Entity } from '../../../../shared/home-assistant/entities';
 import { Widget } from '@everdash/ui/ui/Widget/Widget';
@@ -37,7 +39,7 @@ interface Props {
 /** How a layout shows the forecast: a short vertical list, a few entries across, or the full strip. */
 type ForecastKind = 'list' | 'fit' | 'strip';
 
-/** The entries a short forecast shows. */
+/** The entries a two-row short forecast shows. */
 const shortForecast = 4;
 
 const layoutClasses: Record<CardSize, string> = {
@@ -67,8 +69,15 @@ export function WeatherCard({
     type: forecastType,
   });
   const view = weatherView({ forecastType, locale, online, reading, t });
+  // A one-row card shows only the entries that fit the width it was given.
+  const [rowRef, rowWidth] = useElementWidth<HTMLDivElement>();
 
   const forecast = (kind: ForecastKind, view: WeatherView, limit = shortForecast) => {
+    // No room for even two entries: a one-row card shows the conditions alone.
+    if (limit === 0) {
+      return null;
+    }
+
     if (view.entries.length === 0 || !view.forecastType) {
       return <p class={styles.unavailable}>{view.unavailable}</p>;
     }
@@ -90,6 +99,7 @@ export function WeatherCard({
             limit={limit}
             fit
             compact={rows === 1}
+            hideChance={rows === 2}
             {...common}
           />
         )}
@@ -104,28 +114,30 @@ export function WeatherCard({
       title={title || t('Current weather')}
       titleId={titleId}
       className={`${styles.card} ${layoutClasses[size]} ${rowClasses[rows]}`}
-      hideTitle
+      hideTitle={rows === 1 || !title}
     >
       {rows === 1 && size === 'quarter' && (
         <WeatherCurrent view={view} variant="glance" size="quarter" />
       )}
       {rows === 1 && size === 'half' && (
-        <div class={styles.row}>
+        <div class={styles.row} ref={rowRef}>
           <div class={styles.zone}>
             <WeatherCurrent view={view} variant="glance" size="half" />
           </div>
-          {forecast('fit', view, 3)}
+          {forecast('fit', view, halfRowEntries(rowWidth))}
         </div>
       )}
       {rows === 1 && size === 'full' && (
-        <div class={styles.row}>
+        <div class={styles.row} ref={rowRef}>
           <div class={styles.zone}>
             <WeatherCurrent view={view} variant="inline" size="full" />
           </div>
-          <div class={styles.rowDetails}>
-            <WeatherDetails details={view.details} layout="grid" />
-          </div>
-          {forecast('fit', view, 5)}
+          {fullRowZones(rowWidth).details && (
+            <div class={styles.rowDetails}>
+              <WeatherDetails details={view.details} layout="grid" />
+            </div>
+          )}
+          {forecast('fit', view, fullRowZones(rowWidth).entries)}
         </div>
       )}
       {rows === 2 && size === 'quarter' && (

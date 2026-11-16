@@ -18,7 +18,10 @@
   font-variant-numeric: tabular-nums;
 }
 .row time {
-  width: 44px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 .icon {
@@ -32,12 +35,22 @@
   height: 18px;
   color: #dfae42;
 }
-.row strong {
+.values {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  flex: 0 0 auto;
   min-width: 44px;
-  text-align: right;
+  margin-left: 6px;
+  white-space: nowrap;
+}
+.row strong {
   color: var(--text);
   font-weight: 650;
-  white-space: nowrap;
+}
+.low {
+  margin-left: 5px;
+  font-size: 11px;
 }
 .hidden {
   position: absolute;

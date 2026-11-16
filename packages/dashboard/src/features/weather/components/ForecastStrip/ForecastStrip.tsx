@@ -21,6 +21,8 @@ interface Props {
   roomy?: boolean;
   /** Time, icon and temperature only: no low or chance of precipitation. */
   compact?: boolean;
+  /** Leaves out the chance of precipitation, to save a line. */
+  hideChance?: boolean;
 }
 
 export function ForecastStrip({
@@ -32,6 +34,7 @@ export function ForecastStrip({
   fit = false,
   roomy = false,
   compact = false,
+  hideChance = false,
 }: Props) {
   const entries = limit === undefined ? allEntries : allEntries.slice(0, limit);
   const { t, locale } = useI18n();
@@ -49,6 +52,7 @@ export function ForecastStrip({
     fit ? styles.fit : '',
     roomy ? styles.roomy : '',
     compact ? styles.compact : '',
+    hideChance ? styles.hideChance : '',
     edges.start ? styles.moreBefore : '',
     edges.end ? styles.moreAfter : '',
   ]

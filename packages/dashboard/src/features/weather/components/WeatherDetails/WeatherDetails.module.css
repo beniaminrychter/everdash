@@ -47,3 +47,6 @@
   flex: 0 0 50%;
   margin-bottom: 6px;
 }
+.grid li:nth-last-child(-n + 2) {
+  margin-bottom: 0;
+}

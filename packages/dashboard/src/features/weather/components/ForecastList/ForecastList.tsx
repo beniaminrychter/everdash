@@ -38,7 +38,12 @@ export function ForecastList({ entries, type, temperatureUnit, timeZone }: Props
             <li key={entry.day} class={styles.row} data-forecast-day={entry.day}>
               <time dateTime={entry.day}>{forecastDayLabel(entry, locale, t)}</time>
               {icon}
-              <strong>{temperature(entry.temperature)}</strong>
+              <span class={styles.values}>
+                <strong>{temperature(entry.temperature ?? entry.low)}</strong>
+                {entry.temperature !== null && entry.low !== null && (
+                  <span class={styles.low}>{formatTemperature(entry.low, locale)}°</span>
+                )}
+              </span>
             </li>
           );
         }
@@ -49,7 +54,9 @@ export function ForecastList({ entries, type, temperatureUnit, timeZone }: Props
               {forecastTimeLabel(entry.time, locale, timeZone)}
             </time>
             {icon}
-            <strong>{temperature(entry.temperature)}</strong>
+            <span class={styles.values}>
+              <strong>{temperature(entry.temperature)}</strong>
+            </span>
           </li>
         );
       })}

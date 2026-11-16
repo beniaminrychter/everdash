@@ -39,7 +39,7 @@
   border-top: 0;
 }
 .half .details {
-  margin-top: 12px;
+  margin-top: 8px;
 }
 .half .forecast,
 .half .unavailable {
@@ -86,7 +86,7 @@
   min-width: 0;
 }
 .zone {
-  flex: 0 0 140px;
+  flex: 0 0 150px;
   min-width: 0;
 }
 .full .zone {
@@ -110,12 +110,6 @@
 }
 /* Narrower than a tablet: the details go under the conditions instead of beside them. */
 @media (max-width: 699px) {
-  .full .rowDetails {
-    display: none;
-  }
-  .full .row .forecast li:nth-child(n + 4) {
-    display: none;
-  }
   .top {
     flex-direction: column;
     align-items: flex-start;

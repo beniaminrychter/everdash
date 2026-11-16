@@ -406,6 +406,13 @@ try {
                     name: 'Quarter two rows',
                     size: 'quarter',
                   },
+                  {
+                    type: 'weather',
+                    entity: 'weather.dom',
+                    name: 'Daily quarter two rows',
+                    size: 'quarter',
+                    forecast: 'daily',
+                  },
                   { type: 'weather', entity: 'weather.dom', name: 'Full one row', rows: 1 },
                   {
                     type: 'weather',
@@ -1536,10 +1543,21 @@ try {
       );
     }, selector);
   const details = (name) => weatherCard(name).getByTestId('weather-details').locator('li');
+  const spillsOut = (name) =>
+    weatherCard(name).evaluate((card) => card.scrollHeight > card.clientHeight + 1);
+  // Text that is wider than the box it sits in runs into its neighbour.
+  const crowded = (name) =>
+    weatherCard(name).evaluate((card) =>
+      Array.from(
+        card.querySelectorAll(
+          'li strong, [data-testid="weather-temperature"], [data-testid="weather-range"]',
+        ),
+      ).some((part) => part.scrollWidth > part.clientWidth + 1),
+    );
   const hours = (name) => weatherCard(name).locator('[data-forecast-hour]');
 
   expect(await cardHeight('Full two rows')).toBe(224);
-  expect(await titleWidth('Full two rows')).toBeLessThanOrEqual(1);
+  expect(await titleWidth('Full two rows')).toBeGreaterThan(1);
   await expect(weatherCard('Full two rows').getByTestId('weather-feels-like')).toBeVisible();
   await expect(weatherCard('Full two rows').getByTestId('weather-range')).toBeVisible();
   await expect(details('Full two rows')).toHaveCount(4);
@@ -1552,6 +1570,25 @@ try {
   expect(await insideCard('Half two rows', '[data-forecast-hour]:last-of-type')).toBe(true);
 
   await expect(weatherCard('Daily half two rows').locator('[data-forecast-day]')).toHaveCount(4);
+
+  expect(await titleWidth('Half two rows')).toBeGreaterThan(1);
+  for (const name of [
+    'Full two rows',
+    'Half two rows',
+    'Daily half two rows',
+    'Quarter two rows',
+  ]) {
+    expect(await spillsOut(name), `${name} spills`).toBe(false);
+  }
+  expect(await titleWidth('Quarter two rows')).toBeGreaterThan(1);
+
+  // A daily list keeps the low next to the high.
+  const dailyList = weatherCard('Daily quarter two rows').locator('[data-forecast-day]');
+  await expect(dailyList).toHaveCount(4);
+  await expect(dailyList.first()).toContainText('17.0°C');
+  await expect(dailyList.first()).toContainText('9.0°');
+  expect(await cardHeight('Daily quarter two rows')).toBe(224);
+  expect(await spillsOut('Daily quarter two rows')).toBe(false);
 
   expect(await cardHeight('Quarter two rows')).toBe(224);
   await expect(weatherCard('Quarter two rows').getByTestId('weather-temperature')).toBeVisible();
@@ -1606,11 +1643,68 @@ try {
 
   // A quarter that no longer fits a column is drawn as the full row, still one row high.
   await resize(weatherPage, { height: 1400, width: 600 });
-  await expect(details('Quarter one row')).toHaveCount(4);
   await expect(hours('Quarter one row')).toHaveCount(5);
+  await expect(details('Quarter one row')).toHaveCount(0);
   expect(await cardHeight('Quarter one row')).toBe(104);
   expect(await spills('Quarter one row')).toBe(false);
+
+  // Nothing in a one-row card runs into its neighbour or out of the card at any width, with or
+  // without a forecast; when no entry fits, none is shown.
+  const assertOneRowFits = async () => {
+    for (const name of oneRow) {
+      expect(await crowded(name), `${name} text is crowded`).toBe(false);
+      expect(await spills(name), `${name} spills`).toBe(false);
+      expect(await insideCard(name, '[data-testid="weather-temperature"]')).toBe(true);
+    }
+  };
+  for (const width of [640, 375, 320]) {
+    await resize(weatherPage, { height: 1400, width });
+    await assertOneRowFits();
+  }
+  forecastStatus = 500;
+  await weatherPage.reload();
+  await expect(weatherCard('Full one row').getByTestId('weather-temperature')).toBeVisible();
+  await assertOneRowFits();
+  for (const name of oneRow) {
+    const message = weatherCard(name).getByText(/forecast unavailable/);
+
+    if ((await message.count()) > 0) {
+      expect(await textInside(name, /forecast unavailable/), `${name} message`).toBe(true);
+    }
+  }
+  forecastStatus = 200;
+  await weatherPage.reload();
   await weatherContext.close();
+
+  const polishContext = await browser.newContext({ viewport: { height: 1400, width: 1024 } });
+  await routeHaApi(polishContext);
+  const polishPage = await polishContext.newPage();
+  polishPage.on('pageerror', (error) => errors.push(error.message));
+  await polishPage.addInitScript(() => {
+    localStorage.setItem(
+      'my-home:preferences:v1',
+      JSON.stringify({ appearance: 'light', language: 'pl', page: 'fixture-weather' }),
+    );
+  });
+  await polishPage.goto(`${appUrl}?weather`);
+  for (const width of [1024, 768, 640]) {
+    await resize(polishPage, { height: 1400, width });
+    for (const name of ['Half one row', 'Quarter one row', 'Daily half one row']) {
+      const card = polishPage.getByRole('region', { exact: true, name });
+      await expect(card.getByTestId('weather-temperature')).toBeVisible();
+      expect(
+        await card.evaluate((element) =>
+          Array.from(
+            element.querySelectorAll(
+              'li strong, [data-testid="weather-temperature"], [data-testid="weather-range"]',
+            ),
+          ).some((part) => part.scrollWidth > part.clientWidth + 1),
+        ),
+        `${name} in Polish at ${width}`,
+      ).toBe(false);
+    }
+  }
+  await polishContext.close();
 
   const blockedContext = await browser.newContext();
   await routeHaApi(blockedContext);
