@@ -4,7 +4,22 @@
   "views": [
     {
       "id": "home",
-      "title": "Home"
+      "title": "Home",
+      "cards": [
+        { "type": "clock", "display": "datetime", "size": "third" },
+        { "type": "weather", "entity": "weather.home", "size": "half" },
+        { "type": "weather", "entity": "weather.home", "forecast": "daily", "size": "half" }
+      ],
+      "sections": [
+        {
+          "id": "living-room",
+          "title": "Living room",
+          "cards": [
+            { "type": "light", "entity": "light.living_room", "name": "Ceiling" },
+            { "type": "climate", "entity": "climate.living_room" }
+          ]
+        }
+      ]
     }
   ]
 }
