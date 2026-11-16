@@ -1,4 +1,6 @@
 import type { IconName } from '../iconNames';
+import type { CardSize } from './cardSize';
+import type { ForecastType } from './weatherForecast';
 
 type EntityId<Domain extends string> = `${Domain}.${string}`;
 
@@ -22,6 +24,21 @@ export interface PstrykConfig extends Pick<DisplayOptions, 'name'> {
 export interface WeatherConfig extends Pick<DisplayOptions, 'name'> {
   type: 'weather';
   entity: EntityId<'weather'>;
+  /** Defaults to 'full'. */
+  size?: CardSize;
+  /** Defaults to 'hourly'. */
+  forecast?: ForecastType;
+}
+
+export type ClockDisplay = 'time' | 'date' | 'datetime';
+
+/** Shows the device's own time and date, so it has no Home Assistant entity. */
+export interface ClockConfig extends Pick<DisplayOptions, 'name'> {
+  type: 'clock';
+  /** Defaults to 'datetime'. */
+  display?: ClockDisplay;
+  /** Defaults to 'third'. */
+  size?: CardSize;
 }
 
 export interface ClimateConfig extends Pick<DisplayOptions, 'name'> {
@@ -57,21 +74,35 @@ export type CardConfig =
   | AccessoryConfig
   | PstrykConfig
   | WeatherConfig
+  | ClockConfig
   | ClimateConfig
   | ValueConfig
   | ToggleConfig
   | SceneConfig;
+
+/** Cards bound to a Home Assistant entity; the clock is the only card without one. */
+export type EntityCardConfig = Exclude<CardConfig, ClockConfig>;
 
 export interface BadgeConfig extends DisplayOptions {
   type: 'temperature';
   entity: EntityId<'sensor'>;
 }
 
+/** A titled group of cards inside a view. Sections follow the view's own cards, in order. */
+export interface SectionConfig {
+  /** Stable and unique within its view. */
+  id: string;
+  title: string;
+  cards?: readonly CardConfig[];
+}
+
 export interface ViewConfig {
   id: string;
   title: string;
   badges?: readonly BadgeConfig[];
+  /** Cards outside any section, shown first. */
   cards?: readonly CardConfig[];
+  sections?: readonly SectionConfig[];
 }
 
 export interface PollingConfig {
@@ -96,9 +127,14 @@ type WithIcon<Card> = Card extends { type: 'value' | 'toggle' } ? Card : Card & 
 export type ConfiguredCard = WithIcon<CardConfig>;
 export type ConfiguredBadge = BadgeConfig & { icon: IconName };
 
-export interface ConfiguredView extends Omit<ViewConfig, 'badges' | 'cards'> {
+export interface ConfiguredSection extends Omit<SectionConfig, 'cards'> {
+  cards: readonly ConfiguredCard[];
+}
+
+export interface ConfiguredView extends Omit<ViewConfig, 'badges' | 'cards' | 'sections'> {
   badges: readonly ConfiguredBadge[];
   cards: readonly ConfiguredCard[];
+  sections: readonly ConfiguredSection[];
 }
 
 export interface AppConfig extends Omit<HomeConfig, 'polling' | 'views'> {

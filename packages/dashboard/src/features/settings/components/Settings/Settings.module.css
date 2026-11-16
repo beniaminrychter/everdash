@@ -50,13 +50,3 @@
   opacity: 0.45;
   cursor: default;
 }
-.install {
-  margin-top: 26px;
-  padding-top: 18px;
-  border-top: 1px solid var(--line);
-}
-.install summary {
-  cursor: pointer;
-  font-weight: 600;
-  min-height: 30px;
-}

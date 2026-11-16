@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
 import { useI18n, translateMessage } from '@everdash/ui/i18n/index';
+import { Disclosure } from '@everdash/ui/ui/Disclosure/Disclosure';
 import type { Language } from '@everdash/ui/i18n/index';
 import type { Appearance } from '../../data/preferences';
 import { About } from '../About/About';
@@ -143,10 +144,9 @@ export function Settings({
         )}
       </p>
       {reloadError && <p role="alert">{translateMessage(reloadError, t)}</p>}
-      <details class={styles.install}>
-        <summary>{t('Installation & about')}</summary>
+      <Disclosure summary={t('Installation & about')}>
         <About />
-      </details>
+      </Disclosure>
     </div>
   );
 }
