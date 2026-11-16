@@ -1,6 +1,7 @@
 import { cardEntityDomains } from '@everdash/contracts/config/cardDomains';
 import {
   CloudSunIcon,
+  ClockIcon,
   GaugeIcon,
   LightbulbIcon,
   PlugIcon,
@@ -18,7 +19,7 @@ export interface CardKindInfo {
   label: string;
   /** Short line shown under the name in the Add card dialog. */
   description: string;
-  /** Home Assistant domains the main entity may belong to; the first is the primary one. */
+  /** Home Assistant domains the main entity may belong to; the first is the primary one. Empty when the card has no entity. */
   domains: readonly string[];
   icon: LucideIcon;
 }
@@ -51,6 +52,13 @@ export const cardKinds: readonly CardKindInfo[] = [
     description: 'Current conditions and forecast',
     domains: cardEntityDomains('weather'),
     icon: CloudSunIcon,
+  },
+  {
+    kind: 'clock',
+    label: 'Time and date',
+    description: 'This device’s own clock',
+    domains: cardEntityDomains('clock'),
+    icon: ClockIcon,
   },
   {
     kind: 'pstryk',

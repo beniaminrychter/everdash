@@ -3,10 +3,7 @@ import test from 'node:test';
 import { defineConfig } from '@everdash/contracts/config';
 import { HomeAssistantStore } from '@everdash/dashboard/features/accessories/data/store';
 import type { PageConfig } from '@everdash/dashboard/features/accessories/data/model';
-import {
-  groupCards,
-  resolveDashboard,
-} from '@everdash/dashboard/features/dashboard/data/discovery';
+import { isWidget, resolveDashboard } from '@everdash/dashboard/features/dashboard/data/discovery';
 import { readValue, valueIcon } from '@everdash/dashboard/features/values/data/reading';
 import { sceneUnavailable } from '@everdash/dashboard/features/scenes/data/availability';
 import { staleSince } from '@everdash/dashboard/features/dashboard/data/staleness';
@@ -42,24 +39,19 @@ const entity = (id: string, state: string, attributes: Record<string, unknown> =
   state,
 });
 
-test('discovery groups tile, compact, toggle and scene cards as accessories and hero values as widgets', () => {
+test('discovery draws tile, compact, toggle and scene cards as accessories and hero values as widgets', () => {
   const { views } = resolveDashboard(config, []);
-  const groups = groupCards(views[0].cards);
   assert.deepEqual(
-    groups.map((group) => [group.type, group.cards.map((card) => card.entity)]),
+    views[0].cards.map((card) => [isWidget(card) ? 'widget' : 'accessory', card.entity]),
     [
-      ['accessories', ['sensor.power', 'sensor.temp']],
-      ['widgets', ['sensor.total']],
-      [
-        'accessories',
-        [
-          'input_boolean.guest',
-          'switch.pump',
-          'binary_sensor.door',
-          'scene.evening',
-          'script.goodnight',
-        ],
-      ],
+      ['accessory', 'sensor.power'],
+      ['accessory', 'sensor.temp'],
+      ['widget', 'sensor.total'],
+      ['accessory', 'input_boolean.guest'],
+      ['accessory', 'switch.pump'],
+      ['accessory', 'binary_sensor.door'],
+      ['accessory', 'scene.evening'],
+      ['accessory', 'script.goodnight'],
     ],
   );
 });
@@ -120,7 +112,15 @@ test('value icons follow the device class only when no icon is chosen', () => {
     valueIcon(undefined, entity('sensor.h', '1', { device_class: 'humidity' })),
     'droplet',
   );
-  assert.equal(valueIcon(undefined, entity('sensor.p', '1', { device_class: 'power' })), 'gauge');
+  assert.equal(valueIcon(undefined, entity('sensor.p', '1', { device_class: 'power' })), 'bolt');
+  assert.equal(
+    valueIcon(undefined, entity('sensor.b', '1', { device_class: 'battery' })),
+    'battery',
+  );
+  assert.equal(
+    valueIcon(undefined, entity('sensor.d', '1', { device_class: 'pressure' })),
+    'gauge',
+  );
   assert.equal(valueIcon(undefined, undefined), 'gauge');
   // An explicit choice, including the gauge itself, is never overridden.
   assert.equal(
@@ -134,9 +134,12 @@ const sensor = (kind: string) => entity('binary_sensor.x', 'on', { device_class:
 
 test('toggle icons follow a binary sensor device class unless chosen', () => {
   assert.equal(toggleIcon(undefined, sensor('door')), 'door');
-  assert.equal(toggleIcon(undefined, sensor('window')), 'door');
-  assert.equal(toggleIcon(undefined, sensor('motion')), 'away');
-  assert.equal(toggleIcon(undefined, sensor('battery')), 'toggle');
+  assert.equal(toggleIcon(undefined, sensor('window')), 'window');
+  assert.equal(toggleIcon(undefined, sensor('garage_door')), 'garage');
+  assert.equal(toggleIcon(undefined, sensor('motion')), 'motion');
+  assert.equal(toggleIcon(undefined, sensor('occupancy')), 'away');
+  assert.equal(toggleIcon(undefined, sensor('battery')), 'battery');
+  assert.equal(toggleIcon(undefined, sensor('vibration')), 'toggle');
   assert.equal(toggleIcon(undefined, undefined), 'toggle');
   assert.equal(toggleIcon('moon', sensor('door')), 'moon');
 });

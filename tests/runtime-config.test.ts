@@ -95,9 +95,14 @@ test('the published JSON schema rejects unknown fields and advertises every supp
   const cardSchemas = viewSchema.properties.cards.items.oneOf;
   assert.deepEqual(
     cardSchemas.map((schema) => schema.properties.type.const),
-    ['light', 'outlet', 'pstryk', 'weather', 'climate', 'value', 'toggle', 'scene'],
+    ['light', 'outlet', 'pstryk', 'weather', 'clock', 'climate', 'value', 'toggle', 'scene'],
   );
   assert.ok(cardSchemas.every((schema) => schema.additionalProperties === false));
+  // Sections share the view's card schema and reject unknown fields too.
+  const sectionSchema = viewSchema.properties.sections.items;
+  assert.equal(sectionSchema.additionalProperties, false);
+  assert.deepEqual(sectionSchema.required, ['id', 'title']);
+  assert.equal(sectionSchema.properties.cards, viewSchema.properties.cards);
   assert.ok(
     cardSchemas
       .filter((schema) =>

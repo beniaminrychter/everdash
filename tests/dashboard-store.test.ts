@@ -222,40 +222,188 @@ test('hourly forecasts are cached for 15 minutes; manual refresh retries indepen
     api,
   );
   await store.refresh();
-  assert.deepEqual(store.getSnapshot().forecasts['weather.home'], forecast);
+  assert.deepEqual(store.getSnapshot().forecasts['weather.home#hourly'], forecast);
   now += 30_000;
   await store.refresh(false, false);
   assert.equal(calls, 1);
   fail = true;
   await store.refresh(true);
   assert.equal(calls, 2);
-  assert.equal(store.getSnapshot().forecasts['weather.home'], undefined);
+  assert.equal(store.getSnapshot().forecasts['weather.home#hourly'], undefined);
   assert.equal(store.getSnapshot().readings['weather.home']?.state, 'sunny');
   assert.equal(store.getSnapshot().error, null);
   fail = false;
   now += 900_000;
   await store.refresh(false, false);
   assert.equal(calls, 3);
-  assert.deepEqual(store.getSnapshot().forecasts['weather.home'], forecast);
+  assert.deepEqual(store.getSnapshot().forecasts['weather.home#hourly'], forecast);
   weather.state = 'unavailable';
   await store.refresh(false, false);
-  assert.equal(store.getSnapshot().forecasts['weather.home'], undefined);
+  assert.equal(store.getSnapshot().forecasts['weather.home#hourly'], undefined);
   weather.state = 'sunny';
   await store.refresh(false, false);
   assert.equal(calls, 4);
-  assert.deepEqual(store.getSnapshot().forecasts['weather.home'], forecast);
+  assert.deepEqual(store.getSnapshot().forecasts['weather.home#hourly'], forecast);
   failCatalog = true;
   await store.refresh(true);
-  assert.deepEqual(store.getSnapshot().forecasts['weather.home'], forecast);
+  assert.deepEqual(store.getSnapshot().forecasts['weather.home#hourly'], forecast);
   failCatalog = false;
   await store.refresh(false, false);
   assert.equal(calls, 4);
-  assert.deepEqual(store.getSnapshot().forecasts['weather.home'], forecast);
-  weather.attributes.supported_features = 1;
+  assert.deepEqual(store.getSnapshot().forecasts['weather.home#hourly'], forecast);
+  weather.attributes.supported_features = 4;
   await store.refresh(true);
   assert.equal(calls, 4);
-  assert.equal(store.getSnapshot().forecasts['weather.home'], undefined);
+  assert.equal(store.getSnapshot().forecasts['weather.home#hourly'], undefined);
   store.stop();
+});
+
+function weatherSetup(
+  cards: readonly Record<string, unknown>[],
+  features: number | undefined,
+  overrides: Partial<CatalogApi> = {},
+) {
+  const requests: [string, string][] = [];
+  const weather = {
+    attributes: {
+      ...(features === undefined ? {} : { supported_features: features }),
+      temperature: 14,
+    },
+    entity_id: 'weather.home',
+    state: 'sunny',
+  };
+  const api: CatalogApi = {
+    abort() {},
+    callService: async () => {},
+    getState: async () => weather,
+    getStates: async () => [weather],
+    getWeatherForecast: async (id, type) => {
+      requests.push([id, type]);
+      return {
+        service_response: { [id]: { forecast: [{ datetime: `${type}`, temperature: 1 }] } },
+      };
+    },
+    ...overrides,
+  };
+  const store = new ObservationStore(
+    defineConfig({
+      views: [{ cards: cards as never, id: 'home', title: 'Home' }],
+    }),
+    api,
+  );
+
+  return { requests, store, weather };
+}
+
+test('a daily weather card asks for the daily forecast and an hourly card also reads it for today', async () => {
+  const { requests, store } = weatherSetup(
+    [
+      { type: 'weather', entity: 'weather.home', forecast: 'daily' },
+      { type: 'weather', entity: 'weather.home' },
+    ],
+    3,
+  );
+  await store.refresh();
+  assert.deepEqual(requests.sort(), [
+    ['weather.home', 'daily'],
+    ['weather.home', 'hourly'],
+  ]);
+  const forecasts = store.getSnapshot().forecasts;
+  assert.deepEqual(Object.keys(forecasts).sort(), ['weather.home#daily', 'weather.home#hourly']);
+  assert.deepEqual(forecasts['weather.home#daily'], [{ datetime: 'daily', temperature: 1 }]);
+  assert.deepEqual(forecasts['weather.home#hourly'], [{ datetime: 'hourly', temperature: 1 }]);
+  store.stop();
+});
+
+test('an hourly card reads the daily forecast only when its entity offers one', async () => {
+  const hourlyOnly = weatherSetup([{ type: 'weather', entity: 'weather.home' }], 2);
+  await hourlyOnly.store.refresh();
+  assert.deepEqual(hourlyOnly.requests, [['weather.home', 'hourly']]);
+  hourlyOnly.store.stop();
+  const both = weatherSetup([{ type: 'weather', entity: 'weather.home' }], 3);
+  await both.store.refresh();
+  assert.deepEqual(both.requests.sort(), [
+    ['weather.home', 'daily'],
+    ['weather.home', 'hourly'],
+  ]);
+  both.store.stop();
+});
+
+test('an entity without the requested forecast type falls back to the other, or to none', async () => {
+  const hourlyCard = weatherSetup([{ type: 'weather', entity: 'weather.home' }], 1);
+  await hourlyCard.store.refresh();
+  assert.deepEqual(hourlyCard.requests, [['weather.home', 'daily']]);
+  assert.deepEqual(hourlyCard.store.getSnapshot().forecasts['weather.home#hourly'], [
+    { datetime: 'daily', temperature: 1 },
+  ]);
+  hourlyCard.store.stop();
+  const dailyCard = weatherSetup(
+    [{ type: 'weather', entity: 'weather.home', forecast: 'daily' }],
+    2,
+  );
+  await dailyCard.store.refresh();
+  assert.deepEqual(dailyCard.requests, [['weather.home', 'hourly']]);
+  assert.deepEqual(dailyCard.store.getSnapshot().forecasts['weather.home#daily'], [
+    { datetime: 'hourly', temperature: 1 },
+  ]);
+  dailyCard.store.stop();
+  const neither = weatherSetup([{ type: 'weather', entity: 'weather.home' }], 4);
+  await neither.store.refresh();
+  assert.deepEqual(neither.requests, []);
+  assert.deepEqual(neither.store.getSnapshot().forecasts, {});
+  neither.store.stop();
+  const unreported = weatherSetup([{ type: 'weather', entity: 'weather.home' }], undefined);
+  await unreported.store.refresh();
+  // Without supported_features both types are tried; a failed daily read only drops today's range.
+  assert.deepEqual(unreported.requests.sort(), [
+    ['weather.home', 'daily'],
+    ['weather.home', 'hourly'],
+  ]);
+  unreported.store.stop();
+});
+
+test('daily forecasts are cached for an hour while hourly ones refresh after 15 minutes', async (t) => {
+  let now = Date.parse('2026-10-16T12:30:00Z');
+  t.mock.method(Date, 'now', () => now);
+  const { requests, store } = weatherSetup(
+    [
+      { type: 'weather', entity: 'weather.home' },
+      { type: 'weather', entity: 'weather.home', forecast: 'daily' },
+    ],
+    3,
+  );
+  await store.refresh();
+  assert.equal(requests.length, 2);
+  now += 600_000;
+  await store.refresh(false, false);
+  assert.equal(requests.length, 2);
+  now += 400_000;
+  await store.refresh(false, false);
+  assert.deepEqual(requests.slice(2), [['weather.home', 'hourly']]);
+  now += 900_000;
+  await store.refresh(false, false);
+  assert.deepEqual(requests.slice(3), [['weather.home', 'hourly']]);
+  now += 1_800_000;
+  await store.refresh(false, false);
+  assert.deepEqual(requests.slice(4).sort(), [
+    ['weather.home', 'daily'],
+    ['weather.home', 'hourly'],
+  ]);
+  store.stop();
+});
+
+test('forecasts of a card that changed its forecast type are dropped', async () => {
+  const { store } = weatherSetup([{ type: 'weather', entity: 'weather.home' }], 3);
+  await store.refresh();
+  assert.deepEqual(Object.keys(store.getSnapshot().forecasts).sort(), [
+    'weather.home#daily',
+    'weather.home#hourly',
+  ]);
+  store.stop();
+  const daily = weatherSetup([{ type: 'weather', entity: 'weather.home', forecast: 'daily' }], 3);
+  await daily.store.refresh();
+  assert.deepEqual(Object.keys(daily.store.getSnapshot().forecasts), ['weather.home#daily']);
+  daily.store.stop();
 });
 
 test('paused forecast requests cannot publish late data', async () => {
@@ -378,10 +526,10 @@ test('forecasts kept through a catalog failure expire with the 15 minute cache w
   offline = true;
   now += 600_000;
   await store.refresh(true);
-  assert.deepEqual(store.getSnapshot().forecasts['weather.home'], forecast);
+  assert.deepEqual(store.getSnapshot().forecasts['weather.home#hourly'], forecast);
   now += 400_000;
   await store.refresh(true);
-  assert.equal(store.getSnapshot().forecasts['weather.home'], undefined);
+  assert.equal(store.getSnapshot().forecasts['weather.home#hourly'], undefined);
   assert.equal(store.getSnapshot().readings['weather.home']?.state, 'sunny');
   store.stop();
 });

@@ -3,6 +3,7 @@ import type { ServerDependencies } from '../app';
 import { filterConfiguredStates } from '../home-assistant/policy';
 import { expectedOriginFor, requireAdminAccess } from './access-policy';
 import { apiError } from './errors';
+import { readPreviewForecasts } from './preview-forecasts';
 import { requestSignal } from './request-signal';
 import { requireMutationOrigin } from './security';
 
@@ -122,50 +123,17 @@ export function registerManageRoutes(app: FastifyInstance, dependencies: ServerD
       return;
     }
     const signal = requestSignal(request, reply);
-    const weatherEntities = Array.from(
-      new Set(
-        validation.config.views.flatMap((view) =>
-          view.cards.filter((card) => card.type === 'weather').map((card) => card.entity),
-        ),
-      ),
+    const states = await dependencies.homeAssistant.getStates(signal);
+    const forecasts = await readPreviewForecasts(
+      dependencies.homeAssistant,
+      validation.config,
+      states,
+      signal,
     );
-    const [states, forecastResults] = await Promise.all([
-      dependencies.homeAssistant.getStates(signal),
-      Promise.all(
-        weatherEntities.map(async (entityId) => {
-          try {
-            const result = await dependencies.homeAssistant.callService(
-              'weather',
-              'get_forecasts',
-              { entity_id: entityId, type: 'hourly' },
-              signal,
-            );
-            if (
-              typeof result !== 'object' ||
-              result === null ||
-              !('service_response' in result) ||
-              typeof result.service_response !== 'object' ||
-              result.service_response === null
-            ) {
-              return [entityId, []] as const;
-            }
-            const response = result.service_response as Record<string, unknown>;
-            const entity = response[entityId];
-            if (typeof entity !== 'object' || entity === null || !('forecast' in entity)) {
-              return [entityId, []] as const;
-            }
-            const forecast = (entity as { forecast?: unknown }).forecast;
-            return [entityId, Array.isArray(forecast) ? forecast : []] as const;
-          } catch {
-            return [entityId, []] as const;
-          }
-        }),
-      ),
-    ]);
     return {
       config: validation.document,
       states: filterConfiguredStates(states, validation.config),
-      forecasts: Object.fromEntries(forecastResults),
+      forecasts,
     };
   });
 

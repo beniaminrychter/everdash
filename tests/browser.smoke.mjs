@@ -12,6 +12,17 @@ import { dashboardDocument } from './fixtures/dashboard.ts';
 const temporary = await mkdtemp(join(tmpdir(), 'my-home-ha-check-'));
 const buildDirectory = join(temporary, 'dist');
 const output = process.env.MY_HOME_SCREENSHOT_DIR || join(tmpdir(), 'my-home-browser-check');
+
+/**
+ * Resizes a page and waits for its layout to follow. The cards' grid measures its container, so
+ * it settles on the first animation frames after a resize rather than inside setViewportSize.
+ */
+async function resize(target, size) {
+  await target.setViewportSize(size);
+  await target.evaluate(
+    () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+  );
+}
 await mkdir(output, { recursive: true });
 const lightId = 'light.salon_dodatkowe';
 const outletId = 'switch.ogrod_taras_kinkiety';
@@ -102,10 +113,15 @@ states[usageId] = observed(usageId, 'Pstryk Active power', '13586', {
   unit_of_measurement: 'W',
 });
 states['weather.dom'] = observed('weather.dom', 'Home', 'partlycloudy', {
+  apparent_temperature: 12.6,
   humidity: 72,
+  precipitation_unit: 'mm',
+  pressure: 1013,
+  pressure_unit: 'hPa',
   supported_features: 3,
   temperature: 14.2,
   temperature_unit: '°C',
+  wind_bearing: 225,
   wind_speed: 8,
   wind_speed_unit: 'km/h',
 });
@@ -132,10 +148,20 @@ states[climateId] = observed(climateId, 'Air Conditioner', 'heat', {
   target_temp_step: 1,
   temperature: 22,
 });
-const forecast = Array.from({ length: 8 }, (_, index) => ({
-  condition: index < 3 ? 'sunny' : 'partlycloudy',
+// Forty hours reach past tomorrow's midnight; the first one has already started.
+const forecast = Array.from({ length: 40 }, (_, index) => ({
+  condition: index < 3 ? 'sunny' : index % 9 === 8 ? 'rainy' : 'partlycloudy',
   datetime: new Date(hour + index * 3600000).toISOString(),
+  precipitation_probability: (index * 5) % 60,
   temperature: 15 + index / 10,
+}));
+// Daily entries name their calendar day in the dashboard time zone, from today on.
+const dailyForecast = Array.from({ length: 8 }, (_, index) => ({
+  condition: index % 3 === 2 ? 'rainy' : 'sunny',
+  datetime: `${new Date(hour + index * 86_400_000).toLocaleDateString('en-CA', { timeZone: 'Europe/Warsaw' })}T00:00:00+00:00`,
+  precipitation_probability: index * 10,
+  temperature: 17 + index / 10,
+  templow: 9 + index / 10,
 }));
 let forecastStatus = 200;
 let forecastRequests = 0;
@@ -196,12 +222,19 @@ const api = createServer(async (request, response) => {
       for await (const chunk of request) {
         body += chunk;
       }
-      assert.deepEqual(JSON.parse(body), { entity_id: 'weather.dom', type: 'hourly' });
+      const { entity_id: forecastEntity, type: forecastType, ...extra } = JSON.parse(body);
+      assert.equal(forecastEntity, 'weather.dom');
+      assert.ok(['hourly', 'daily'].includes(forecastType));
+      assert.deepEqual(extra, {});
       assert.ok(url.searchParams.has('return_response'));
       forecastRequests++;
-      response
-        .writeHead(forecastStatus)
-        .end(JSON.stringify({ service_response: { 'weather.dom': { forecast } } }));
+      response.writeHead(forecastStatus).end(
+        JSON.stringify({
+          service_response: {
+            'weather.dom': { forecast: forecastType === 'daily' ? dailyForecast : forecast },
+          },
+        }),
+      );
       return;
     }
     const climateMatch = url.pathname.match(
@@ -344,7 +377,7 @@ try {
               name: 'Room energy',
               usage: 'sensor.pstryk_multisensor_activepower_0',
             },
-            { type: 'weather', entity: 'weather.dom', name: 'Outdoor weather' },
+            { type: 'weather', entity: 'weather.dom', name: 'Outdoor weather', forecast: 'daily' },
           ],
         },
         {
@@ -385,11 +418,33 @@ try {
             ]
           : []),
       ];
+      // One view of widgets of every width and tiles, to check how the grid lays them out.
+      const widthViews = [
+        {
+          id: 'fixture-widths',
+          title: 'Widths',
+          badges: [],
+          cards: [
+            { type: 'clock', name: 'Third one' },
+            { type: 'clock', name: 'Third two' },
+            { type: 'clock', name: 'Third three' },
+            { type: 'clock', name: 'Half one', size: 'half' },
+            { type: 'clock', name: 'Half two', size: 'half' },
+            { type: 'clock', name: 'Full row', size: 'full' },
+            { type: 'value', entity: 'sensor.fixture_living_temp', name: 'Tile one' },
+            { type: 'value', entity: 'sensor.fixture_living_temp', name: 'Tile two' },
+            { type: 'value', entity: 'sensor.fixture_living_temp', name: 'Tile three' },
+            { type: 'value', entity: 'sensor.fixture_living_temp', name: 'Tile four' },
+          ],
+        },
+      ];
       const config = {
         ...dashboardDocument,
         views: url.searchParams.has('sensors-only')
           ? fixtureViews.filter((view) => view.id === 'fixture-sensors')
-          : fixtureViews,
+          : url.searchParams.has('widths-only')
+            ? widthViews
+            : fixtureViews,
       };
       await route.fulfill({
         json: { mode: 'direct', configured: true, revision: 'fixture-v1', config },
@@ -625,8 +680,30 @@ try {
   await expect(page.getByText('Next hour', { exact: true }).locator('..')).toContainText('0.45');
   await expect(page.getByTestId('weather-temperature')).toHaveText('14.2°C');
   const weather = page.getByRole('region', { exact: true, name: 'Current weather' });
-  await expect(weather.locator('[data-forecast-hour]')).toHaveCount(5);
   await expect(weather.locator('[data-forecast-hour]').first()).toContainText('15.1°C');
+  // The strip holds the next day and a half, not just a few hours, and says where tomorrow starts.
+  expect(await weather.locator('[data-forecast-hour]').count()).toBeGreaterThanOrEqual(36);
+  await expect(weather.locator('[data-forecast-day-break]').first()).toHaveText('Tomorrow');
+  await expect(weather.getByTestId('weather-feels-like')).toHaveText('Feels like 12.6°C');
+  await expect(weather.getByTestId('weather-range')).toContainText('High 17.0°C');
+  await expect(weather.getByTestId('weather-range')).toContainText('Low 9.0°C');
+  await expect(weather.getByTestId('weather-details')).toContainText('72%');
+  await expect(weather.getByTestId('weather-details')).toContainText('SW 8 km/h');
+  await expect(weather.getByTestId('weather-details')).toContainText('1013 hPa');
+  const strip = weather.getByRole('list', { exact: true, name: 'Hourly forecast' });
+  const fades = () =>
+    strip.evaluate((list) =>
+      [list.nextElementSibling, list.nextElementSibling.nextElementSibling].map(
+        (fade) => getComputedStyle(fade).opacity,
+      ),
+    );
+  expect(await strip.evaluate((list) => list.scrollWidth > list.clientWidth)).toBe(true);
+  expect(await strip.evaluate((list) => getComputedStyle(list).overflowX)).toBe('auto');
+  expect(await fades()).toEqual(['0', '1']);
+  await strip.evaluate((list) => {
+    list.scrollLeft = list.scrollWidth;
+  });
+  await expect.poll(fades).toEqual(['1', '0']);
   expect(forecastRequests).toBeGreaterThan(0);
   forecastStatus = 500;
   await refreshPage();
@@ -634,7 +711,7 @@ try {
   await expect(page.getByTestId('weather-temperature')).toHaveText('14.2°C');
   forecastStatus = 200;
   await refreshPage();
-  await expect(weather.locator('[data-forecast-hour]')).toHaveCount(5);
+  await expect(weather.locator('[data-forecast-hour]').first()).toContainText('15.1°C');
 
   await expect(page.locator('[data-sensor="sensor.czujnik_jadalnia_temperatura"]')).toContainText(
     '21.2',
@@ -666,17 +743,31 @@ try {
   await page.getByTestId('energy-price-bar').nth(8).click();
   await expect(page.getByTestId('energy-selected-price')).toContainText('-0,10');
   for (const width of [1024, 375, 320]) {
-    await page.setViewportSize({ height: 768, width });
+    await resize(page, { height: 768, width });
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(
       false,
     );
     await page.screenshot({ fullPage: true, path: join(output, `polish-graph-${width}.png`) });
   }
-  await page.setViewportSize({ height: 768, width: 1024 });
+  await resize(page, { height: 768, width: 1024 });
   await page.getByRole('button', { exact: true, name: 'First floor, wybierz pulpit' }).click();
   await page.getByRole('button', { exact: true, name: 'Meter room' }).click();
   await expect(page.getByRole('heading', { exact: true, name: 'Room weather' })).toBeVisible();
   await expect(page.getByRole('heading', { exact: true, name: 'Outdoor weather' })).toBeVisible();
+  // The daily variant lists one entry per day, labelled in the app language.
+  const dailyWeather = page.getByRole('region', { exact: true, name: 'Outdoor weather' });
+  await expect(dailyWeather.locator('[data-forecast-day]')).toHaveCount(8);
+  await expect(dailyWeather.locator('[data-forecast-day]').nth(0)).toContainText('Dziś');
+  await expect(dailyWeather.locator('[data-forecast-day]').nth(0)).toContainText('17,0°C');
+  await expect(dailyWeather.locator('[data-forecast-day]').nth(0)).toContainText('9,0°C');
+  await expect(dailyWeather.locator('[data-forecast-day]').nth(1)).toContainText('Jutro');
+  await expect(dailyWeather.locator('[data-forecast-hour]')).toHaveCount(0);
+  await expect(
+    page
+      .getByRole('region', { exact: true, name: 'Room weather' })
+      .locator('[data-forecast-hour]')
+      .first(),
+  ).toBeVisible();
   await page.getByRole('button', { exact: true, name: 'Meter room, wybierz pulpit' }).click();
   await page.getByRole('button', { exact: true, name: 'First floor' }).click();
 
@@ -1081,7 +1172,7 @@ try {
     [375, 812, 'phone'],
     [320, 568, 'small-phone'],
   ]) {
-    await page.setViewportSize({ height, width });
+    await resize(page, { height, width });
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(
       false,
     );
@@ -1098,7 +1189,7 @@ try {
     [1024, 768, 'dark-ipad'],
     [375, 812, 'dark-phone'],
   ]) {
-    await page.setViewportSize({ height, width });
+    await resize(page, { height, width });
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(
       false,
     );
@@ -1163,6 +1254,74 @@ try {
     'Connected to Home Assistant',
   );
   await sensorContext.close();
+
+  // One grid per area: a third stays a third while a third is at least 200px wide, and accessory
+  // tiles go four, three, two per row; widgets and tiles may share a row.
+  const widthContext = await browser.newContext();
+  await routeHaApi(widthContext);
+  const widthPage = await widthContext.newPage();
+  widthPage.on('pageerror', (error) => errors.push(error.message));
+  await widthPage.goto(`${appUrl}?widths-only=1`);
+  await expect(widthPage.getByRole('heading', { name: 'Full row' })).toBeVisible();
+  const widgetBoxes = async () =>
+    widthPage.evaluate(() =>
+      Array.from(document.querySelectorAll('main [data-card="clock"]')).map((element) => {
+        const box = element.getBoundingClientRect();
+
+        return { y: Math.round(box.y), w: box.width, x: box.x };
+      }),
+    );
+  const tileBoxes = async () =>
+    widthPage.evaluate(() =>
+      Array.from(document.querySelectorAll('main [data-value-card="tile"]')).map((element) => {
+        const cell = element.closest('[style*="grid-column"]') ?? element;
+        const box = cell.getBoundingClientRect();
+
+        return { y: Math.round(box.y), w: box.width, x: box.x };
+      }),
+    );
+  const widthShots = process.env.EVERDASH_SMOKE_SHOTS ?? output;
+  for (const [width, height, label, thirds, tilesPerRow] of [
+    [1024, 768, 'tablet-1024', 'third', 4],
+    [768, 1024, 'tablet-768', 'third', 3],
+    [375, 812, 'tablet-375', 'full', 2],
+  ]) {
+    await resize(widthPage, { height, width });
+    await expect.poll(async () => (await widgetBoxes()).length).toBe(6);
+    const [one, two, three, halfOne, halfTwo, full] = await widgetBoxes();
+    const row = full.w;
+
+    if (thirds === 'third') {
+      // Three thirds on one row, each a third of the row, and halves two to a row.
+      assert.ok(one.y === two.y && two.y === three.y, `${label}: thirds share a row`);
+      assert.ok(Math.abs(one.w * 3 + 32 - row) <= 2, `${label}: a third is a third, not a half`);
+      assert.ok(halfOne.y === halfTwo.y, `${label}: halves share a row`);
+      assert.ok(Math.abs(halfOne.w * 2 + 16 - row) <= 2, `${label}: a half is a half`);
+      assert.ok(one.w >= 200, `${label}: a third is at least 200px wide`);
+    } else {
+      assert.ok(
+        Math.abs(one.w - row) <= 2,
+        `${label}: a narrow container gives every card the row`,
+      );
+      assert.ok(two.y > one.y && three.y > two.y, `${label}: cards stack`);
+    }
+
+    // Tiles span three, four or six of the twelve columns: four, three or two per row.
+    const tiles = await tileBoxes();
+    assert.equal(tiles.length, 4);
+    const firstRow = tiles.filter((tile) => tile.y === tiles[0].y).length;
+    assert.equal(firstRow, tilesPerRow, `${label}: ${tilesPerRow} tiles per row`);
+    assert.equal(
+      await widthPage.evaluate(() => document.documentElement.scrollWidth > innerWidth),
+      false,
+    );
+    await widthPage.screenshot({
+      animations: 'disabled',
+      fullPage: true,
+      path: join(widthShots, `${label}.png`),
+    });
+  }
+  await widthContext.close();
 
   const pinContext = await browser.newContext();
   await routeHaApi(pinContext);

@@ -287,7 +287,7 @@ test('daily low and nearby prices are cheap even when Pstryk flags are false', (
   assert.equal(read().status, 'unknown');
 });
 
-test('hourly weather validates, sorts and keeps only the next five hours without inventing data', () => {
+test('hourly weather validates, sorts and keeps the coming hours without inventing data', () => {
   const now = Date.parse('2026-10-16T12:30:00Z');
   const raw = [
     { condition: 'rainy', datetime: '2026-10-16T14:00:00Z', temperature: 0 },
@@ -301,7 +301,7 @@ test('hourly weather validates, sorts and keeps only the next five hours without
   const result = mapWeather(entity('weather.home', 'Home', 'sunny'), raw, now);
   assert.deepEqual(
     result.forecast.map((item) => item.temperature),
-    [-1, 0],
+    [-1, 0, 3],
   );
   assert.equal(result.forecast[1].condition, 'Rainy');
   assert.equal(mapWeather(undefined, raw, now).available, false);

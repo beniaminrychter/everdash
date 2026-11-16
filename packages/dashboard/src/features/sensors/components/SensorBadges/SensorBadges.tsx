@@ -71,6 +71,7 @@ export function SensorBadges({
                 <button
                   type="button"
                   class={styles.selectLayer}
+                  data-editor-select=""
                   onClick={() => onEdit?.(index)}
                   aria-label={`Edit ${badge.name}`}
                   aria-pressed={selectedIndex === index}

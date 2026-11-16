@@ -1,38 +1,18 @@
-.groups {
+/*
+ * One grid per area (the unsectioned cards, or one section). Its children are exactly that
+ * area's cards in data order, so the order on screen is the order in the dashboard. The grid has
+ * twelve columns; how many each card spans is set inline from the container's width by
+ * data/gridLayout.ts, which the tablet and the editor preview share.
+ */
+.cards {
   display: grid;
-  grid-gap: 24px;
-}
-.accessoryGrid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-gap: 14px;
-}
-.widgetGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   grid-gap: 16px;
   align-items: start;
-}
-@media (max-width: 899px) {
-  .accessoryGrid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-@media (max-width: 899px) and (orientation: portrait) {
-  .accessoryGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-@media (max-width: 699px) {
-  .accessoryGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .widgetGrid {
-    grid-template-columns: minmax(0, 1fr);
-  }
+  min-width: 0;
 }
 @media (max-width: 360px) {
-  .accessoryGrid {
+  .cards {
     grid-gap: 10px;
   }
 }
@@ -44,114 +24,45 @@
   text-align: center;
 }
 
-.wide {
-  grid-column: 1 / -1;
-}
-
 .compactItem {
   align-self: start;
 }
 
-.editorItem {
+/* Sections are titled blocks that follow the view's own cards; each lays its cards out as a view does. */
+.content {
+  display: grid;
+  grid-gap: 32px;
+}
+
+.sections {
+  display: grid;
+  grid-gap: 32px;
   min-width: 0;
 }
 
-.editorCard {
-  position: relative;
-  border-radius: 22px;
+.section {
+  display: grid;
+  grid-gap: 14px;
+  align-content: start;
+  min-width: 0;
 }
 
-/* Covers the whole card, so a click anywhere on it opens the card in the inspector. */
-.selectLayer {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  margin: 0;
-  border: 0;
-  padding: 0;
-  border-radius: inherit;
-  background: transparent;
-  cursor: pointer;
-}
-
-.selectLayer:hover {
-  background: rgba(37, 99, 235, 0.06);
-}
-
-.selectLayer:focus-visible {
-  outline: 2px solid #2563eb;
-  outline-offset: 4px;
-}
-
-/* Editor only: marks the card shown in the inspector. */
-.selectedCard .selectLayer,
-.selectedCard .selectLayer:focus-visible {
-  outline: 2px solid #2563eb;
-  outline-offset: 4px;
-}
-
-.editorFooter {
+.sectionTitle {
   display: flex;
   align-items: center;
-  min-height: 36px;
-  min-width: 0;
-  margin: 6px 0 0;
-  border: 0;
-  padding: 0 2px;
-  color: var(--muted);
-}
-
-.editorFooter button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 30px;
-  height: 30px;
-  border: 0;
-  border-radius: 8px;
-  padding: 0;
-  color: inherit;
-  background: transparent;
-}
-
-.editorFooter button + button {
-  margin-left: 2px;
-}
-
-.actionIcon {
-  width: 16px;
-  height: 16px;
-}
-
-.dragHandle {
-  cursor: grab;
-}
-
-.editorFooter button:hover:not(:disabled),
-.editorFooter button:focus-visible {
+  margin: 0;
   color: var(--text);
-  background: var(--surface-strong);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.25;
 }
 
-.editorFooter button:disabled {
-  opacity: 0.3;
-}
-
-.editorFooter .deleteAction {
-  margin-left: auto;
-}
-
-.editorFooter .deleteAction:hover:not(:disabled) {
-  color: #c62828;
-}
-
-@media (pointer: coarse) {
-  .editorFooter button {
-    width: 40px;
-    height: 40px;
-  }
+/* A hairline continues the heading across the section. */
+.sectionTitle::after {
+  content: '';
+  flex: 1 1 auto;
+  height: 1px;
+  margin-left: 14px;
+  background: var(--muted);
+  opacity: 0.25;
 }

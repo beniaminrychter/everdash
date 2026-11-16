@@ -1,4 +1,5 @@
-const canvasEditButtons = '[data-canvas-island] button[aria-label^="Edit "]';
+/** The canvas buttons that select a card or badge, which the inspector sheet returns focus to. */
+const canvasEditButtons = '[data-canvas-island] button[data-editor-select]';
 
 /** What the inspector sheet remembers about the element that opened it. */
 export interface OpenerMemory {

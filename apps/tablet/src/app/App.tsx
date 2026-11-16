@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'preact/hooks';
 import { LanguageProvider, createTranslator, translateMessage } from '@everdash/ui/i18n/index';
 import type { AppConfig } from '@everdash/contracts/config';
+import { viewCards } from '@everdash/contracts/config/sections';
 import type { DashboardDocument } from '@everdash/contracts/config/types';
 import type { RuntimeSnapshot } from '@everdash/dashboard/features/configuration/data/api';
 import { useClimate } from '@everdash/dashboard/features/climate/data/useClimate';
@@ -84,7 +85,7 @@ export function App({
       ? home.devices.find((device) => device.id === modal.deviceId)
       : undefined;
   const openDefinition = openState
-    ? page.cards.find((card) => card.entity === openState.id)
+    ? viewCards(page).find((card) => card.type !== 'clock' && card.entity === openState.id)
     : undefined;
   const openDevice =
     openState && openDefinition

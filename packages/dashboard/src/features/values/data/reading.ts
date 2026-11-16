@@ -32,6 +32,22 @@ export function valueIcon(icon: IconName | undefined, entity: Entity | undefined
     return 'droplet';
   }
 
+  if (kind === 'power' || kind === 'energy' || kind === 'current' || kind === 'voltage') {
+    return 'bolt';
+  }
+
+  if (kind === 'battery') {
+    return 'battery';
+  }
+
+  if (kind === 'illuminance') {
+    return 'sun';
+  }
+
+  if (kind === 'wind_speed') {
+    return 'wind';
+  }
+
   return 'gauge';
 }
 

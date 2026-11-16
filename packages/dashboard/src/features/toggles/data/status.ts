@@ -60,12 +60,48 @@ export function toggleIcon(icon: IconName | undefined, entity: Entity | undefine
   }
 
   const kind = entity?.attributes.device_class;
-  if (kind === 'door' || kind === 'window' || kind === 'garage_door' || kind === 'opening') {
+  if (kind === 'door' || kind === 'opening') {
     return 'door';
   }
 
-  if (kind === 'motion' || kind === 'occupancy' || kind === 'presence') {
+  if (kind === 'window') {
+    return 'window';
+  }
+
+  if (kind === 'garage_door') {
+    return 'garage';
+  }
+
+  if (kind === 'motion') {
+    return 'motion';
+  }
+
+  if (kind === 'occupancy' || kind === 'presence') {
     return 'away';
+  }
+
+  if (kind === 'smoke') {
+    return 'smoke';
+  }
+
+  if (kind === 'lock') {
+    return 'lock';
+  }
+
+  if (kind === 'battery') {
+    return 'battery';
+  }
+
+  if (kind === 'plug' || kind === 'power') {
+    return 'plug';
+  }
+
+  if (kind === 'moisture') {
+    return 'droplet';
+  }
+
+  if (kind === 'connectivity') {
+    return 'wifi';
   }
 
   return 'toggle';

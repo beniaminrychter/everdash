@@ -1,5 +1,10 @@
 import { ArrowDownIcon, ArrowUpIcon, Trash2Icon } from 'lucide-react';
-import type { CardConfig, ValueTemplate } from '@everdash/contracts/config/types';
+import { hasCardEntity } from '@everdash/contracts/config/cardDomains';
+import { defaultCardSize } from '@everdash/contracts/config/cardSize';
+import type { CardSize } from '@everdash/contracts/config/cardSize';
+import type { CardConfig, ClockDisplay, ValueTemplate } from '@everdash/contracts/config/types';
+import { defaultForecastType } from '@everdash/contracts/config/weatherForecast';
+import type { ForecastType } from '@everdash/contracts/config/weatherForecast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -11,16 +16,20 @@ import {
 } from '@/components/ui/select';
 import { useDraft } from '@/app/DraftContext';
 import { compatibleCardKinds, convertCard } from '@/app/draft/builder';
+import { isIncomplete } from '@/app/draft/incomplete';
 import type { CardKind } from '@/app/draft/builder';
 import { cardKindInfo, cardKinds, isEntityForDomain } from './cardKinds';
 import type { DeleteTarget } from './DeleteItemDialog';
+import { CardSizeField } from './CardSizeField';
 import { EntityCombobox } from './EntityCombobox';
 import { IconGrid } from './IconGrid';
 import { InspectorField, InspectorPanel } from './InspectorPanel';
 
-export type CardSelection =
-  | { kind: 'card'; index: number }
-  | { kind: 'pending-card'; card: CardConfig };
+export interface CardSelection {
+  kind: 'card';
+  section?: string;
+  index: number;
+}
 
 interface CardInspectorProps {
   selection: CardSelection;
@@ -32,6 +41,21 @@ const valueTemplates: readonly { value: ValueTemplate; label: string }[] = [
   { value: 'compact', label: 'Compact' },
   { value: 'hero', label: 'Hero' },
 ];
+
+const forecastOptions: readonly { value: ForecastType; label: string }[] = [
+  { value: 'hourly', label: 'Every hour' },
+  { value: 'daily', label: 'Every day' },
+];
+
+const clockDisplays: readonly { value: ClockDisplay; label: string }[] = [
+  { value: 'time', label: 'Time' },
+  { value: 'date', label: 'Date' },
+  { value: 'datetime', label: 'Both' },
+];
+
+/** Select values: section ids are prefixed so none can equal the value for the unsectioned cards. */
+const noSection = 'none';
+const sectionPrefix = 'section:';
 
 const precisionOptions = ['auto', '0', '1', '2', '3'] as const;
 
@@ -49,87 +73,97 @@ function patch(card: CardConfig, changes: Record<string, unknown>): CardConfig {
 export function CardInspector({ selection, onRequestDelete }: CardInspectorProps) {
   const { state, dispatch } = useDraft();
   const view = state.document.views.find((item) => item.id === state.viewId);
-  const cardCount = view?.cards?.length ?? 0;
-  const card = selection.kind === 'pending-card' ? selection.card : view?.cards?.[selection.index];
+  const section = selection.section ?? null;
+  const sections = view?.sections ?? [];
+  const list = section === null ? view?.cards : sections.find((item) => item.id === section)?.cards;
+  const cardCount = list?.length ?? 0;
+  const card = list?.[selection.index];
 
   if (!card) {
     return null;
   }
 
   const info = cardKindInfo(card.type);
-  const pending = selection.kind === 'pending-card';
-  const entityInvalid = card.entity.length > 0 && !isEntityForDomain(card.entity, info.domains);
-  const canAdd = isEntityForDomain(card.entity, info.domains);
+  // A card that was just added is finished (or cancelled) here before it can be saved.
+  const pending = isIncomplete(card);
+  // A card without an entity, such as the clock, has nothing to pick or validate.
+  const entity = hasCardEntity(card) ? card.entity : undefined;
+  const entityInvalid =
+    entity !== undefined && entity.length > 0 && !isEntityForDomain(entity, info.domains);
+  const canAdd = entity === undefined || isEntityForDomain(entity, info.domains);
   const allKinds = cardKinds.map((item) => item.kind);
   // A saved card may only switch to types that accept its entity, so the draft stays valid.
-  const typeChoices = pending ? allKinds : compatibleCardKinds(card.entity, allKinds);
+  const typeChoices = pending
+    ? allKinds
+    : entity === undefined
+      ? [card.type]
+      : compatibleCardKinds(entity, allKinds);
 
   function change(next: CardConfig) {
-    if (selection.kind === 'pending-card') {
-      dispatch({ type: 'update-pending', value: next });
-
-      return;
-    }
-
-    dispatch({ type: 'update-card', index: selection.index, card: next });
+    dispatch({ type: 'update-card', section, index: selection.index, card: next });
   }
 
-  const footer =
-    selection.kind === 'pending-card' ? (
-      <>
-        <Button disabled={!canAdd} onClick={() => dispatch({ type: 'commit-pending' })}>
-          Add card
-        </Button>
-        <Button
-          variant="ghost"
-          onClick={() => dispatch({ type: 'select', selection: { kind: 'view' } })}
-        >
-          Cancel
-        </Button>
-      </>
-    ) : (
-      <>
-        <Button
-          variant="outline"
-          size="icon-sm"
-          aria-label="Move card up"
-          disabled={selection.index === 0}
-          onClick={() => dispatch({ type: 'move-card', index: selection.index, offset: -1 })}
-        >
-          <ArrowUpIcon />
-        </Button>
-        <Button
-          variant="outline"
-          size="icon-sm"
-          aria-label="Move card down"
-          disabled={selection.index >= cardCount - 1}
-          onClick={() => dispatch({ type: 'move-card', index: selection.index, offset: 1 })}
-        >
-          <ArrowDownIcon />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-destructive hover:text-destructive ml-auto"
-          onClick={() => onRequestDelete({ kind: 'card', index: selection.index })}
-        >
-          <Trash2Icon />
-          Delete card
-        </Button>
-      </>
-    );
+  const setSize = (size: CardSize) =>
+    change(patch(card, { size: size === defaultCardSize(card.type) ? undefined : size }));
+
+  const footer = pending ? (
+    <>
+      <Button
+        disabled={!canAdd}
+        onClick={() => dispatch({ type: 'finish-card', section, index: selection.index })}
+      >
+        Add card
+      </Button>
+      <Button
+        variant="ghost"
+        onClick={() => dispatch({ type: 'delete-card', section, index: selection.index })}
+      >
+        Cancel
+      </Button>
+    </>
+  ) : (
+    <>
+      <Button
+        variant="outline"
+        size="icon-sm"
+        aria-label="Move card up"
+        disabled={selection.index === 0}
+        onClick={() => dispatch({ type: 'move-card', section, index: selection.index, offset: -1 })}
+      >
+        <ArrowUpIcon />
+      </Button>
+      <Button
+        variant="outline"
+        size="icon-sm"
+        aria-label="Move card down"
+        disabled={selection.index >= cardCount - 1}
+        onClick={() => dispatch({ type: 'move-card', section, index: selection.index, offset: 1 })}
+      >
+        <ArrowDownIcon />
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="text-destructive hover:text-destructive ml-auto"
+        onClick={() => onRequestDelete({ kind: 'card', section, index: selection.index })}
+      >
+        <Trash2Icon />
+        Delete card
+      </Button>
+    </>
+  );
 
   return (
     <InspectorPanel
       eyebrow={pending ? `New ${info.label.toLowerCase()} card` : `${info.label} card`}
-      title={card.name || card.entity || 'Choose an entity'}
+      title={card.name || entity || (entity === undefined ? info.label : 'Choose an entity')}
       footer={footer}
     >
       <InspectorField
         label="Card type"
         htmlFor="card-type"
         hint={
-          pending
+          pending || entity === undefined
             ? undefined
             : typeChoices.length > 1
               ? 'Only types that can show this entity are listed.'
@@ -165,22 +199,48 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
           </SelectContent>
         </Select>
       </InspectorField>
-      <InspectorField
-        label="Home Assistant entity"
-        htmlFor="card-entity"
-        error={entityInvalid ? `Choose a ${info.domains.join(' or ')} entity.` : undefined}
-      >
-        <EntityCombobox
-          id="card-entity"
-          value={card.entity}
-          domain={info.domains}
-          onChange={(entity) => change(patch(card, { entity }))}
-        />
-      </InspectorField>
+      {sections.length > 0 && (
+        <InspectorField label="Section" htmlFor="card-section">
+          <Select
+            value={section === null ? noSection : `${sectionPrefix}${section}`}
+            onValueChange={(value) => {
+              const target = value === noSection ? null : value.slice(sectionPrefix.length);
+
+              dispatch({ type: 'send-card', section, index: selection.index, toSection: target });
+            }}
+          >
+            <SelectTrigger id="card-section" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={noSection}>No section (top of the view)</SelectItem>
+              {sections.map((item) => (
+                <SelectItem key={item.id} value={`${sectionPrefix}${item.id}`}>
+                  {item.title || 'Untitled section'}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </InspectorField>
+      )}
+      {entity !== undefined && (
+        <InspectorField
+          label="Home Assistant entity"
+          htmlFor="card-entity"
+          error={entityInvalid ? `Choose a ${info.domains.join(' or ')} entity.` : undefined}
+        >
+          <EntityCombobox
+            id="card-entity"
+            value={entity}
+            domain={info.domains}
+            onChange={(next) => change(patch(card, { entity: next }))}
+          />
+        </InspectorField>
+      )}
       <InspectorField label="Display name" htmlFor="card-name">
         <Input
           id="card-name"
-          placeholder="Use Home Assistant name"
+          placeholder={card.type === 'clock' ? 'No heading' : 'Use Home Assistant name'}
           value={card.name ?? ''}
           onChange={(event) => change(patch(card, { name: event.target.value || undefined }))}
         />
@@ -198,6 +258,61 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
             onChange={(icon) => change(patch(card, { icon }))}
           />
         </InspectorField>
+      )}
+      {card.type === 'clock' && (
+        <InspectorField label="Show">
+          <fieldset className="grid grid-cols-3 gap-1.5">
+            <legend className="sr-only">Show</legend>
+            {clockDisplays.map(({ value, label }) => {
+              const selected = (card.display ?? 'datetime') === value;
+
+              return (
+                <Button
+                  key={value}
+                  type="button"
+                  aria-pressed={selected}
+                  variant={selected ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() =>
+                    change(patch(card, { display: value === 'datetime' ? undefined : value }))
+                  }
+                >
+                  {label}
+                </Button>
+              );
+            })}
+          </fieldset>
+        </InspectorField>
+      )}
+      {card.type === 'weather' && (
+        <InspectorField label="Forecast" hint="One entry per hour, or one per day.">
+          <fieldset className="grid grid-cols-2 gap-1.5">
+            <legend className="sr-only">Forecast</legend>
+            {forecastOptions.map(({ value, label }) => {
+              const selected = (card.forecast ?? defaultForecastType) === value;
+
+              return (
+                <Button
+                  key={value}
+                  type="button"
+                  aria-pressed={selected}
+                  variant={selected ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() =>
+                    change(
+                      patch(card, { forecast: value === defaultForecastType ? undefined : value }),
+                    )
+                  }
+                >
+                  {label}
+                </Button>
+              );
+            })}
+          </fieldset>
+        </InspectorField>
+      )}
+      {(card.type === 'clock' || card.type === 'weather') && (
+        <CardSizeField value={card.size ?? defaultCardSize(card.type)} onChange={setSize} />
       )}
       {card.type === 'value' && (
         <>

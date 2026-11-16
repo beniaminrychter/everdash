@@ -6,6 +6,8 @@ This inventory covers the server runtime and browser bundles for EverDash 0.2.0.
 | --- | --- | --- |
 | Tablet browser runtime | `preact` and its production dependency tree | MIT and transitive package terms listed in the lockfile |
 | Home Assistant admin browser bundle | `react`, `react-dom`, `@base-ui/react`, `lucide-react`, `qrcode.react`, and shadcn-derived components | Package license metadata is listed in the lockfile; generated shadcn component patterns are MIT |
+| Dashboard editor drag and drop (admin bundle only, never the tablet) | `sortablejs`, the library Home Assistant's `ha-sortable` is built on | MIT |
+| Tablet and admin dashboard icons | Icon path data vendored from Lucide into `packages/ui/src/ui/Icon/iconShapes.ts` (attribution in the file header) | ISC (Lucide; portions MIT from Feather) |
 | Server runtime | `fastify` and its production dependency tree | Package license metadata is listed in the lockfile |
 
 The application build dependencies include React, Base UI, Tailwind, Vite, and shadcn CLI. They are not copied as Node modules into the runtime image. React, Base UI, and icon/QR code implementations are included in the admin browser bundle, so their package license terms remain relevant to the distributed image.

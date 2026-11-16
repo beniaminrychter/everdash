@@ -5,6 +5,7 @@ import {
   convertCard,
   createCard,
   createConfiguredCard,
+  createPendingCard,
   createView,
   isCardEditorMessage,
   moveItem,
@@ -33,6 +34,7 @@ test('builder can start every supported card type with a valid domain placeholde
   assert.deepEqual(createCard('outlet'), { type: 'outlet', entity: 'switch.select_entity' });
   assert.deepEqual(createCard('climate'), { type: 'climate', entity: 'climate.select_entity' });
   assert.deepEqual(createCard('weather'), { type: 'weather', entity: 'weather.select_entity' });
+  assert.deepEqual(createCard('clock'), { type: 'clock' });
   assert.deepEqual(createCard('pstryk'), { type: 'pstryk', entity: 'sensor.select_entity' });
   assert.deepEqual(createCard('value'), { type: 'value', entity: 'sensor.select_entity' });
   assert.deepEqual(createCard('toggle'), { type: 'toggle', entity: 'input_boolean.select_entity' });
@@ -104,4 +106,36 @@ test('compatibleCardKinds lists only types that accept the entity', () => {
   assert.deepEqual(compatibleCardKinds('switch.kettle', kinds), ['outlet', 'toggle']);
   assert.deepEqual(compatibleCardKinds('sensor.power', kinds), ['value', 'pstryk']);
   assert.deepEqual(compatibleCardKinds('script.bedtime', kinds), ['scene']);
+});
+
+test('the clock card needs no entity to be created, added or converted to', () => {
+  assert.deepEqual(createConfiguredCard('clock', ''), { type: 'clock' });
+  assert.deepEqual(createPendingCard('clock'), { type: 'clock' });
+  assert.deepEqual(createPendingCard('light'), { type: 'light', entity: '' });
+
+  const outlet = { type: 'outlet', entity: 'switch.kettle', name: 'Kettle' } as const;
+
+  assert.deepEqual(convertCard(outlet, 'clock'), { type: 'clock', name: 'Kettle' });
+  assert.deepEqual(convertCard({ type: 'clock', display: 'time' }, 'light'), {
+    type: 'light',
+    entity: '',
+  });
+  assert.deepEqual(compatibleCardKinds('switch.kettle', ['clock', 'outlet']), ['outlet']);
+});
+
+test('card move intents accept any integer offset or an in-range target index', () => {
+  const move = {
+    type: 'everdash.editor.card.move',
+    nonce: 'n',
+    generation: 1,
+    viewId: 'home',
+    index: 0,
+  };
+
+  assert.equal(isCardEditorMessage({ ...move, offset: 2 }, 'n', 1, 'home', 4), true);
+  assert.equal(isCardEditorMessage({ ...move, offset: -1 }, 'n', 1, 'home', 4), true);
+  assert.equal(isCardEditorMessage({ ...move, to: 3 }, 'n', 1, 'home', 4), true);
+  assert.equal(isCardEditorMessage({ ...move, to: 4 }, 'n', 1, 'home', 4), false);
+  assert.equal(isCardEditorMessage({ ...move, offset: 1.5 }, 'n', 1, 'home', 4), false);
+  assert.equal(isCardEditorMessage(move, 'n', 1, 'home', 4), false);
 });

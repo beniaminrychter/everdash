@@ -39,6 +39,14 @@ export const dashboardDocument = {
         },
         { type: 'climate', entity: 'climate.ac', name: 'Air Conditioner' },
         { type: 'weather', entity: 'weather.dom' },
+        { type: 'clock' },
+      ],
+      sections: [
+        {
+          id: 'evening',
+          title: 'Evening',
+          cards: [{ type: 'clock', name: 'Bedside clock', display: 'time' as const }],
+        },
       ],
     },
   ],
