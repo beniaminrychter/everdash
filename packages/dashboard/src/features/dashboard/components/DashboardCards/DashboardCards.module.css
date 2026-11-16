@@ -17,6 +17,24 @@
   }
 }
 
+/*
+ * Once hooks/usePackedGrids.ts has measured the cards, the rows are 1px high and each card spans
+ * its own height plus the gap below it, so a short card can sit under a short card beside a tall
+ * one. The gap below the last cards is taken back with the negative margin.
+ */
+.cards[data-packed] {
+  grid-auto-rows: 1px;
+  grid-column-gap: 16px;
+  grid-row-gap: 0;
+  margin-bottom: -16px;
+}
+@media (max-width: 360px) {
+  .cards[data-packed] {
+    grid-column-gap: 10px;
+    margin-bottom: -10px;
+  }
+}
+
 .emptyView {
   padding: 48px 16px;
   color: var(--muted);

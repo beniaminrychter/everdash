@@ -129,7 +129,7 @@ function validateCards(cards: unknown, path: string, issues: ConfigIssue[]) {
     if (cardKeys[card.type].includes('size') && card.size !== undefined && !isCardSize(card.size)) {
       issues.push({
         path: `${cardPath}.size`,
-        message: 'Expected third, half or full.',
+        message: 'Expected quarter, half or full.',
       });
     }
     if (card.type === 'weather' && card.forecast !== undefined && !isForecastType(card.forecast)) {

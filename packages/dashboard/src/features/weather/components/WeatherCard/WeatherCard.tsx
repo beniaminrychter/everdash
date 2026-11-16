@@ -36,7 +36,7 @@ interface Detail {
 }
 
 const sizeClasses: Record<CardSize, string> = {
-  third: styles.third,
+  quarter: styles.quarter,
   half: styles.half,
   full: styles.full,
 };

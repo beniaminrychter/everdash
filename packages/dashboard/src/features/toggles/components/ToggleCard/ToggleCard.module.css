@@ -86,37 +86,6 @@
   color: var(--danger);
   font-weight: 600;
 }
-.track {
-  position: relative;
-  display: block;
-  width: 52px;
-  height: 32px;
-  flex-shrink: 0;
-  margin-left: 10px;
-  border-radius: 16px;
-  background: var(--surface-strong);
-  box-shadow: inset 0 0 0 1px var(--muted);
-  transition: background 0.18s;
-}
-.trackOn {
-  background: #3489fa;
-  box-shadow: none;
-}
-.knob {
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
-  transition: transform 0.18s;
-}
-.trackOn .knob {
-  -webkit-transform: translateX(20px);
-  transform: translateX(20px);
-}
 .control:active:not(:disabled) {
   -webkit-transform: scale(0.97);
   transform: scale(0.97);
@@ -153,13 +122,5 @@
   }
   .status {
     font-size: 14px;
-  }
-  .track {
-    width: 46px;
-    margin-left: 6px;
-  }
-  .trackOn .knob {
-    -webkit-transform: translateX(14px);
-    transform: translateX(14px);
   }
 }

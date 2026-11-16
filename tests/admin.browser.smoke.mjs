@@ -276,8 +276,11 @@ async function dragTo(target, from, to, { release = true } = {}) {
   }
 }
 
-/** The same rule as the tablet (data/gridLayout.ts): a column of a third is 200px or more. */
-const expectedThird = (row) => (row >= 632 ? 'third' : row >= 576 ? 'half' : 'full');
+/**
+ * The same rule as the tablet (data/gridLayout.ts): a quarter is as wide as an accessory tile, so
+ * four to a row from 800px, three from 620px, then a half and then the full row.
+ */
+const expectedQuarter = (row) => (row >= 800 ? 4 : row >= 620 ? 3 : row >= 576 ? 'half' : 'full');
 
 /** The card names of one area, in the order the canvas draws them. */
 const areaNames = (target, area) =>
@@ -965,9 +968,9 @@ try {
         title: 'Home',
         badges: [],
         cards: [
-          { type: 'clock', name: 'Third one' },
-          { type: 'clock', name: 'Third two' },
-          { type: 'clock', name: 'Third three' },
+          { type: 'clock', name: 'Quarter one' },
+          { type: 'clock', name: 'Quarter two' },
+          { type: 'clock', name: 'Quarter three' },
           { type: 'clock', name: 'Half one', size: 'half' },
           { type: 'clock', name: 'Half two', size: 'half' },
           { type: 'clock', name: 'Full row', size: 'full' },
@@ -992,26 +995,29 @@ try {
     );
     const [one, two, three, halfOne, halfTwo, full] = await clockBoxes();
     const row = full.w;
-    const rule = expectedThird(row);
+    const rule = expectedQuarter(row);
 
     seen.add(rule);
 
-    if (rule === 'third') {
-      assert.ok(one.y === two.y && two.y === three.y, `${width}: thirds share a row`);
-      assert.ok(Math.abs(one.w * 3 + 32 - row) <= 2, `${width}: a third is a third of the row`);
-      assert.ok(one.w >= 200, `${width}: a third is at least 200px wide`);
+    if (typeof rule === 'number') {
+      assert.ok(one.y === two.y && two.y === three.y, `${width}: quarters share a row`);
+      assert.ok(
+        Math.abs(one.w * rule + 16 * (rule - 1) - row) <= 2,
+        `${width}: a quarter is 1/${rule} of the row, as wide as a tile`,
+      );
+      assert.ok(one.w >= 185, `${width}: a quarter is at least 185px wide`);
       assert.ok(halfOne.y === halfTwo.y, `${width}: halves share a row`);
       assert.ok(Math.abs(halfOne.w * 2 + 16 - row) <= 2, `${width}: a half is a half`);
     } else if (rule === 'half') {
-      // The thirds became halves, and the halves stay halves, so all five flow two to a row.
+      // The quarters became halves, and the halves stay halves, so all five flow two to a row.
       for (const card of [one, two, three, halfOne, halfTwo]) {
-        assert.ok(Math.abs(card.w * 2 + 16 - row) <= 2, `${width}: a collapsed third is a half`);
+        assert.ok(Math.abs(card.w * 2 + 16 - row) <= 2, `${width}: a collapsed quarter is a half`);
       }
     } else {
       assert.ok(Math.abs(one.w - row) <= 2, `${width}: a narrow preview gives each card the row`);
     }
   }
-  assert.ok(seen.has('third'), 'the wide preview shows true thirds');
+  assert.ok(seen.has(4) || seen.has(3), 'the wide preview shows true quarters');
   await widthPage.setViewportSize({ width: 1440, height: 1000 });
   await widthPage.evaluate(
     () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
@@ -1056,7 +1062,7 @@ try {
           'sections: add, rename, reorder (menu and drag handle) and delete (keeping or deleting cards)',
           'SortableJS drag: lifted card, card-sized placeholder, Drop here zones, reorder within and across areas',
           'the card menu: edit, move to section, earlier, later, duplicate, delete; keyboard, Escape and outside click',
-          'thirds stay thirds in the preview while a third is at least 200px wide',
+          'quarters stay as wide as a tile in the preview while tiles are three or four to a row',
           'sections round-trip through the saved dashboard and the JSON page',
           'an invalid dashboard lists its problems in the canvas area',
           'dashboard settings join the draft and appear in the JSON page',

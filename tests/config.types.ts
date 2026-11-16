@@ -16,7 +16,7 @@ function configTypeChecks() {
           { type: 'outlet', entity: 'light.wrong' },
           // @ts-expect-error Weather requires a weather entity.
           { type: 'weather', entity: 'sensor.wrong' },
-          // @ts-expect-error Weather sizes are a third, a half or full.
+          // @ts-expect-error Weather sizes are a quarter, a half or full.
           { type: 'weather', entity: 'weather.valid', size: 'wide' },
           // @ts-expect-error Weather forecasts are hourly or daily.
           { type: 'weather', entity: 'weather.valid', forecast: 'weekly' },

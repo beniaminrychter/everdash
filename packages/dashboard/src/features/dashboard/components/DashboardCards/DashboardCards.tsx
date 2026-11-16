@@ -7,8 +7,9 @@ import { ClimateCard } from '../../../climate/components/ClimateCard/ClimateCard
 import { isControlToggle, isWidget } from '../../data/discovery';
 import type { CardLocation, EditorHandler } from '../../data/editorEvent';
 import type { EditorKit } from '../../data/editorKit';
-import { cardSpan, widgetSize } from '../../data/gridLayout';
+import { cardSpan, effectiveSize, widgetSize } from '../../data/gridLayout';
 import { useContainerWidth } from '../../hooks/useContainerWidth';
+import { usePackedGrids } from '../../hooks/usePackedGrids';
 import type {
   EntityReadings,
   ResolvedAccessory,
@@ -92,6 +93,9 @@ export function DashboardCards({
 }: Props) {
   const surface = useRef<HTMLDivElement>(null);
   const width = useContainerWidth(surface);
+
+  usePackedGrids(surface, styles.cards);
+
   const { t, locale } = useI18n();
   const reading = (id: string | undefined) => (id ? readings[id] : undefined);
 
@@ -245,7 +249,7 @@ export function DashboardCards({
             timeZone={timeZone}
             online={online}
             now={now}
-            size={widgetSize(card)}
+            size={effectiveSize(widgetSize(card), width)}
           />
         );
       }
@@ -256,7 +260,7 @@ export function DashboardCards({
             title={card.defaultTitle ? undefined : card.name}
             titleId={titleId}
             display={card.display ?? 'datetime'}
-            size={widgetSize(card)}
+            size={effectiveSize(widgetSize(card), width)}
           />
         );
       }

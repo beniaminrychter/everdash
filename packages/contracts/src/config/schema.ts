@@ -9,7 +9,7 @@ const icon = {
   type: 'string',
   enum: [...iconNames],
 };
-const cardSize = { enum: ['third', 'half', 'full'] };
+const cardSize = { enum: ['quarter', 'half', 'full'] };
 const sensor = entity('sensor');
 const entityIn = (...domains: string[]) => entity(`(?:${domains.join('|')})`);
 

@@ -37,7 +37,7 @@ export interface ClockConfig extends Pick<DisplayOptions, 'name'> {
   type: 'clock';
   /** Defaults to 'datetime'. */
   display?: ClockDisplay;
-  /** Defaults to 'third'. */
+  /** Defaults to 'quarter'. */
   size?: CardSize;
 }
 

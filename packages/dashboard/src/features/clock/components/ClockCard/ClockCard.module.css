@@ -33,10 +33,10 @@
   margin-top: 6px;
   color: var(--muted);
 }
-.third .primary {
+.quarter .primary {
   font-size: 56px;
 }
-.third .secondary {
+.quarter .secondary {
   font-size: 16px;
 }
 .half .primary {
@@ -69,7 +69,7 @@
     padding: 18px;
     border-radius: 24px;
   }
-  .third .primary,
+  .quarter .primary,
   .half .primary {
     font-size: 48px;
   }

@@ -45,11 +45,6 @@ export function ToggleCard({
           {status}
         </span>
       </span>
-      {!readOnly && (
-        <span class={`${styles.track} ${active ? styles.trackOn : ''}`} aria-hidden="true">
-          <span class={styles.knob} />
-        </span>
-      )}
     </>
   );
 

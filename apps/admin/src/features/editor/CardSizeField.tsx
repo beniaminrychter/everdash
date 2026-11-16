@@ -3,7 +3,7 @@ import type { CardSize } from '@everdash/contracts/config/cardSize';
 import { Button } from '@/components/ui/button';
 import { InspectorField } from './InspectorPanel';
 
-const sizeLabels: Record<CardSize, string> = { third: '1/3', half: '1/2', full: '1/1' };
+const sizeLabels: Record<CardSize, string> = { quarter: '1/4', half: '1/2', full: '1/1' };
 
 interface CardSizeFieldProps {
   /** The size in effect, including the default of a card whose configuration leaves it unset. */

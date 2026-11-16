@@ -1,4 +1,4 @@
-/* Stacked: the current conditions, then the forecast strip, as a half or third of the row needs. */
+/* Stacked: the current conditions, then the forecast strip, as a half or quarter of the row needs. */
 .strip {
   margin-top: 14px;
 }
@@ -102,23 +102,23 @@
   width: 15px;
   height: 15px;
 }
-/* A third is about 220px wide: tighter type and a details row that wraps. */
-.third .currentIcon {
+/* A quarter is about 190 to 250px wide: tighter type and a details row that wraps. */
+.quarter .currentIcon {
   width: 28px;
   height: 28px;
   margin-right: 10px;
 }
-.third .temperature {
+.quarter .temperature {
   font-size: 26px;
 }
-.third .details {
+.quarter .details {
   margin-top: 10px;
 }
-.third .details li {
+.quarter .details li {
   margin-right: 10px;
   font-size: 11px;
 }
-.third .detailIcon {
+.quarter .detailIcon {
   width: 12px;
   height: 12px;
   margin-right: 4px;

@@ -1,12 +1,12 @@
 import type { CardConfig } from './types';
 
-/** Width of a widget card in the dashboard grid: a third, a half or the full row. */
-export const cardSizes = ['third', 'half', 'full'] as const;
+/** Width of a widget card in the dashboard grid: a quarter, a half or the full row. */
+export const cardSizes = ['quarter', 'half', 'full'] as const;
 
 export type CardSize = (typeof cardSizes)[number];
 
 const defaultSizeByType: Readonly<Partial<Record<CardConfig['type'], CardSize>>> = {
-  clock: 'third',
+  clock: 'quarter',
   pstryk: 'half',
   climate: 'half',
 };

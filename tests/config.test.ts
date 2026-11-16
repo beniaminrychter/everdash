@@ -226,7 +226,7 @@ test('clock cards are widgets without an entity, observation or resolution', () 
             { type: 'light', entity: 'light.kitchen' },
             { type: 'clock' },
             { type: 'clock', display: 'date', size: 'half', name: 'Today' },
-            { type: 'weather', entity: 'weather.home', size: 'third' },
+            { type: 'weather', entity: 'weather.home', size: 'quarter' },
           ],
           id: 'home',
           title: 'Home',
@@ -268,7 +268,7 @@ test('widget sizes default per card type and follow the configured size', () => 
   ).views[0];
   assert.ok(cards.every(isWidget));
   assert.deepEqual((cards as ResolvedWidget[]).map(widgetSize), [
-    'third',
+    'quarter',
     'full',
     'full',
     'half',
@@ -278,15 +278,16 @@ test('widget sizes default per card type and follow the configured size', () => 
   ]);
 });
 
-test('a third stays a third while a column of it is at least 200px wide', () => {
-  // 3 * 200 + 2 * 16 = 632px.
-  assert.equal(effectiveSize('third', 632), 'third');
-  assert.equal(effectiveSize('third', 631), 'half');
-  // The admin preview (about 760px of cards) and an iPad in portrait (768px window) stay thirds.
-  assert.equal(effectiveSize('third', 760), 'third');
-  assert.equal(effectiveSize('third', 720), 'third');
+test('a quarter stays as wide as an accessory tile and collapses when tiles are two to a row', () => {
+  assert.equal(effectiveSize('quarter', 1000), 'quarter');
+  assert.equal(effectiveSize('quarter', 800), 'quarter');
+  // The admin preview (about 760px of cards) and an iPad in portrait (768px window) still have
+  // three tiles to a row, so a quarter is a tile wide.
+  assert.equal(effectiveSize('quarter', 768), 'quarter');
+  assert.equal(effectiveSize('quarter', 620), 'quarter');
+  assert.equal(effectiveSize('quarter', 619), 'half');
   // A half needs 280px a column, a full row never collapses.
-  assert.equal(effectiveSize('third', 575), 'full');
+  assert.equal(effectiveSize('quarter', 575), 'full');
   assert.equal(effectiveSize('half', 576), 'half');
   assert.equal(effectiveSize('half', 575), 'full');
   assert.equal(effectiveSize('full', 320), 'full');
@@ -295,19 +296,19 @@ test('a third stays a third while a column of it is at least 200px wide', () => 
 test('widget and accessory column spans come from one function of the container width', () => {
   assert.equal(gridColumns, 12);
   assert.deepEqual(
-    (['third', 'half', 'full'] as const).map((size) => widgetSpan(size, 1000)),
+    (['quarter', 'half', 'full'] as const).map((size) => widgetSpan(size, 1000)),
+    [3, 6, 12],
+  );
+  assert.deepEqual(
+    (['quarter', 'half', 'full'] as const).map((size) => widgetSpan(size, 700)),
     [4, 6, 12],
   );
   assert.deepEqual(
-    (['third', 'half', 'full'] as const).map((size) => widgetSpan(size, 700)),
-    [4, 6, 12],
-  );
-  assert.deepEqual(
-    (['third', 'half', 'full'] as const).map((size) => widgetSpan(size, 600)),
+    (['quarter', 'half', 'full'] as const).map((size) => widgetSpan(size, 600)),
     [6, 6, 12],
   );
   assert.deepEqual(
-    (['third', 'half', 'full'] as const).map((size) => widgetSpan(size, 400)),
+    (['quarter', 'half', 'full'] as const).map((size) => widgetSpan(size, 400)),
     [12, 12, 12],
   );
   // Accessory tiles go four, three, two per row.
@@ -443,7 +444,7 @@ test('clock cards validate without an entity and reject bad display, size and en
 });
 
 test('only weather and clock cards accept a size', () => {
-  assert.equal(withCard({ type: 'weather', entity: 'weather.home', size: 'third' }).ok, true);
+  assert.equal(withCard({ type: 'weather', entity: 'weather.home', size: 'quarter' }).ok, true);
   assert.deepEqual(issuePaths({ type: 'weather', entity: 'weather.home', size: 'huge' }), [
     'views[0].cards[0].size',
   ]);

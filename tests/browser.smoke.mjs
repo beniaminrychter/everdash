@@ -425,9 +425,9 @@ try {
           title: 'Widths',
           badges: [],
           cards: [
-            { type: 'clock', name: 'Third one' },
-            { type: 'clock', name: 'Third two' },
-            { type: 'clock', name: 'Third three' },
+            { type: 'clock', name: 'Quarter one' },
+            { type: 'clock', name: 'Quarter two' },
+            { type: 'clock', name: 'Quarter three' },
             { type: 'clock', name: 'Half one', size: 'half' },
             { type: 'clock', name: 'Half two', size: 'half' },
             { type: 'clock', name: 'Full row', size: 'full' },
@@ -1255,8 +1255,8 @@ try {
   );
   await sensorContext.close();
 
-  // One grid per area: a third stays a third while a third is at least 200px wide, and accessory
-  // tiles go four, three, two per row; widgets and tiles may share a row.
+  // One grid per area: a quarter is as wide as an accessory tile (four, three, two per row) and
+  // becomes a half when tiles are two to a row; widgets and tiles may share a row.
   const widthContext = await browser.newContext();
   await routeHaApi(widthContext);
   const widthPage = await widthContext.newPage();
@@ -1281,9 +1281,9 @@ try {
       }),
     );
   const widthShots = process.env.EVERDASH_SMOKE_SHOTS ?? output;
-  for (const [width, height, label, thirds, tilesPerRow] of [
-    [1024, 768, 'tablet-1024', 'third', 4],
-    [768, 1024, 'tablet-768', 'third', 3],
+  for (const [width, height, label, quarters, tilesPerRow] of [
+    [1024, 768, 'tablet-1024', 'quarter', 4],
+    [768, 1024, 'tablet-768', 'quarter', 3],
     [375, 812, 'tablet-375', 'full', 2],
   ]) {
     await resize(widthPage, { height, width });
@@ -1291,13 +1291,16 @@ try {
     const [one, two, three, halfOne, halfTwo, full] = await widgetBoxes();
     const row = full.w;
 
-    if (thirds === 'third') {
-      // Three thirds on one row, each a third of the row, and halves two to a row.
-      assert.ok(one.y === two.y && two.y === three.y, `${label}: thirds share a row`);
-      assert.ok(Math.abs(one.w * 3 + 32 - row) <= 2, `${label}: a third is a third, not a half`);
+    if (quarters === 'quarter') {
+      // Three quarters on one row, each as wide as a tile of the row, and halves two to a row.
+      assert.ok(one.y === two.y && two.y === three.y, `${label}: quarters share a row`);
+      assert.ok(
+        Math.abs(one.w * tilesPerRow + 16 * (tilesPerRow - 1) - row) <= 2,
+        `${label}: a quarter is as wide as an accessory tile, not a half`,
+      );
       assert.ok(halfOne.y === halfTwo.y, `${label}: halves share a row`);
       assert.ok(Math.abs(halfOne.w * 2 + 16 - row) <= 2, `${label}: a half is a half`);
-      assert.ok(one.w >= 200, `${label}: a third is at least 200px wide`);
+      assert.ok(one.w >= 185, `${label}: a quarter is at least 185px wide`);
     } else {
       assert.ok(
         Math.abs(one.w - row) <= 2,
