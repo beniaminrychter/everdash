@@ -26,6 +26,10 @@ test('resolvePreviewScale computes fixed percentages and fit-to-screen scale', (
     0.5,
   );
   assert.equal(
+    resolvePreviewScale('fit', { width: 956, height: 440 }, { width: 478, height: 700 }),
+    0.5,
+  );
+  assert.equal(
     resolvePreviewScale('fit', { width: 390, height: 844 }, { width: 1000, height: 1000 }),
     1,
   );

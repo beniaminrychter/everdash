@@ -118,5 +118,5 @@ export function resolvePreviewScale(
 
   const scale = Math.min(1, available.width / viewport.width, available.height / viewport.height);
 
-  return Math.round(Math.max(0.25, scale) * 10000) / 10000;
+  return Math.round(Math.max(0.1, scale) * 10000) / 10000;
 }

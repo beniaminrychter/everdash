@@ -436,20 +436,31 @@ try {
   );
   await expect(viewportFrame).toHaveAttribute('data-preview-orientation', 'portrait');
   await expect(page.locator('[data-preview-size]')).toHaveText('390 × 844');
+  await expect(page.getByRole('combobox', { name: 'Preview zoom' })).toHaveText('Fit');
+  const fitBox = await viewportFrame.boundingBox();
+  const scrollPane = page
+    .locator('[data-preview-viewport]')
+    .locator('xpath=ancestor::div[contains(@class, "overflow-y-auto")][1]');
+  const scrollPaneFitBox = await scrollPane.boundingBox();
+  assert.ok(fitBox && scrollPaneFitBox);
+  assert.ok(fitBox.height <= scrollPaneFitBox.height);
+  assert.ok(fitBox.width <= scrollPaneFitBox.width);
+  assert.equal(
+    await scrollPane.evaluate((element) => element.scrollHeight <= element.clientHeight),
+    true,
+  );
   await expect(canvasRoot).toHaveAttribute('data-bp-699', '');
   await expect(canvasRoot).toHaveAttribute('data-bp-599', '');
   await page.getByRole('combobox', { name: 'Preview zoom' }).click();
   await page.getByRole('option', { name: '100%', exact: true }).click();
   assert.equal(Math.round((await viewportFrame.boundingBox()).width), 390);
+  assert.equal(Math.round((await viewportFrame.boundingBox()).height), 844);
   const viewportBox = await page.getByRole('combobox', { name: 'Preview viewport' }).boundingBox();
   const addCardBox = await page.getByRole('button', { name: '+ Add card' }).boundingBox();
   assert.ok(viewportBox && addCardBox && Math.abs(viewportBox.y - addCardBox.y) <= 6);
   const toolbarTopBeforeScroll = addCardBox.y;
-  const scrollPane = page
-    .locator('[data-preview-viewport]')
-    .locator('xpath=ancestor::div[contains(@class, "overflow-y-auto")][1]');
   await scrollPane.evaluate((element) => {
-    element.scrollTop = 240;
+    element.scrollTop = 120;
   });
   const addCardBoxAfterScroll = await page
     .getByRole('button', { name: '+ Add card' })
@@ -471,6 +482,11 @@ try {
   await expect(page.locator('[data-preview-size]')).toHaveText('844 × 390');
   await expect(canvasRoot).not.toHaveAttribute('data-bp-699');
   assert.equal(Math.round((await viewportFrame.boundingBox()).width), 844);
+  assert.equal(Math.round((await viewportFrame.boundingBox()).height), 390);
+  assert.equal(
+    await viewportFrame.evaluate((element) => getComputedStyle(element).overflowY),
+    'auto',
+  );
   await page.getByRole('combobox', { name: 'Preview zoom' }).click();
   await page.getByRole('option', { name: '50%', exact: true }).click();
   assert.equal(Math.round((await viewportFrame.boundingBox()).width), 422);
@@ -784,6 +800,21 @@ try {
   assert.ok(
     detailsBox.y >= currentBox.y + currentBox.height - 2,
     'weather details must stack under current conditions on phone-sized previews',
+  );
+  await rowsPage.getByRole('button', { name: 'Portrait', exact: true }).click();
+  await rowsPage.getByRole('button', { name: '+ Section' }).click();
+  await rowsPage.getByRole('button', { name: '+ Section' }).click();
+  await rowsPage.getByRole('button', { name: '+ Section' }).click();
+  const rowsFrame = rowsPage.locator('[data-preview-viewport]');
+  await expect
+    .poll(() => rowsFrame.evaluate((element) => element.scrollHeight > element.clientHeight))
+    .toBe(true);
+  assert.equal(
+    await rowsFrame.evaluate((element) => {
+      element.scrollTop = 40;
+      return element.scrollTop > 0 && element.clientHeight === 390;
+    }),
+    true,
   );
   await rowsPage.close();
 

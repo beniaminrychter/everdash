@@ -85,10 +85,8 @@ export function EditorPage() {
   } | null>(null);
   const [zoom, setZoom] = useState<PreviewZoom>('fit');
   const [availableSpace, setAvailableSpace] = useState({ width: 0, height: 0 });
-  const [frameHeight, setFrameHeight] = useState(0);
   const scrollPaneRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
-  const frameRef = useRef<HTMLDivElement>(null);
   const latest = useRef(state);
 
   useLayoutEffect(() => {
@@ -144,27 +142,24 @@ export function EditorPage() {
     const measure = () => {
       const scrollPane = scrollPaneRef.current;
       const stage = stageRef.current;
-      const frame = frameRef.current;
 
-      if (scrollPane && stage) {
-        const scrollRect = scrollPane.getBoundingClientRect();
-        const stageRect = stage.getBoundingClientRect();
-        const stageTop = stageRect.top - scrollRect.top + scrollPane.scrollTop;
-        const nextWidth = Math.max(0, stage.clientWidth - 4);
-        const nextHeight = Math.max(240, scrollPane.clientHeight - stageTop - 24);
-
-        setAvailableSpace((current) =>
-          current.width === nextWidth && current.height === nextHeight
-            ? current
-            : { width: nextWidth, height: nextHeight },
-        );
+      if (!scrollPane || !stage) {
+        return;
       }
 
-      if (frame) {
-        const nextFrameHeight = frame.offsetHeight;
+      const scrollRect = scrollPane.getBoundingClientRect();
+      const stageRect = stage.getBoundingClientRect();
+      const paddingBottom =
+        Number(getComputedStyle(scrollPane).paddingBottom.replace('px', '')) || 0;
+      const stageTop = stageRect.top - scrollRect.top + scrollPane.scrollTop;
+      const nextWidth = Math.max(0, stage.clientWidth - 4);
+      const nextHeight = Math.max(120, scrollPane.clientHeight - stageTop - paddingBottom - 4);
 
-        setFrameHeight((current) => (current === nextFrameHeight ? current : nextFrameHeight));
-      }
+      setAvailableSpace((current) =>
+        current.width === nextWidth && current.height === nextHeight
+          ? current
+          : { width: nextWidth, height: nextHeight },
+      );
     };
 
     measure();
@@ -177,10 +172,6 @@ export function EditorPage() {
 
     if (stageRef.current) {
       observer?.observe(stageRef.current);
-    }
-
-    if (frameRef.current) {
-      observer?.observe(frameRef.current);
     }
 
     window.addEventListener('resize', measure);
@@ -200,6 +191,7 @@ export function EditorPage() {
     (deviceId: string) => {
       if (deviceId === 'default') {
         setViewportSelection(null);
+        setZoom('fit');
 
         return;
       }
@@ -208,6 +200,7 @@ export function EditorPage() {
 
       if (!option) {
         setViewportSelection(null);
+        setZoom('fit');
 
         return;
       }
@@ -273,9 +266,7 @@ export function EditorPage() {
   );
 
   const scaledWidth = activeViewport ? Math.round(activeViewport.width * previewScale) : 0;
-  const scaledHeight = activeViewport
-    ? Math.round(Math.max(activeViewport.height, frameHeight) * previewScale)
-    : 0;
+  const scaledHeight = activeViewport ? Math.round(activeViewport.height * previewScale) : 0;
 
   return (
     <div className="flex h-svh min-h-0 flex-col">
@@ -300,7 +291,16 @@ export function EditorPage() {
             <div className="mx-auto mb-4 max-w-4xl space-y-4 empty:hidden">
               <DraftAlerts />
             </div>
-            <div ref={stageRef} className={activeViewport ? 'overflow-x-auto pb-2' : undefined}>
+            <div
+              ref={stageRef}
+              className={
+                activeViewport
+                  ? zoom === 'fit'
+                    ? 'overflow-x-hidden'
+                    : 'overflow-x-auto pb-2'
+                  : undefined
+              }
+            >
               <div
                 data-preview-scale={activeViewport ? String(previewScale) : undefined}
                 className={activeViewport ? 'relative mx-auto' : undefined}
@@ -311,19 +311,18 @@ export function EditorPage() {
                 }
               >
                 <div
-                  ref={frameRef}
                   data-preview-viewport={activeViewport?.deviceId ?? 'default'}
                   data-preview-orientation={activeViewport?.orientation}
                   className={
                     activeViewport
-                      ? 'ring-border mx-auto overflow-hidden rounded-xl bg-[#e4eaf1] shadow-sm ring-1'
+                      ? 'ring-border mx-auto overflow-x-hidden overflow-y-auto overscroll-contain rounded-xl bg-[#e4eaf1] shadow-sm ring-1'
                       : 'mx-auto max-w-4xl'
                   }
                   style={
                     activeViewport
                       ? {
                           width: `${activeViewport.width}px`,
-                          minHeight: `${activeViewport.height}px`,
+                          height: `${activeViewport.height}px`,
                           ...(previewScale === 1
                             ? undefined
                             : {
