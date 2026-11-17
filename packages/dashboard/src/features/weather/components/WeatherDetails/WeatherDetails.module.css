@@ -1,0 +1,52 @@
+.details {
+  display: flex;
+  overflow: hidden;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.details li {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.detailIcon {
+  width: 14px;
+  height: 14px;
+  margin-right: 5px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+.row {
+  flex-wrap: nowrap;
+}
+.row li {
+  margin-right: 16px;
+  font-size: 12.5px;
+}
+.row li:last-child {
+  margin-right: 0;
+}
+.grid {
+  flex-wrap: wrap;
+}
+.grid li {
+  flex: 0 0 50%;
+  margin-bottom: 6px;
+}
+.grid li:nth-last-child(-n + 2) {
+  margin-bottom: 0;
+}

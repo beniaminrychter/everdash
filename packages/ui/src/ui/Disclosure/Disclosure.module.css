@@ -1,0 +1,13 @@
+.disclosure {
+  margin-top: 26px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.disclosure summary {
+  cursor: pointer;
+  font-weight: 600;
+  min-height: 30px;
+}

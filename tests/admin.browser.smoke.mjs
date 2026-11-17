@@ -22,6 +22,29 @@ const invalidConfig = {
   schemaVersion: 1,
   views: [{ id: 'home', title: 'Home', cards: [{ type: 'light' }], badges: [] }],
 };
+// A dashboard with sections, one of them empty, for the section and drag-and-drop checks.
+const sectionConfig = {
+  schemaVersion: 1,
+  views: [
+    {
+      id: 'home',
+      title: 'Home',
+      cards: [
+        { type: 'value', entity: 'sensor.lounge_temperature', name: 'Hall temp' },
+        { type: 'climate', entity: 'climate.living_room' },
+      ],
+      sections: [
+        {
+          id: 'kitchen',
+          title: 'Kitchen',
+          cards: [{ type: 'value', entity: 'sensor.lounge_temperature', name: 'Lounge' }],
+        },
+        { id: 'garden', title: 'Garden', cards: [] },
+      ],
+      badges: [],
+    },
+  ],
+};
 const contentTypes = {
   '.css': 'text/css',
   '.html': 'text/html',
@@ -103,6 +126,16 @@ const server = createServer(async (request, response) => {
           available: true,
           unit: '°C',
           deviceClass: 'temperature',
+          icon: null,
+        },
+        {
+          entityId: 'weather.home',
+          name: 'Home Weather',
+          domain: 'weather',
+          state: 'Available',
+          available: true,
+          unit: null,
+          deviceClass: null,
           icon: null,
         },
       ].filter((entity) => !domain || domain.split(',').includes(entity.domain));
@@ -211,6 +244,62 @@ async function openPage(viewport) {
   return opened;
 }
 
+/** The middle of a Playwright bounding box. */
+const center = (box) => ({ x: box.x + box.width / 2, y: box.y + box.height / 2 });
+
+/** The card's cell in the canvas, found by its select layer ("Select <name>"). */
+const cardCell = (target, name) =>
+  target.locator('[data-editor-card]').filter({
+    has: target.getByRole('button', { name: `Select ${name}`, exact: true }),
+  });
+
+/** Hovering a card shows its pencil and ⋮ buttons; they are found by aria-label. */
+async function hoverCard(target, name) {
+  await target.getByRole('button', { name: `Select ${name}`, exact: true }).hover();
+}
+
+async function openCardMenu(target, name) {
+  await hoverCard(target, name);
+  await target.getByRole('button', { name: `More actions for ${name}`, exact: true }).click();
+}
+
+/** Picks one entry of a card's or section's ⋮ menu. */
+async function chooseMenuItem(target, name, item) {
+  await openCardMenu(target, name);
+  await target.getByRole('menuitem', { name: item, exact: true }).click();
+}
+
+/**
+ * Drags with the mouse the way a person does: press, several small moves so the drag starts and
+ * the pointer crosses the cards in between, then release.
+ */
+async function dragTo(target, from, to, { release = true } = {}) {
+  await target.mouse.move(from.x, from.y);
+  await target.mouse.down();
+  await target.mouse.move(from.x + 8, from.y + 8, { steps: 3 });
+  await target.mouse.move(to.x, to.y, { steps: 14 });
+  // SortableJS animates the neighbours for 150ms; wait for the placeholder to settle.
+  await target.waitForTimeout(260);
+
+  if (release) {
+    await target.mouse.up();
+  }
+}
+
+/**
+ * The same rule as the tablet (data/gridLayout.ts): a quarter is as wide as an accessory tile, so
+ * four to a row from 800px, three from 620px, then a half and then the full row.
+ */
+const expectedQuarter = (row) => (row >= 800 ? 4 : row >= 620 ? 3 : row >= 576 ? 'half' : 'full');
+
+/** The card names of one area, in the order the canvas draws them. */
+const areaNames = (target, area) =>
+  target
+    .locator(`[data-editor-area="${area}"] [data-editor-card] [data-editor-select][aria-pressed]`)
+    .evaluateAll((layers) =>
+      layers.map((layer) => layer.getAttribute('aria-label').replace(/^Select /, '')),
+    );
+
 // Browsers report modern CSS colors (oklch) unchanged, so a canvas converts them to sRGB.
 async function contrastOf(locator) {
   return locator.evaluate((element) => {
@@ -314,18 +403,33 @@ try {
   await page.getByRole('button', { name: 'Add card', exact: true }).click();
   const preview = page;
   await expect(preview.getByRole('button', { name: 'Edit Living Room Climate' })).toBeVisible();
-  await expect(preview.getByRole('button', { name: 'Delete Living Room Climate' })).toBeVisible();
   await expect(preview.getByText(/card controls/)).toHaveCount(0);
+  // Nothing is drawn under the cards any more: the row of grip, arrows and trash is gone.
+  await expect(preview.getByRole('button', { name: /^Drag .* to reorder$/ })).toHaveCount(0);
+  await expect(preview.getByRole('button', { name: /^Delete Living Room Climate/ })).toHaveCount(0);
+  await expect(preview.getByRole('button', { name: /^Move Living Room Climate/ })).toHaveCount(0);
+  // The overlay shows on hover: a pencil and a ⋮ menu. With a single card, it cannot move.
+  await hoverCard(preview, 'Living Room Climate');
   await expect(
-    preview.getByRole('button', { name: 'Move Living Room Climate earlier' }),
-  ).toBeDisabled();
-  await expect(
-    preview.getByRole('button', { name: 'Move Living Room Climate later' }),
-  ).toBeDisabled();
-  // The select layer covers the card, so the click lands on it and selects the card instead.
-  await preview
-    .getByRole('button', { name: 'Increase Living Room Climate temperature' })
-    .click({ force: true });
+    cardCell(preview, 'Living Room Climate').locator('[data-editor-nodrag]').first(),
+  ).toHaveCSS('opacity', '1');
+  await preview.getByRole('button', { name: 'More actions for Living Room Climate' }).click();
+  await expect(preview.getByRole('menuitem')).toHaveText([
+    'Edit',
+    'Move earlier',
+    'Move later',
+    'Duplicate',
+    'Delete',
+  ]);
+  await expect(preview.getByRole('menuitem', { name: 'Move earlier' })).toBeDisabled();
+  await expect(preview.getByRole('menuitem', { name: 'Move later' })).toBeDisabled();
+  await page.keyboard.press('Escape');
+  await expect(preview.getByRole('menu')).toHaveCount(0);
+  // The card's own controls are inert in the editor: a click where its + button is selects the card.
+  const increase = await preview
+    .locator('[data-editor-card] button[aria-label="Increase Living Room Climate temperature"]')
+    .boundingBox();
+  await page.mouse.click(center(increase).x, center(increase).y);
   assert.equal(deviceCommandCount, 0, 'editor card content must not send device commands');
   await page.getByRole('button', { name: '+ Add card' }).click();
   await page.getByRole('combobox', { name: 'Card type' }).click();
@@ -372,14 +476,19 @@ try {
   await page.getByLabel('Display name').fill('Lounge temp');
   await page.getByRole('button', { name: 'Add badge', exact: true }).click();
   await expect(preview.getByRole('button', { name: 'Edit Lounge temp' })).toBeVisible();
-  await expect(preview.getByRole('button', { name: 'Delete Lounge temp' })).toBeVisible();
-  const badgeWrapper = preview.locator('[data-sensor="sensor.lounge_temperature"]').locator('..');
-  const badgeBox = await preview.locator('[data-sensor="sensor.lounge_temperature"]').boundingBox();
-  // Edit is the badge itself; the remaining action sits underneath it.
-  const badgeActionsBox = await badgeWrapper
-    .getByRole('button', { name: 'Delete Lounge temp' })
-    .boundingBox();
-  assert.ok(badgeBox && badgeActionsBox && badgeActionsBox.y >= badgeBox.y + badgeBox.height);
+  // A badge has no delete button of its own: hovering it shows a ⋮ on its top right corner.
+  await expect(preview.getByRole('button', { name: 'Delete Lounge temp' })).toHaveCount(0);
+  const loungePill = preview.locator('[data-sensor="sensor.lounge_temperature"]');
+  await preview.getByRole('button', { name: 'Edit Lounge temp', exact: true }).hover();
+  const loungeMenu = preview.getByRole('button', { name: 'More actions for Lounge temp' });
+  await expect(loungeMenu).toBeVisible();
+  const loungeBox = await loungePill.boundingBox();
+  const loungeMenuBox = await loungeMenu.boundingBox();
+  assert.ok(
+    loungeMenuBox.y + loungeMenuBox.height / 2 <= loungeBox.y + 4,
+    'the menu button sits on the pill corner, not over its value',
+  );
+  await page.mouse.move(5, 5);
 
   // A rejected save keeps the draft, shows the error, and a second save succeeds.
   await expect(page.getByText(/unsaved change/)).toBeVisible();
@@ -439,6 +548,7 @@ try {
 
   // Below lg the inspector is a sheet.
   await page.setViewportSize({ width: 900, height: 768 });
+  await hoverCard(preview, 'Living Room Climate');
   await preview.getByRole('button', { name: 'Edit Living Room Climate' }).click();
   const inspector = page.getByRole('dialog', { name: 'Inspector' });
   await expect(inspector).toBeVisible();
@@ -463,17 +573,17 @@ try {
   await expect(preview.getByRole('button', { name: 'Edit Living Room Climate' })).toBeVisible();
   await page.setViewportSize({ width: 1440, height: 1000 });
 
-  await preview.getByRole('button', { name: 'Delete Living Room Climate' }).click();
+  await chooseMenuItem(preview, 'Living Room Climate', 'Delete');
   const deleteDialog = page.getByRole('alertdialog', { name: 'Delete this card?' });
   await expect(deleteDialog).toBeVisible();
   await deleteDialog.getByRole('button', { name: 'Cancel' }).click();
-  await expect(preview.getByRole('button', { name: 'Delete Living Room Climate' })).toBeVisible();
+  await expect(preview.getByRole('button', { name: 'Select Living Room Climate' })).toBeVisible();
   await page.screenshot({ path: join(tmpdir(), 'everdash-admin.png'), fullPage: true });
   assert.ok(previewCount > 0, 'preview snapshot endpoint was not called');
   await page.close();
 
-  // Saving with a pending (entity-less) card open must not put that card in the saved document.
-  const cardsBefore = cardTotal(savedConfig);
+  // A new card is a card of the draft from the moment it is added: it shows in the canvas with
+  // a hint, and saving is blocked (with a message) until it is finished or removed.
   const savesBefore = saveCount;
   const pendingPage = await openPage({ width: 1440, height: 1000 });
   await expect(pendingPage.getByRole('tab', { name: 'Guest room' })).toBeVisible();
@@ -482,18 +592,548 @@ try {
   await pendingPage.getByRole('combobox', { name: 'Card type' }).click();
   await pendingPage.getByRole('option', { name: /^Climate/ }).click();
   await expect(pendingPage.getByRole('button', { name: 'Add card', exact: true })).toBeDisabled();
-  // The preview shows the placeholder card, but saving must not include it.
-  await expect(pendingPage.getByRole('button', { name: 'Edit New climate' })).toBeVisible();
-  await pendingPage.getByRole('button', { name: 'Save', exact: true }).click();
-  await expect.poll(() => saveCount).toBe(savesBefore + 1);
-  assert.equal(cardTotal(savedConfig), cardsBefore, 'a pending card must not be saved');
+  await expect(pendingPage.getByRole('button', { name: 'Select New climate' })).toBeVisible();
+  await expect(
+    pendingPage.locator('[data-canvas-island]').getByText('Choose an entity'),
+  ).toBeVisible();
+  const pendingSave = pendingPage.getByRole('button', { name: 'Save', exact: true });
+  await expect(pendingSave).toBeDisabled();
+  await expect(pendingPage.getByText('Finish or remove the new card before saving.')).toBeVisible();
+  // The new card has the same hover chrome as any card; Duplicate is not offered for it.
+  await openCardMenu(pendingPage, 'New climate');
+  await expect(pendingPage.getByRole('menuitem', { name: 'Duplicate' })).toBeDisabled();
+  await expect(pendingPage.getByRole('menuitem', { name: 'Delete' })).toBeEnabled();
+  await pendingPage.getByRole('menuitem', { name: 'Delete' }).click();
+  // A card that was only just added is removed at once, like Cancel; there is nothing to confirm.
+  await expect(pendingPage.getByRole('alertdialog')).toHaveCount(0);
+  await expect(pendingPage.getByRole('button', { name: 'Select New climate' })).toHaveCount(0);
+  await expect(pendingPage.getByText('Finish or remove the new card')).toHaveCount(0);
+  await expect(pendingSave).toBeEnabled();
+  assert.equal(saveCount, savesBefore, 'nothing was saved');
+  await pendingPage.close();
+
+  // A weather card is one or two rows high; two is the default and is not written to the config.
+  savedConfig = {
+    schemaVersion: 1,
+    views: [
+      {
+        id: 'home',
+        title: 'Home',
+        cards: [{ type: 'weather', entity: 'weather.home', name: 'Forecast' }],
+        badges: [],
+      },
+    ],
+  };
+  const rowsPage = await openPage({ width: 1440, height: 900 });
+  await rowsPage.getByRole('button', { name: 'Select Forecast', exact: true }).click();
+  const rowsField = rowsPage.getByRole('group', { name: 'Rows', exact: true });
+  await expect(rowsField.getByRole('button', { name: '2 rows' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await rowsField.getByRole('button', { name: '1 row', exact: true }).click();
+  await rowsPage.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect.poll(() => savedConfig.views[0].cards[0].rows).toBe(1);
+  await rowsField.getByRole('button', { name: '2 rows' }).click();
+  await rowsPage.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect.poll(() => 'rows' in savedConfig.views[0].cards[0]).toBe(false);
+  await rowsPage.close();
+
+  // Badges are edited like cards: click to edit, a ⋮ menu, and drag and drop to reorder.
+  savedConfig = {
+    schemaVersion: 1,
+    views: [
+      {
+        id: 'home',
+        title: 'Home',
+        cards: [],
+        badges: ['Alpha', 'Bravo', 'Charlie'].map((name) => ({
+          type: 'temperature',
+          entity: 'sensor.lounge_temperature',
+          name,
+        })),
+      },
+    ],
+  };
+  const badgePage = await openPage({ width: 1440, height: 900 });
+  const badgeNames = () =>
+    badgePage
+      .locator('[data-editor-badge] [data-editor-select]')
+      .evaluateAll((layers) =>
+        layers.map((layer) => layer.getAttribute('aria-label').replace('Edit ', '')),
+      );
+  const badgeLayer = (name) =>
+    badgePage.getByRole('button', { exact: true, name: `Edit ${name}` }).first();
+  const openBadgeMenu = async (name) => {
+    await badgeLayer(name).hover();
+    await badgePage
+      .getByRole('button', { exact: true, name: `More actions for ${name}` })
+      .first()
+      .click();
+  };
+  const chooseBadgeItem = async (name, item) => {
+    await openBadgeMenu(name);
+    await badgePage.getByRole('menuitem', { exact: true, name: item }).click();
+  };
+  await expect.poll(badgeNames).toEqual(['Alpha', 'Bravo', 'Charlie']);
+  await badgeLayer('Bravo').click();
+  await expect(badgeLayer('Bravo')).toHaveAttribute('aria-pressed', 'true');
+  await expect(badgePage.getByLabel('Display name')).toHaveValue('Bravo');
+
+  await chooseBadgeItem('Alpha', 'Move later');
+  await expect.poll(badgeNames).toEqual(['Bravo', 'Alpha', 'Charlie']);
+  await openBadgeMenu('Bravo');
+  await expect(badgePage.getByRole('menuitem', { name: 'Move earlier' })).toBeDisabled();
+  await badgePage.keyboard.press('Escape');
+
+  const charlie = center(await badgeLayer('Charlie').boundingBox());
+  const first = await badgeLayer('Bravo').boundingBox();
+  await dragTo(badgePage, charlie, { x: first.x + 6, y: first.y + first.height / 2 });
+  await expect.poll(badgeNames).toEqual(['Charlie', 'Bravo', 'Alpha']);
+
+  await chooseBadgeItem('Alpha', 'Duplicate');
+  await expect.poll(badgeNames).toEqual(['Charlie', 'Bravo', 'Alpha', 'Alpha']);
+
+  await chooseBadgeItem('Bravo', 'Delete');
+  const badgeDialog = badgePage.getByRole('alertdialog', { name: 'Delete this badge?' });
+  await expect(badgeDialog).toBeVisible();
+  await badgeDialog.getByRole('button', { name: 'Delete badge' }).click();
+  await expect.poll(badgeNames).toEqual(['Charlie', 'Alpha', 'Alpha']);
+
+  await badgePage.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect
+    .poll(() => savedConfig.views[0].badges.map((badge) => badge.name))
+    .toEqual(['Charlie', 'Alpha', 'Alpha']);
+  await badgePage.close();
+
+  // Sections, hover chrome and SortableJS drag and drop.
+  const shots = process.env.EVERDASH_SMOKE_SHOTS;
+  const screenshot = async (target, name) => {
+    if (shots) {
+      await target.screenshot({ path: join(shots, name), fullPage: true });
+    }
+  };
+  savedConfig = structuredClone(sectionConfig);
+  const cardsSavedBefore = cardTotal(savedConfig);
+  // Tall enough that every drop target is on screen, since the pointer cannot leave the viewport.
+  const sectionPage = await openPage({ width: 1440, height: 1500 });
+  const sectionArea = (id) => sectionPage.locator(`section[aria-labelledby="section-home-${id}"]`);
+  const headings = () => sectionPage.locator('h2[id^="section-home-"]').allTextContents();
+  const ghost = sectionPage.locator('[class*="_ghost_"]');
+  const lifted = sectionPage.locator('[class*="_lifted_"]');
+  const selectLayer = (name) =>
+    sectionPage.getByRole('button', { name: `Select ${name}`, exact: true });
+  const layerCenter = async (name) => center(await selectLayer(name).boundingBox());
+  const saveSections = sectionPage.getByRole('button', { name: 'Save', exact: true });
+  await expect(selectLayer('Hall temp')).toBeVisible();
+  assert.deepEqual(await headings(), ['Kitchen', 'Garden']);
+  await expect(sectionArea('garden').getByText(/No cards in this section yet/)).toBeVisible();
+  // An empty area is a visible drop zone with a height of its own.
+  const gardenList = sectionPage.locator('[data-editor-area="garden"]');
+  assert.ok((await gardenList.boundingBox()).height >= 80, 'an empty area keeps a drop zone');
+  await screenshot(sectionPage, 'admin-sections.png');
+  // A section heading shows a drag handle, a pencil and a ⋮ menu on hover.
+  await sectionPage.getByRole('button', { name: 'Select section Garden', exact: true }).hover();
+  await expect(
+    sectionPage.getByRole('button', { name: 'Drag section Garden', exact: true }),
+  ).toBeVisible();
+  await expect(
+    sectionPage.getByRole('button', { name: 'Edit section Garden', exact: true }),
+  ).toBeVisible();
+  await screenshot(sectionPage, 'admin-section-hover.png');
+
+  // Hover chrome: a pencil and ⋮ in the card's top right corner, found by aria-label. It is
+  // hidden until the card is hovered, focused or selected.
+  await sectionPage.mouse.move(700, 20);
+  await expect(
+    cardCell(sectionPage, 'Hall temp').locator('[data-editor-nodrag]').first(),
+  ).toHaveCSS('opacity', '0');
+  await hoverCard(sectionPage, 'Hall temp');
+  await expect(
+    cardCell(sectionPage, 'Hall temp').locator('[data-editor-nodrag]').first(),
+  ).toHaveCSS('opacity', '1');
+  await expect(
+    sectionPage.getByRole('button', { name: 'Edit Hall temp', exact: true }),
+  ).toBeVisible();
+  const pencil = await sectionPage
+    .getByRole('button', { name: 'Edit Hall temp', exact: true })
+    .boundingBox();
+  const hallBox = await selectLayer('Hall temp').boundingBox();
+  assert.ok(pencil.x > hallBox.x + hallBox.width / 2, 'the pencil is on the right of the card');
+  assert.ok(pencil.y < hallBox.y + hallBox.height / 3, 'the pencil is at the top of the card');
+  await screenshot(sectionPage, 'admin-card-hover.png');
+
+  // The ⋮ menu: keyboard accessible, with Move to section because the view has sections.
+  await openCardMenu(sectionPage, 'Hall temp');
+  const menuButton = sectionPage.getByRole('button', {
+    name: 'More actions for Hall temp',
+    exact: true,
+  });
+  await expect(menuButton).toHaveAttribute('aria-expanded', 'true');
+  await expect(sectionPage.getByRole('menuitem')).toHaveText([
+    'Edit',
+    'Move to section',
+    'Move earlier',
+    'Move later',
+    'Duplicate',
+    'Delete',
+  ]);
+  await expect(sectionPage.getByRole('menuitem', { name: 'Edit', exact: true })).toBeFocused();
+  await sectionPage.keyboard.press('ArrowDown');
+  await expect(sectionPage.getByRole('menuitem', { name: 'Move to section' })).toBeFocused();
+  await sectionPage.keyboard.press('Enter');
+  await expect(sectionPage.getByRole('menuitem')).toContainText([
+    'Edit',
+    'Move to section',
+    'No section',
+    'Kitchen',
+    'Garden',
+    'Move earlier',
+    'Move later',
+    'Duplicate',
+    'Delete',
+  ]);
+  // The card's own section is marked and cannot be picked again.
+  await expect(sectionPage.getByRole('menuitem', { name: 'No section' })).toBeDisabled();
+  await screenshot(sectionPage, 'admin-card-menu.png');
+  await sectionPage.keyboard.press('Escape');
+  await expect(sectionPage.getByRole('menu')).toHaveCount(0);
+  await expect(menuButton).toBeFocused();
+  // A press anywhere outside closes the menu as well.
+  await openCardMenu(sectionPage, 'Hall temp');
+  await expect(sectionPage.getByRole('menu')).toBeVisible();
+  await sectionPage.mouse.click(1000, 60);
+  await expect(sectionPage.getByRole('menu')).toHaveCount(0);
+  // The menu sits above the cards after it, and is not clipped by the card.
+  await openCardMenu(sectionPage, 'Living Room Climate');
+  const climateMenu = sectionPage.getByRole('menu');
+  const menuBox = await climateMenu.boundingBox();
+  const middle = center(menuBox);
+  const topmost = await sectionPage.evaluate(
+    ({ x, y }) => document.elementFromPoint(x, y)?.closest('[role="menu"]') !== null,
+    middle,
+  );
+  assert.ok(topmost, 'the open menu must be the topmost layer where it is drawn');
+  await sectionPage.keyboard.press('Escape');
+
+  // A click without movement selects the card and opens it in the inspector.
+  await selectLayer('Hall temp').click();
+  await expect(sectionPage.getByLabel('Display name')).toHaveValue('Hall temp');
+  await expect(selectLayer('Hall temp')).toHaveAttribute('aria-pressed', 'true');
+  await sectionPage.getByRole('button', { name: 'Select Lounge', exact: true }).click();
+  await expect(sectionPage.getByLabel('Display name')).toHaveValue('Lounge');
+
+  // Dragging the whole card: a placeholder shows where it will land, the card follows the pointer.
+  await dragTo(
+    sectionPage,
+    await layerCenter('Hall temp'),
+    {
+      x: (await gardenList.boundingBox()).x + 120,
+      y: (await gardenList.boundingBox()).y + 40,
+    },
+    { release: false },
+  );
+  await expect(lifted).toHaveCount(1);
+  await expect(ghost).toHaveCount(1);
+  await expect(sectionArea('garden').getByText('Drop here')).toBeVisible();
+  const ghostBox = await ghost.boundingBox();
+  const gardenBox = await gardenList.boundingBox();
+  assert.ok(
+    ghostBox.x >= gardenBox.x - 1 && ghostBox.y >= gardenBox.y - 1,
+    'the placeholder is where the card will land',
+  );
+  assert.ok(ghostBox.width < gardenBox.width / 2, 'the placeholder is card sized');
+  await screenshot(sectionPage, 'admin-drag.png');
+  await sectionPage.mouse.up();
+  await expect(
+    sectionArea('garden').getByRole('button', { name: 'Select Hall temp' }),
+  ).toBeVisible();
+  assert.deepEqual(await areaNames(sectionPage, 'garden'), ['Hall temp']);
+  assert.deepEqual(await areaNames(sectionPage, ''), ['Living Room Climate']);
+  await expect(ghost).toHaveCount(0);
+  await expect(lifted).toHaveCount(0);
+  // The drop does not select the card that moved; Lounge stays the selected one.
+  await expect(sectionPage.getByLabel('Display name')).toHaveValue('Lounge');
+
+  // Dropping before a card in another section puts the card ahead of it.
+  const lounge = await selectLayer('Lounge').boundingBox();
+  await dragTo(sectionPage, await layerCenter('Hall temp'), {
+    x: lounge.x + 24,
+    y: lounge.y + lounge.height / 2,
+  });
+  assert.deepEqual(await areaNames(sectionPage, 'kitchen'), ['Hall temp', 'Lounge']);
+  assert.deepEqual(await areaNames(sectionPage, 'garden'), []);
+  await expect(sectionArea('garden').getByText(/No cards in this section yet/)).toBeVisible();
+  // Lounge is still the selected card, and still has the right index after the card ahead of it.
+  await expect(sectionPage.getByLabel('Display name')).toHaveValue('Lounge');
+
+  // Reordering inside a list: onto the far side of the neighbour.
+  const neighbour = await selectLayer('Lounge').boundingBox();
+  await dragTo(sectionPage, await layerCenter('Hall temp'), {
+    x: neighbour.x + neighbour.width - 24,
+    y: neighbour.y + neighbour.height / 2,
+  });
+  assert.deepEqual(await areaNames(sectionPage, 'kitchen'), ['Lounge', 'Hall temp']);
+
+  // The menu moves a card to a section, or out of every section, and earlier or later.
+  await chooseMenuItem(sectionPage, 'Hall temp', 'Move to section');
+  await sectionPage.getByRole('menuitem', { name: 'Garden', exact: true }).click();
+  assert.deepEqual(await areaNames(sectionPage, 'garden'), ['Hall temp']);
+  await openCardMenu(sectionPage, 'Hall temp');
+  await sectionPage.getByRole('menuitem', { name: 'Move to section' }).click();
+  await sectionPage.getByRole('menuitem', { name: 'No section' }).click();
+  assert.deepEqual(await areaNames(sectionPage, ''), ['Living Room Climate', 'Hall temp']);
+  await chooseMenuItem(sectionPage, 'Hall temp', 'Move earlier');
+  assert.deepEqual(await areaNames(sectionPage, ''), ['Hall temp', 'Living Room Climate']);
+  await chooseMenuItem(sectionPage, 'Hall temp', 'Move later');
+  assert.deepEqual(await areaNames(sectionPage, ''), ['Living Room Climate', 'Hall temp']);
+
+  // Duplicate puts a copy right after the card and selects it.
+  await chooseMenuItem(sectionPage, 'Lounge', 'Duplicate');
+  assert.deepEqual(await areaNames(sectionPage, 'kitchen'), ['Lounge', 'Lounge']);
+  await expect(sectionPage.getByLabel('Display name')).toHaveValue('Lounge');
+  const lounges = sectionPage.getByRole('button', { name: 'Select Lounge', exact: true });
+  await expect(lounges.nth(1)).toHaveAttribute('aria-pressed', 'true');
+  // Delete goes through the existing confirmation, which can be cancelled.
+  await lounges.nth(1).hover();
+  await sectionPage.getByRole('button', { name: 'More actions for Lounge' }).nth(1).click();
+  await sectionPage.getByRole('menuitem', { name: 'Delete' }).click();
+  const cardDialog = sectionPage.getByRole('alertdialog', { name: 'Delete this card?' });
+  await expect(cardDialog).toBeVisible();
+  await cardDialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(lounges).toHaveCount(2);
+  await lounges.nth(1).hover();
+  await sectionPage.getByRole('button', { name: 'More actions for Lounge' }).nth(1).click();
+  await sectionPage.getByRole('menuitem', { name: 'Delete' }).click();
+  await sectionPage.getByRole('alertdialog').getByRole('button', { name: 'Delete card' }).click();
+  await expect(lounges).toHaveCount(1);
+
+  // A card started in a section is a card of that section, with the same chrome and drag.
+  await sectionPage.getByRole('button', { name: 'Add card to Garden' }).click();
+  await expect(
+    sectionArea('garden').getByRole('button', { name: 'Select New light' }),
+  ).toBeVisible();
+  await expect(sectionPage.getByRole('combobox', { name: 'Section' })).toContainText('Garden');
+  await expect(
+    sectionPage.locator('[data-canvas-island]').getByText('Choose an entity'),
+  ).toBeVisible();
+  await expect(saveSections).toBeDisabled();
+  await expect(sectionPage.getByText('Finish or remove the new card before saving.')).toBeVisible();
+  await screenshot(sectionPage, 'admin-pending-card.png');
+  // Drag it into Kitchen, ahead of Lounge: it stays selected, and still new.
+  const loungeNow = await selectLayer('Lounge').boundingBox();
+  await dragTo(sectionPage, await layerCenter('New light'), {
+    x: loungeNow.x + 24,
+    y: loungeNow.y + loungeNow.height / 2,
+  });
+  assert.deepEqual(await areaNames(sectionPage, 'kitchen'), ['New light', 'Lounge']);
+  assert.deepEqual(await areaNames(sectionPage, 'garden'), []);
+  await expect(sectionPage.getByRole('combobox', { name: 'Section' })).toContainText('Kitchen');
+  await expect(sectionPage.getByRole('button', { name: 'Add card', exact: true })).toBeDisabled();
+  await expect(saveSections).toBeDisabled();
+  // Acting on other cards never makes it disappear.
+  await chooseMenuItem(sectionPage, 'Hall temp', 'Move earlier');
+  await chooseMenuItem(sectionPage, 'Lounge', 'Duplicate');
+  assert.deepEqual(await areaNames(sectionPage, 'kitchen'), ['New light', 'Lounge', 'Lounge']);
+  await sectionPage.getByRole('button', { name: 'Select Lounge', exact: true }).nth(1).hover();
+  await sectionPage.getByRole('button', { name: 'More actions for Lounge' }).nth(1).click();
+  await sectionPage.getByRole('menuitem', { name: 'Delete' }).click();
+  await sectionPage.getByRole('alertdialog').getByRole('button', { name: 'Delete card' }).click();
+  assert.deepEqual(await areaNames(sectionPage, 'kitchen'), ['New light', 'Lounge']);
+  // Its ⋮ Delete removes it, as Cancel does, without a dialog.
+  await chooseMenuItem(sectionPage, 'New light', 'Delete');
+  await expect(sectionPage.getByRole('alertdialog')).toHaveCount(0);
+  assert.deepEqual(await areaNames(sectionPage, 'kitchen'), ['Lounge']);
+  await expect(saveSections).toBeDisabled();
+  await expect(sectionPage.getByText('Finish or remove the new card')).toHaveCount(0);
+  // The inspector's Cancel removes a new card too.
+  await sectionPage.getByRole('button', { name: 'Add card to Garden' }).click();
+  await expect(
+    sectionArea('garden').getByRole('button', { name: 'Select New light' }),
+  ).toBeVisible();
+  await sectionPage.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(sectionPage.getByRole('button', { name: 'Select New light' })).toHaveCount(0);
+  // And it can be finished: pick an entity, press Add card, and the gate lifts.
+  await sectionPage.getByRole('button', { name: 'Add card to Garden' }).click();
+  await sectionPage.getByLabel('Home Assistant entity').click();
+  await sectionPage.getByPlaceholder('Search light by name or ID').fill('Kitchen');
+  await sectionPage.getByRole('option', { name: /Kitchen Lights/ }).click();
+  await sectionPage.getByRole('button', { name: 'Add card', exact: true }).click();
+  await expect(
+    sectionArea('garden').getByRole('button', { name: 'Select light.kitchen' }),
+  ).toBeVisible();
+  await expect(
+    sectionPage.locator('[data-canvas-island]').getByText('Choose an entity'),
+  ).toHaveCount(0);
+
+  // Sections: add one, which is named in the inspector, which takes focus.
+  await sectionPage.getByRole('button', { name: '+ Section' }).click();
+  const sectionName = sectionPage.getByLabel('Section name');
+  await expect(sectionName).toBeFocused();
+  await expect(sectionName).toHaveValue('New section');
+  await sectionName.fill('Evening');
+  await expect(sectionPage.getByRole('button', { name: 'Edit section Evening' })).toBeVisible();
+  assert.deepEqual(await headings(), ['Kitchen', 'Garden', 'Evening']);
+
+  // A section heading has a pencil, a drag handle and a ⋮ menu on hover.
+  const sectionMenu = async (name, item) => {
+    await sectionPage.getByRole('button', { name: `Select section ${name}`, exact: true }).hover();
+    await sectionPage
+      .getByRole('button', { name: `More actions for section ${name}`, exact: true })
+      .click();
+    await sectionPage.getByRole('menuitem', { name: item, exact: true }).click();
+  };
+  await sectionPage.getByRole('button', { name: 'Select section Evening', exact: true }).hover();
+  await sectionPage
+    .getByRole('button', { name: 'More actions for section Evening', exact: true })
+    .click();
+  await expect(sectionPage.getByRole('menuitem')).toHaveText([
+    'Rename',
+    'Move up',
+    'Move down',
+    'Delete',
+  ]);
+  await expect(sectionPage.getByRole('menuitem', { name: 'Move down' })).toBeDisabled();
+  await screenshot(sectionPage, 'admin-section-menu.png');
+  await sectionPage.getByRole('menuitem', { name: 'Move up' }).click();
+  assert.deepEqual(await headings(), ['Kitchen', 'Evening', 'Garden']);
+  await expect(
+    sectionPage.getByRole('button', { name: 'Edit section Kitchen', exact: true }),
+  ).toBeVisible();
+
+  // Rename from the menu selects the section and puts the cursor in its name.
+  await sectionMenu('Kitchen', 'Rename');
+  await expect(sectionName).toBeFocused();
+  await expect(sectionName).toHaveValue('Kitchen');
+
+  // Sections are reordered by dragging the handle in the heading.
+  await sectionPage.getByRole('button', { name: 'Select section Kitchen', exact: true }).hover();
+  const handle = sectionPage.getByRole('button', { name: 'Drag section Kitchen', exact: true });
+  const garden = await sectionArea('garden').boundingBox();
+  await dragTo(sectionPage, center(await handle.boundingBox()), {
+    x: garden.x + 200,
+    y: garden.y + garden.height - 10,
+  });
+  assert.deepEqual(await headings(), ['Evening', 'Garden', 'Kitchen']);
+  assert.deepEqual(await areaNames(sectionPage, 'kitchen'), ['Lounge']);
+
+  // Deleting a section with cards asks what to do with them.
+  await sectionMenu('Kitchen', 'Delete');
+  const sectionDialog = sectionPage.getByRole('alertdialog', { name: 'Delete this section?' });
+  await expect(sectionDialog).toBeVisible();
+  await expect(
+    sectionDialog.getByRole('button', { name: 'Delete section and cards' }),
+  ).toBeVisible();
+  await sectionDialog.getByRole('button', { name: 'Keep cards' }).click();
+  await expect(sectionPage.getByRole('button', { name: 'Edit section Kitchen' })).toHaveCount(0);
+  await expect(selectLayer('Lounge')).toBeVisible();
+  assert.deepEqual(await headings(), ['Evening', 'Garden']);
+
+  // Save, then check the saved JSON and its round trip through the JSON page.
+  await expect(saveSections).toBeEnabled();
+  await saveSections.click();
+  await expect.poll(() => saveCount).toBeGreaterThan(savesBefore);
   assert.equal(
-    savedConfig.views.some((view) =>
-      (view.cards ?? []).some((card) => !card.entity || card.entity.endsWith('.select_entity')),
-    ),
+    savedConfig.views[0].cards.some((card) => card.incomplete),
     false,
   );
-  await pendingPage.close();
+  assert.deepEqual(
+    savedConfig.views[0].sections.map((section) => [
+      section.id.startsWith('section-') ? 'new' : section.id,
+      section.title,
+      section.cards.map((card) => card.name ?? card.entity),
+    ]),
+    [
+      ['new', 'Evening', []],
+      ['garden', 'Garden', ['light.kitchen']],
+    ],
+  );
+  assert.deepEqual(
+    savedConfig.views[0].cards.map((card) => card.name ?? card.type),
+    ['Hall temp', 'climate', 'Lounge'],
+  );
+  assert.equal(cardTotal(savedConfig), cardsSavedBefore + 1);
+  await sectionPage.getByRole('button', { name: 'JSON import / export', exact: true }).click();
+  const sectionJson = sectionPage.getByRole('textbox', { name: 'Dashboard JSON' });
+  const exported = JSON.parse(await sectionJson.inputValue());
+  assert.deepEqual(exported.views[0].sections, savedConfig.views[0].sections);
+  exported.views[0].sections[1].title = 'Terrace';
+  await sectionJson.fill(JSON.stringify(exported, null, 2));
+  await sectionPage.getByRole('button', { name: 'Editor', exact: true }).click();
+  await sectionPage
+    .getByRole('alertdialog', { name: 'Unapplied JSON changes' })
+    .getByRole('button', { name: 'Validate and apply' })
+    .click();
+  await expect(sectionPage.getByRole('button', { name: 'Edit section Terrace' })).toBeVisible();
+  await sectionPage.close();
+  savedConfig = structuredClone(config);
+
+  // Sizes are honest in the preview too: it follows its own width, exactly as the tablet does.
+  savedConfig = {
+    schemaVersion: 1,
+    views: [
+      {
+        id: 'home',
+        title: 'Home',
+        badges: [],
+        cards: [
+          { type: 'clock', name: 'Quarter one' },
+          { type: 'clock', name: 'Quarter two' },
+          { type: 'clock', name: 'Quarter three' },
+          { type: 'clock', name: 'Half one', size: 'half' },
+          { type: 'clock', name: 'Half two', size: 'half' },
+          { type: 'clock', name: 'Full row', size: 'full' },
+        ],
+      },
+    ],
+  };
+  const widthPage = await openPage({ width: 1440, height: 1000 });
+  await expect(widthPage.getByRole('button', { name: 'Select Full row' })).toBeVisible();
+  const clockBoxes = () =>
+    widthPage.locator('[data-editor-area=""] [data-editor-card]').evaluateAll((cells) =>
+      cells.map((cell) => ({
+        y: Math.round(cell.getBoundingClientRect().y),
+        w: cell.getBoundingClientRect().width,
+      })),
+    );
+  const seen = new Set();
+  for (const width of [1440, 1280, 1100]) {
+    await widthPage.setViewportSize({ width, height: 1000 });
+    await widthPage.evaluate(
+      () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+    );
+    const [one, two, three, halfOne, halfTwo, full] = await clockBoxes();
+    const row = full.w;
+    const rule = expectedQuarter(row);
+
+    seen.add(rule);
+
+    if (typeof rule === 'number') {
+      assert.ok(one.y === two.y && two.y === three.y, `${width}: quarters share a row`);
+      assert.ok(
+        Math.abs(one.w * rule + 16 * (rule - 1) - row) <= 2,
+        `${width}: a quarter is 1/${rule} of the row, as wide as a tile`,
+      );
+      assert.ok(one.w >= 185, `${width}: a quarter is at least 185px wide`);
+      assert.ok(halfOne.y === halfTwo.y, `${width}: halves share a row`);
+      assert.ok(Math.abs(halfOne.w * 2 + 16 - row) <= 2, `${width}: a half is a half`);
+    } else if (rule === 'half') {
+      // The quarters became halves, and the halves stay halves, so all five flow two to a row.
+      for (const card of [one, two, three, halfOne, halfTwo]) {
+        assert.ok(Math.abs(card.w * 2 + 16 - row) <= 2, `${width}: a collapsed quarter is a half`);
+      }
+    } else {
+      assert.ok(Math.abs(one.w - row) <= 2, `${width}: a narrow preview gives each card the row`);
+    }
+  }
+  assert.ok(seen.has(4) || seen.has(3), 'the wide preview shows true quarters');
+  await widthPage.setViewportSize({ width: 1440, height: 1000 });
+  await widthPage.evaluate(
+    () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+  );
+  await screenshot(widthPage, 'admin-widths.png');
+  await widthPage.close();
+  savedConfig = structuredClone(config);
 
   // An invalid stored dashboard lists its problems in the canvas area.
   serveInvalidConfig = true;
@@ -523,11 +1163,18 @@ try {
           'view ordering and boundary move states',
           'view deletion preserves the final view',
           'domain-filtered searchable entity selection',
-          'climate unit editing and editor-only card footer controls',
-          'temperature badge selection and editor-only badge actions',
+          'climate unit editing; the hover pencil and ⋮ menu replace the controls under cards',
+          'temperature badge selection; a badge has a hover ⋮ menu and no delete button of its own',
+          'weather card rows toggle',
+          'badges: click to edit, menu move later, drag to reorder, duplicate and delete with confirmation',
           'a rejected save keeps the draft and shows an Alert, then a second save succeeds',
           'Save publishes the schema-v1 draft',
-          'a pending card is never saved',
+          'a new card is a draggable, deletable card of the canvas and blocks Save until finished',
+          'sections: add, rename, reorder (menu and drag handle) and delete (keeping or deleting cards)',
+          'SortableJS drag: lifted card, card-sized placeholder, Drop here zones, reorder within and across areas',
+          'the card menu: edit, move to section, earlier, later, duplicate, delete; keyboard, Escape and outside click',
+          'quarters stay as wide as a tile in the preview while tiles are three or four to a row',
+          'sections round-trip through the saved dashboard and the JSON page',
           'an invalid dashboard lists its problems in the canvas area',
           'dashboard settings join the draft and appear in the JSON page',
           'JSON apply shows a toast and preserves its draft until save',

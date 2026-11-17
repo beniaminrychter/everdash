@@ -24,6 +24,7 @@ const config = {
           usage: 'sensor.daily_usage',
         },
         { type: 'weather', entity: 'weather.local' },
+        { type: 'clock' },
         { type: 'toggle', entity: 'input_boolean.guest' },
         { type: 'toggle', entity: 'switch.pump' },
         { type: 'toggle', entity: 'binary_sensor.door' },
@@ -101,6 +102,15 @@ test('allows supported light, outlet and climate payloads for configured targets
     ),
     { entity_id: 'weather.local', type: 'hourly' },
   );
+  assert.deepEqual(
+    validateServiceCommand(
+      'weather',
+      'get_forecasts',
+      { entity_id: 'weather.local', type: 'daily' },
+      validConfig.config,
+    ),
+    { entity_id: 'weather.local', type: 'daily' },
+  );
 });
 
 test('rejects unknown services, unconfigured targets, extra fields and invalid values', () => {
@@ -111,7 +121,13 @@ test('rejects unknown services, unconfigured targets, extra fields and invalid v
     ['light', 'turn_on', { entity_id: 'light.ceiling', brightness_pct: 101 }],
     ['light', 'turn_off', { entity_id: 'light.ceiling', brightness_pct: 5 }],
     ['climate', 'set_temperature', { entity_id: 'climate.main', temperature: '20' }],
-    ['weather', 'get_forecasts', { entity_id: 'weather.local', type: 'daily' }],
+    ['weather', 'get_forecasts', { entity_id: 'weather.local', type: 'twice_daily' }],
+    ['weather', 'get_forecasts', { entity_id: 'weather.local', type: 'weekly' }],
+    ['weather', 'get_forecasts', { entity_id: 'weather.local', type: 'Daily' }],
+    ['weather', 'get_forecasts', { entity_id: 'weather.local', type: ['daily'] }],
+    ['weather', 'get_forecasts', { entity_id: 'weather.local' }],
+    ['weather', 'get_forecasts', { entity_id: 'weather.private', type: 'daily' }],
+    ['weather', 'get_forecasts', { entity_id: 'weather.local', type: 'daily', extra: true }],
     ['camera', 'record', { entity_id: 'camera.door' }],
   ];
   for (const [domain, service, data] of cases) {
@@ -159,4 +175,44 @@ test('rejects commands that a toggle or scene card does not authorize', () => {
   // An outlet card cannot be driven through the input_boolean service, and value cards are read-only.
   assert.throws(() => run('input_number', 'set_value', { entity_id: 'input_number.target' }));
   assert.throws(() => run('switch', 'turn_on', { entity_id: 'switch.unconfigured' }));
+});
+
+test('entities on section cards are exposed and may be commanded like any other card', () => {
+  const sectioned = validateDashboard({
+    schemaVersion: 1,
+    views: [
+      {
+        id: 'home',
+        title: 'Home',
+        sections: [
+          {
+            id: 'kitchen',
+            title: 'Kitchen',
+            cards: [
+              { type: 'light', entity: 'light.island' },
+              { type: 'weather', entity: 'weather.kitchen' },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+  assert.equal(sectioned.ok, true);
+  if (!sectioned.ok) {
+    return;
+  }
+
+  const states = [
+    { entity_id: 'light.island', state: 'on' },
+    { entity_id: 'weather.kitchen', state: 'sunny' },
+    { entity_id: 'light.other', state: 'off' },
+  ];
+  assert.deepEqual(filterConfiguredStates(states, sectioned.config), states.slice(0, 2));
+  assert.deepEqual(
+    validateServiceCommand('light', 'turn_on', { entity_id: 'light.island' }, sectioned.config),
+    { entity_id: 'light.island' },
+  );
+  assert.throws(() =>
+    validateServiceCommand('light', 'turn_on', { entity_id: 'light.other' }, sectioned.config),
+  );
 });

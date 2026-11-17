@@ -1,4 +1,5 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { viewCards } from '@everdash/contracts/config/sections';
 import type { DashboardDocument } from '@everdash/contracts/config/types';
 import { mountDashboardCanvas } from '@everdash/dashboard/editor/mountDashboardCanvas';
 import type {
@@ -17,17 +18,42 @@ interface CanvasIslandProps {
   document: DashboardDocument;
   viewId: string;
   generation: number;
-  /** The saved card or badge to outline. Pending items have no ring. */
-  selection?: { kind: 'card' | 'badge'; index: number };
+  /** The saved card, badge or section to outline. Pending items have no ring. */
+  selection?: DashboardCanvasProps['selection'];
+  /** New cards of the view that still need an entity. */
+  incomplete?: DashboardCanvasProps['incomplete'];
   onMessage: (message: unknown) => void;
 }
 
 interface CanvasMountProps {
   snapshot: DashboardCanvasProps['snapshot'];
   selectedView: string;
-  selectionKind?: 'card' | 'badge';
+  selectionKind?: 'card' | 'badge' | 'section';
+  /** The section id of the selected card or section; null for the unsectioned cards. */
+  selectionSection?: string | null;
   selectionIndex?: number;
+  incomplete?: DashboardCanvasProps['incomplete'];
   onMessage: (message: unknown) => void;
+}
+
+function canvasSelection(
+  kind: CanvasMountProps['selectionKind'],
+  section: string | null | undefined,
+  index: number | undefined,
+): DashboardCanvasProps['selection'] {
+  if (kind === 'section' && typeof section === 'string') {
+    return { kind, section };
+  }
+
+  if (kind === 'card' && index !== undefined && section !== undefined) {
+    return { kind, section, index };
+  }
+
+  if (kind === 'badge' && index !== undefined) {
+    return { kind, index };
+  }
+
+  return undefined;
 }
 
 /** Owns the Preact root: mounts once, re-renders on props, unmounts with the component. */
@@ -35,7 +61,9 @@ function CanvasMountView({
   snapshot,
   selectedView,
   selectionKind,
+  selectionSection,
   selectionIndex,
+  incomplete,
   onMessage,
 }: CanvasMountProps) {
   const container = useRef<HTMLDivElement>(null);
@@ -56,10 +84,8 @@ function CanvasMountView({
     const props: DashboardCanvasProps = {
       snapshot,
       selectedView,
-      selection:
-        selectionKind && selectionIndex !== undefined
-          ? { kind: selectionKind, index: selectionIndex }
-          : undefined,
+      selection: canvasSelection(selectionKind, selectionSection, selectionIndex),
+      incomplete,
       onAction: (action) => onMessageRef.current(action),
     };
 
@@ -68,7 +94,7 @@ function CanvasMountView({
     } else {
       handle.current = mountDashboardCanvas(element, props);
     }
-  }, [snapshot, selectedView, selectionKind, selectionIndex]);
+  }, [snapshot, selectedView, selectionKind, selectionSection, selectionIndex, incomplete]);
 
   useLayoutEffect(
     () => () => {
@@ -94,8 +120,8 @@ function placeholderStates(document: DashboardDocument): unknown[] {
   const ids = new Set<string>();
 
   for (const view of document.views) {
-    for (const item of [...(view.cards ?? []), ...(view.badges ?? [])]) {
-      if (placeholderEntity.test(item.entity)) {
+    for (const item of [...viewCards(view), ...(view.badges ?? [])]) {
+      if ('entity' in item && placeholderEntity.test(item.entity)) {
         ids.add(item.entity);
       }
     }
@@ -117,6 +143,7 @@ export function CanvasIsland({
   viewId,
   generation,
   selection,
+  incomplete,
   onMessage,
 }: CanvasIslandProps) {
   const latestRequest = useRef(0);
@@ -215,7 +242,9 @@ export function CanvasIsland({
           snapshot={snapshot}
           selectedView={viewId}
           selectionKind={selection?.kind}
-          selectionIndex={selection?.index}
+          selectionSection={selection && 'section' in selection ? selection.section : undefined}
+          selectionIndex={selection && 'index' in selection ? selection.index : undefined}
+          incomplete={incomplete}
           onMessage={onMessage}
         />
       )}

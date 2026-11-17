@@ -6,6 +6,12 @@ import { LanguageProvider } from '@everdash/ui/i18n/index';
 import { createDevice, mapState } from '../features/accessories/data/model';
 import { mapClimate, createClimate } from '../features/climate/data/model';
 import { DashboardCards } from '../features/dashboard/components/DashboardCards/DashboardCards';
+import type {
+  CardLocation,
+  EditorEvent,
+  EditorSelection,
+} from '../features/dashboard/data/editorEvent';
+import type { EditorKit } from '../features/dashboard/data/editorKit';
 import { parseEntities, resolveDashboard } from '../features/dashboard/data/discovery';
 import { SensorBadges } from '../features/sensors/components/SensorBadges/SensorBadges';
 import styles from './DashboardCanvas.module.css';
@@ -22,17 +28,26 @@ export interface CanvasSnapshot {
 export interface DashboardCanvasProps {
   snapshot: CanvasSnapshot;
   selectedView: string;
-  /** Editor only: the card or badge to outline. The tablet never passes it. */
-  selection?: { kind: 'card' | 'badge'; index: number };
+  /** Editor only: the card, badge or section to outline. The tablet never passes it. */
+  selection?: EditorSelection;
+  /** Editor only: new cards that still need an entity, outlined as such. */
+  incomplete?: readonly CardLocation[];
   onAction: (action: Record<string, unknown>) => void;
+}
+
+/** What the component takes: the public props plus the editor chrome, which only the editor loads. */
+export interface DashboardCanvasInnerProps extends DashboardCanvasProps {
+  editorKit?: EditorKit;
 }
 
 export function DashboardCanvas({
   snapshot,
   selectedView,
   selection,
+  incomplete,
+  editorKit,
   onAction,
-}: DashboardCanvasProps) {
+}: DashboardCanvasInnerProps) {
   const model = useMemo(() => {
     if (!snapshot) {
       return null;
@@ -75,38 +90,42 @@ export function DashboardCanvas({
       </main>
     );
   }
-  const postEditorAction = (
-    type: 'card.edit' | 'card.delete' | 'card.move' | 'badge.edit' | 'badge.delete' | 'view.select',
-    index?: number,
-    offset?: number,
-    viewId?: string,
-  ) => {
+  const postEditorAction = (type: string, details: Record<string, unknown> = {}) => {
     onAction({
       type: `everdash.editor.${type}`,
       generation: snapshot.generation,
-      viewId: viewId ?? view.id,
-      index,
-      offset,
+      viewId: view.id,
+      ...details,
     });
+  };
+  const rawView = snapshot.config.views.find((item) => item.id === view.id);
+  const editorKeysFor = (section: string | null) =>
+    editorKeys(
+      section === null
+        ? (rawView?.cards ?? [])
+        : (rawView?.sections?.find((item) => item.id === section)?.cards ?? []),
+    );
+  const postCardEvent = (event: EditorEvent) => {
+    const { type, ...details } = event;
+
+    postEditorAction(type, details);
   };
 
   return (
     <LanguageProvider language="en">
-      <main class={styles.mainContent}>
+      <main class={styles.mainContent} data-theme="light">
         <SensorBadges
           badges={view.badges}
           readings={model.readings}
           online
-          editorMode={currentSnapshot.editor}
+          editor={currentSnapshot.editor ? editorKit : undefined}
           selectedIndex={selection?.kind === 'badge' ? selection.index : undefined}
-          onEdit={(index) => currentSnapshot.editor && postEditorAction('badge.edit', index)}
-          onDelete={(index) => currentSnapshot.editor && postEditorAction('badge.delete', index)}
+          onEditorEvent={(event) => currentSnapshot.editor && postCardEvent(event)}
         />
         <DashboardCards
           view={view}
-          editorKeys={editorKeys(
-            snapshot.config.views.find((item) => item.id === view.id)?.cards ?? [],
-          )}
+          editor={editorKit}
+          editorKeys={editorKeysFor}
           devices={model.devices}
           climates={model.climates}
           onClimateChange={() => undefined}
@@ -118,11 +137,10 @@ export function DashboardCanvas({
           onToggle={() => undefined}
           onDetails={() => undefined}
           editorMode={currentSnapshot.editor}
-          selectedIndex={selection?.kind === 'card' ? selection.index : undefined}
-          onEditorAction={(action, index, offset) =>
-            currentSnapshot.editor &&
-            postEditorAction(action === 'move' ? 'card.move' : `card.${action}`, index, offset)
-          }
+          selectedCard={selection?.kind === 'card' ? selection : undefined}
+          selectedSection={selection?.kind === 'section' ? selection.section : undefined}
+          incompleteCards={incomplete}
+          onEditorEvent={(event) => currentSnapshot.editor && postCardEvent(event)}
           readOnly={!currentSnapshot.editor}
         />
       </main>

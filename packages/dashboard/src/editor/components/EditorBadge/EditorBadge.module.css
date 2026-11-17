@@ -1,0 +1,79 @@
+.cell {
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* A badge whose menu is open rises above the badges after it, so the menu is never covered. */
+.raised {
+  z-index: 20;
+}
+
+.pill {
+  position: relative;
+  border-radius: 24px;
+}
+
+.content {
+  min-width: 0;
+}
+
+/* Covers the whole pill, so a click anywhere on it opens the badge in the inspector. */
+.layer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: grab;
+}
+
+.layer:hover {
+  background: rgba(37, 99, 235, 0.06);
+}
+
+.layer:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 3px;
+}
+
+/* Editor only: marks the badge shown in the inspector. */
+.selected .layer,
+.selected .layer:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 3px;
+  background: rgba(37, 99, 235, 0.05);
+}
+
+/* On the top right corner, so it never covers the badge's value. */
+.actions {
+  position: absolute;
+  top: -12px;
+  right: -10px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.cell:hover .actions,
+.cell:focus-within .actions,
+.selected .actions,
+.raised .actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (pointer: coarse) {
+  .actions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}

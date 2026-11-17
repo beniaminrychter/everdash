@@ -9,6 +9,10 @@
   "dependencies": {
     "@everdash/contracts": "workspace:*",
     "@everdash/ui": "workspace:*",
-    "preact": "^10.29.8"
+    "preact": "^10.29.8",
+    "sortablejs": "^1.15.7"
+  },
+  "devDependencies": {
+    "@types/sortablejs": "^1.15.9"
   }
 }

@@ -1,3 +1,5 @@
+import type { ForecastType } from '../config/weatherForecast';
+
 export interface ServiceCommand {
   domain: 'light' | 'switch' | 'input_boolean' | 'scene' | 'script';
   service: 'turn_on' | 'turn_off';
@@ -27,5 +29,5 @@ export interface ClimateApi extends Omit<HomeAssistantApi, 'callService'> {
 
 export interface CatalogApi extends HomeAssistantApi {
   getStates: () => Promise<unknown>;
-  getWeatherForecast: (entityId: string) => Promise<unknown>;
+  getWeatherForecast: (entityId: string, type: ForecastType) => Promise<unknown>;
 }

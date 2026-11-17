@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { validateDashboard } from '@everdash/contracts/config/validate';
 import { useDraft } from '@/app/DraftContext';
 import { serializeDocument } from '@/app/draft/draftReducer';
+import { withoutIncomplete } from '@/app/draft/incomplete';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +14,8 @@ import { useJsonGuard } from './useJsonGuard';
 
 export function JsonPage() {
   const { state, dispatch } = useDraft();
-  const current = serializeDocument(state.document);
+  // A card still being added is not part of the dashboard yet, so it is not exported.
+  const current = serializeDocument(withoutIncomplete(state.document));
   // Null while the textarea just mirrors the draft, so a draft that finishes loading shows up.
   const [edited, setEdited] = useState<string | null>(null);
   const text = edited ?? current;

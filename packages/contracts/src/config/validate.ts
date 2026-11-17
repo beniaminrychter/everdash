@@ -1,4 +1,7 @@
 import { cardEntityDomains, isCardEntity } from './cardDomains';
+import { isCardRows } from './cardRows';
+import { isCardSize } from './cardSize';
+import { isForecastType } from './weatherForecast';
 import { defineConfig } from './normalize';
 import type { AppConfig, CardConfig, DashboardDocument, HomeConfig } from './types';
 import { iconNames } from '../iconNames';
@@ -14,8 +17,10 @@ export type DashboardValidation =
 
 const rootKeys = ['schemaVersion', 'timeZone', 'sun', 'polling', 'views'];
 const pollingKeys = ['controlsMs', 'observationsMs', 'metadataMs'];
-const viewKeys = ['id', 'title', 'badges', 'cards'];
+const viewKeys = ['id', 'title', 'badges', 'cards', 'sections'];
+const sectionKeys = ['id', 'title', 'cards'];
 const cardKeys: Record<string, string[]> = {
+  clock: ['type', 'name', 'display', 'size'],
   climate: ['type', 'entity', 'name', 'temperatureUnit'],
   light: ['type', 'entity', 'name', 'icon'],
   outlet: ['type', 'entity', 'name', 'icon'],
@@ -23,10 +28,11 @@ const cardKeys: Record<string, string[]> = {
   scene: ['type', 'entity', 'name', 'icon'],
   toggle: ['type', 'entity', 'name', 'icon'],
   value: ['type', 'entity', 'name', 'icon', 'template', 'unit', 'precision'],
-  weather: ['type', 'entity', 'name'],
+  weather: ['type', 'entity', 'name', 'size', 'rows', 'forecast'],
 };
 const iconCardTypes = new Set(['light', 'outlet', 'value', 'toggle', 'scene']);
 const valueTemplates = new Set(['tile', 'hero', 'compact']);
+const clockDisplays = new Set(['time', 'date', 'datetime']);
 const iconSet = new Set<string>(iconNames);
 
 function hasControlCharacter(value: string): boolean {
@@ -90,6 +96,151 @@ function validateOptionalText(
     return false;
   }
   return true;
+}
+
+function validateCards(cards: unknown, path: string, issues: ConfigIssue[]) {
+  if (cards === undefined) {
+    return;
+  }
+  if (!Array.isArray(cards)) {
+    issues.push({ path, message: 'Expected an array.' });
+    return;
+  }
+  cards.forEach((card, cardIndex) => {
+    const cardPath = `${path}[${cardIndex}]`;
+    if (!isRecord(card)) {
+      issues.push({ path: cardPath, message: 'Expected an object.' });
+      return;
+    }
+    if (typeof card.type !== 'string' || !cardKeys[card.type]) {
+      issues.push({ path: `${cardPath}.type`, message: 'Unknown card type.' });
+      return;
+    }
+    addUnknownKeys(card, cardKeys[card.type], cardPath, issues);
+    if (
+      cardEntityDomains(card.type as CardConfig['type']).length > 0 &&
+      !isCardEntity(card.type as CardConfig['type'], card.entity)
+    ) {
+      issues.push({
+        path: `${cardPath}.entity`,
+        message: `Expected an entity ID in the ${cardEntityDomains(card.type as CardConfig['type']).join(' or ')} domain.`,
+      });
+    }
+    validateOptionalText(card.name, `${cardPath}.name`, issues);
+    if (cardKeys[card.type].includes('size') && card.size !== undefined && !isCardSize(card.size)) {
+      issues.push({
+        path: `${cardPath}.size`,
+        message: 'Expected quarter, half or full.',
+      });
+    }
+    if (cardKeys[card.type].includes('rows') && card.rows !== undefined && !isCardRows(card.rows)) {
+      issues.push({
+        path: `${cardPath}.rows`,
+        message: 'Expected 1 or 2.',
+      });
+    }
+    if (card.type === 'weather' && card.forecast !== undefined && !isForecastType(card.forecast)) {
+      issues.push({
+        path: `${cardPath}.forecast`,
+        message: 'Expected hourly or daily.',
+      });
+    }
+    if (
+      card.type === 'clock' &&
+      card.display !== undefined &&
+      !clockDisplays.has(String(card.display))
+    ) {
+      issues.push({
+        path: `${cardPath}.display`,
+        message: 'Expected time, date or datetime.',
+      });
+    }
+    if (iconCardTypes.has(card.type)) {
+      validateOptionalText(card.icon, `${cardPath}.icon`, issues);
+      if (card.icon !== undefined && !iconSet.has(String(card.icon))) {
+        issues.push({ path: `${cardPath}.icon`, message: 'Unknown icon.' });
+      }
+    }
+    if (
+      card.type === 'climate' &&
+      card.temperatureUnit !== undefined &&
+      card.temperatureUnit !== '°C' &&
+      card.temperatureUnit !== '°F'
+    ) {
+      issues.push({
+        path: `${cardPath}.temperatureUnit`,
+        message: 'Expected °C or °F.',
+      });
+    }
+    if (card.type === 'value') {
+      if (card.template !== undefined && !valueTemplates.has(String(card.template))) {
+        issues.push({
+          path: `${cardPath}.template`,
+          message: 'Expected tile, compact or hero.',
+        });
+      }
+      if (card.unit !== undefined && !isValidUnit(card.unit)) {
+        issues.push({
+          path: `${cardPath}.unit`,
+          message:
+            'Expected a unit of at most 12 printable characters, or an empty string to hide it.',
+        });
+      }
+      if (
+        card.precision !== undefined &&
+        (typeof card.precision !== 'number' ||
+          !Number.isInteger(card.precision) ||
+          card.precision < 0 ||
+          card.precision > 3)
+      ) {
+        issues.push({
+          path: `${cardPath}.precision`,
+          message: 'Expected a whole number from 0 to 3.',
+        });
+      }
+    }
+    if (card.type === 'pstryk') {
+      for (const field of ['sellPrice', 'nextPrice', 'usage', 'schedule']) {
+        if (card[field] !== undefined) {
+          validateEntity(card[field], 'sensor', `${cardPath}.${field}`, issues);
+        }
+      }
+    }
+  });
+}
+
+function validateSections(sections: unknown, path: string, issues: ConfigIssue[]) {
+  if (sections === undefined) {
+    return;
+  }
+  if (!Array.isArray(sections)) {
+    issues.push({ path, message: 'Expected an array.' });
+    return;
+  }
+  const ids = new Set<string>();
+  sections.forEach((section, sectionIndex) => {
+    const sectionPath = `${path}[${sectionIndex}]`;
+    if (!isRecord(section)) {
+      issues.push({ path: sectionPath, message: 'Expected an object.' });
+      return;
+    }
+    addUnknownKeys(section, sectionKeys, sectionPath, issues);
+    for (const field of ['id', 'title']) {
+      if (typeof section[field] !== 'string' || !section[field].trim()) {
+        issues.push({ path: `${sectionPath}.${field}`, message: 'Expected a non-empty string.' });
+      }
+    }
+    if (typeof section.id === 'string' && section.id.trim()) {
+      if (ids.has(section.id)) {
+        issues.push({
+          path: `${sectionPath}.id`,
+          message: 'Section IDs must be unique within a view.',
+        });
+      }
+      ids.add(section.id);
+    }
+    validateCards(section.cards, `${sectionPath}.cards`, issues);
+  });
 }
 
 export function validateDashboard(input: unknown): DashboardValidation {
@@ -185,82 +336,8 @@ export function validateDashboard(input: unknown): DashboardValidation {
         }
       }
 
-      if (view.cards !== undefined) {
-        if (!Array.isArray(view.cards)) {
-          issues.push({ path: `${viewPath}.cards`, message: 'Expected an array.' });
-        } else {
-          view.cards.forEach((card, cardIndex) => {
-            const cardPath = `${viewPath}.cards[${cardIndex}]`;
-            if (!isRecord(card)) {
-              issues.push({ path: cardPath, message: 'Expected an object.' });
-              return;
-            }
-            if (typeof card.type !== 'string' || !cardKeys[card.type]) {
-              issues.push({ path: `${cardPath}.type`, message: 'Unknown card type.' });
-              return;
-            }
-            addUnknownKeys(card, cardKeys[card.type], cardPath, issues);
-            if (!isCardEntity(card.type as CardConfig['type'], card.entity)) {
-              issues.push({
-                path: `${cardPath}.entity`,
-                message: `Expected an entity ID in the ${cardEntityDomains(card.type as CardConfig['type']).join(' or ')} domain.`,
-              });
-            }
-            validateOptionalText(card.name, `${cardPath}.name`, issues);
-            if (iconCardTypes.has(card.type)) {
-              validateOptionalText(card.icon, `${cardPath}.icon`, issues);
-              if (card.icon !== undefined && !iconSet.has(String(card.icon))) {
-                issues.push({ path: `${cardPath}.icon`, message: 'Unknown icon.' });
-              }
-            }
-            if (
-              card.type === 'climate' &&
-              card.temperatureUnit !== undefined &&
-              card.temperatureUnit !== '°C' &&
-              card.temperatureUnit !== '°F'
-            ) {
-              issues.push({
-                path: `${cardPath}.temperatureUnit`,
-                message: 'Expected °C or °F.',
-              });
-            }
-            if (card.type === 'value') {
-              if (card.template !== undefined && !valueTemplates.has(String(card.template))) {
-                issues.push({
-                  path: `${cardPath}.template`,
-                  message: 'Expected tile, compact or hero.',
-                });
-              }
-              if (card.unit !== undefined && !isValidUnit(card.unit)) {
-                issues.push({
-                  path: `${cardPath}.unit`,
-                  message:
-                    'Expected a unit of at most 12 printable characters, or an empty string to hide it.',
-                });
-              }
-              if (
-                card.precision !== undefined &&
-                (typeof card.precision !== 'number' ||
-                  !Number.isInteger(card.precision) ||
-                  card.precision < 0 ||
-                  card.precision > 3)
-              ) {
-                issues.push({
-                  path: `${cardPath}.precision`,
-                  message: 'Expected a whole number from 0 to 3.',
-                });
-              }
-            }
-            if (card.type === 'pstryk') {
-              for (const field of ['sellPrice', 'nextPrice', 'usage', 'schedule']) {
-                if (card[field] !== undefined) {
-                  validateEntity(card[field], 'sensor', `${cardPath}.${field}`, issues);
-                }
-              }
-            }
-          });
-        }
-      }
+      validateCards(view.cards, `${viewPath}.cards`, issues);
+      validateSections(view.sections, `${viewPath}.sections`, issues);
     });
   }
 

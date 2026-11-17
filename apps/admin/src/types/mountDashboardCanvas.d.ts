@@ -3,6 +3,18 @@
 // Keep in sync with packages/dashboard/src/editor/mountDashboardCanvas.ts.
 import type { DashboardDocument } from '@everdash/contracts/config/types';
 
+/** A card's place: its section's id, or null for the cards outside any section. */
+export interface CardLocation {
+  section: string | null;
+  index: number;
+}
+
+/** `section` is a section id, or null for the cards outside any section. */
+export type EditorSelection =
+  | { kind: 'card'; section: string | null; index: number }
+  | { kind: 'badge'; index: number }
+  | { kind: 'section'; section: string };
+
 export interface CanvasSnapshot {
   config: DashboardDocument;
   states: unknown[];
@@ -15,8 +27,10 @@ export interface CanvasSnapshot {
 export interface DashboardCanvasProps {
   snapshot: CanvasSnapshot;
   selectedView: string;
-  /** Editor only: the card or badge to outline. The tablet never passes it. */
-  selection?: { kind: 'card' | 'badge'; index: number };
+  /** Editor only: the card, badge or section to outline. The tablet never passes it. */
+  selection?: EditorSelection;
+  /** Editor only: new cards that still need an entity, outlined as such. */
+  incomplete?: readonly CardLocation[];
   onAction: (action: Record<string, unknown>) => void;
 }
 

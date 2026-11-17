@@ -4,6 +4,7 @@ import { useDraft } from '@/app/DraftContext';
 import { BadgeInspector } from './BadgeInspector';
 import { CardInspector } from './CardInspector';
 import type { DeleteTarget } from './DeleteItemDialog';
+import { SectionInspector } from './SectionInspector';
 import { findOpener, rememberOpener } from './sheetOpener';
 import type { OpenerMemory } from './sheetOpener';
 import { useMediaQuery } from './useMediaQuery';
@@ -24,8 +25,18 @@ function InspectorContent({ onRequestDelete }: Pick<InspectorProps, 'onRequestDe
     case 'card': {
       return (
         <CardInspector
-          key={`${state.viewId}-card-${selection.index}`}
+          key={`${state.viewId}-card-${selection.section ?? ''}-${selection.index}`}
           selection={selection}
+          onRequestDelete={onRequestDelete}
+        />
+      );
+    }
+
+    case 'section': {
+      return (
+        <SectionInspector
+          key={`${state.viewId}-section-${selection.id}`}
+          id={selection.id}
           onRequestDelete={onRequestDelete}
         />
       );
@@ -38,12 +49,6 @@ function InspectorContent({ onRequestDelete }: Pick<InspectorProps, 'onRequestDe
           selection={selection}
           onRequestDelete={onRequestDelete}
         />
-      );
-    }
-
-    case 'pending-card': {
-      return (
-        <CardInspector key="pending-card" selection={selection} onRequestDelete={onRequestDelete} />
       );
     }
 

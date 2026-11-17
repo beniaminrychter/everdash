@@ -106,10 +106,10 @@ export function createClient(baseUrl = ''): HomeAssistantClient {
     },
     getState: (entityId) => request('GET', `api/ha/states/${encodeURIComponent(entityId)}`),
     getStates: () => request('GET', 'api/ha/states'),
-    getWeatherForecast: (entityId) =>
+    getWeatherForecast: (entityId, type) =>
       request('POST', 'api/ha/services/weather/get_forecasts', {
         entity_id: entityId,
-        type: 'hourly',
+        type,
       }),
   };
 }

@@ -4,6 +4,13 @@ import { hasState } from '../../../shared/dashboard/readings';
 import { parseForecastResponse } from '../../weather/data/forecast';
 import { isEntity, parseEntities, resolveDashboard } from './discovery';
 import type { AppConfig } from '@everdash/contracts/config';
+import {
+  defaultForecastType,
+  forecastKey,
+  resolveForecastType,
+} from '@everdash/contracts/config/weatherForecast';
+import type { ForecastType } from '@everdash/contracts/config/weatherForecast';
+import { viewCards } from '@everdash/contracts/config/sections';
 import type { Entity, EntityReadings, ResolvedDashboard } from './types';
 
 export interface ObservationSnapshot {
@@ -15,7 +22,17 @@ export interface ObservationSnapshot {
   updatedAt: number | null;
 }
 
-const forecastTtlMs = 900_000;
+/** How long a forecast is reused: hours change faster than days. */
+const forecastTtlMs: Readonly<Record<ForecastType, number>> = {
+  daily: 3_600_000,
+  hourly: 900_000,
+};
+
+interface ForecastRequest {
+  entityId: string;
+  /** The forecast type to ask Home Assistant for, which can differ from what the card asked for. */
+  type: ForecastType;
+}
 
 export class ObservationStore {
   private snapshot: ObservationSnapshot;
@@ -29,7 +46,8 @@ export class ObservationStore {
   private authFailed = false;
   private revision = 0;
   private lastDiscovery = 0;
-  private forecastChecked: Record<string, number> = {};
+  /** When each forecast stops being fresh, by forecast key; failed reads are remembered too. */
+  private forecastExpires: Record<string, number> = {};
   private timer?: ReturnType<typeof setTimeout>;
   constructor(
     private readonly config: AppConfig,
@@ -181,7 +199,7 @@ export class ObservationStore {
         }
         this.authFailed = Boolean(authenticationError);
         if (authenticationError) {
-          this.forecastChecked = {};
+          this.forecastExpires = {};
         }
         this.emit({
           readings: authenticationError ? {} : readings,
@@ -202,7 +220,7 @@ export class ObservationStore {
       this.authFailed =
         error instanceof HomeAssistantError && (error.status === 401 || error.status === 403);
       if (this.authFailed) {
-        this.forecastChecked = {};
+        this.forecastExpires = {};
       }
       // Offline or server errors keep the last known readings, and forecasts inside their cache window.
       this.emit({
@@ -223,57 +241,91 @@ export class ObservationStore {
       }
     }
   }
-  /** Forecasts that are still inside the 15 minute cache window. */
+  /** Forecasts that are still inside their cache window. */
   private freshForecasts(): Record<string, readonly unknown[]> {
     const forecasts: Record<string, readonly unknown[]> = {};
-    for (const [id, forecast] of Object.entries(this.snapshot.forecasts)) {
-      const checked = this.forecastChecked[id];
-      if (checked !== undefined && Date.now() - checked < forecastTtlMs) {
-        forecasts[id] = forecast;
+    for (const [key, forecast] of Object.entries(this.snapshot.forecasts)) {
+      const expires = this.forecastExpires[key];
+      if (expires !== undefined && Date.now() < expires) {
+        forecasts[key] = forecast;
       } else {
-        delete this.forecastChecked[id];
+        delete this.forecastExpires[key];
       }
     }
 
     return forecasts;
   }
 
+  /**
+   * The forecasts the weather cards need, by snapshot key. A card gets the type it asked for, or the
+   * other one when its entity does not offer it; an hourly card also reads the daily forecast
+   * for today's high and low when the entity offers one.
+   */
+  private forecastRequests(): Map<string, ForecastRequest> {
+    const requests = new Map<string, ForecastRequest>();
+    this.snapshot.resolved.views.forEach((view) =>
+      viewCards(view).forEach((card) => {
+        if (card.type !== 'weather') {
+          return;
+        }
+        const entity = this.snapshot.readings[card.entity];
+        if (!hasState(entity)) {
+          return;
+        }
+        const features = entity.attributes.supported_features;
+        const requested = card.forecast ?? defaultForecastType;
+        const resolved = resolveForecastType(requested, features);
+        if (!resolved.type) {
+          return;
+        }
+        requests.set(forecastKey(card.entity, requested), {
+          entityId: card.entity,
+          type: resolved.type,
+        });
+        if (resolved.type === 'hourly') {
+          const daily = resolveForecastType('daily', features);
+          if (daily.type === 'daily' && !daily.fellBack) {
+            requests.set(forecastKey(card.entity, 'daily'), {
+              entityId: card.entity,
+              type: 'daily',
+            });
+          }
+        }
+      }),
+    );
+
+    return requests;
+  }
+
   private async refreshForecasts(manual: boolean, revision: number) {
     if (this.stopped || revision !== this.revision) {
       return;
     }
-    const ids = new Set<string>();
-    this.snapshot.resolved.views.forEach((view) =>
-      view.cards.forEach((card) => {
-        if (card.type === 'weather') {
-          ids.add(card.entity);
-        }
-      }),
-    );
+    const requests = this.forecastRequests();
     const forecasts = { ...this.snapshot.forecasts };
+    // Forecasts nobody asks for any more, such as after a card changes its type, are dropped.
+    Object.keys(forecasts).forEach((key) => {
+      if (!requests.has(key)) {
+        delete forecasts[key];
+        delete this.forecastExpires[key];
+      }
+    });
     await Promise.all(
-      [...ids].map(async (id) => {
-        const entity = this.snapshot.readings[id];
-        const features = entity?.attributes.supported_features;
-        if (!hasState(entity) || (typeof features === 'number' && (features & 2) === 0)) {
-          delete forecasts[id];
-          delete this.forecastChecked[id];
-          return;
-        }
-        if (
-          !manual &&
-          this.forecastChecked[id] !== undefined &&
-          Date.now() - this.forecastChecked[id] < forecastTtlMs
-        ) {
+      [...requests].map(async ([key, { entityId, type }]) => {
+        const expires = this.forecastExpires[key];
+        if (!manual && expires !== undefined && Date.now() < expires) {
           return;
         }
         try {
-          forecasts[id] = parseForecastResponse(await this.api.getWeatherForecast(id), id);
+          forecasts[key] = parseForecastResponse(
+            await this.api.getWeatherForecast(entityId, type),
+            entityId,
+          );
         } catch {
-          delete forecasts[id];
+          delete forecasts[key];
         }
         if (!this.stopped && revision === this.revision) {
-          this.forecastChecked[id] = Date.now();
+          this.forecastExpires[key] = Date.now() + forecastTtlMs[type];
         }
       }),
     );

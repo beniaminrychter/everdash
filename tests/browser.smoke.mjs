@@ -12,6 +12,30 @@ import { dashboardDocument } from './fixtures/dashboard.ts';
 const temporary = await mkdtemp(join(tmpdir(), 'my-home-ha-check-'));
 const buildDirectory = join(temporary, 'dist');
 const output = process.env.MY_HOME_SCREENSHOT_DIR || join(tmpdir(), 'my-home-browser-check');
+
+/**
+ * Resizes a page and waits for its layout to follow. The cards' grid measures its container, so
+ * it settles on the first animation frames after a resize rather than inside setViewportSize.
+ */
+async function resize(target, size) {
+  await target.setViewportSize(size);
+  await target.evaluate(
+    () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+  );
+}
+/** Presses the brightness pill at the first percentage and drags it through the rest. */
+async function dragBrightness(target, percents) {
+  const box = await target.locator('#brightness').boundingBox();
+  const at = (percent) => box.y + box.height * (1 - percent / 100);
+  const x = box.x + box.width / 2;
+
+  await target.mouse.move(x, at(percents[0]));
+  await target.mouse.down();
+  for (const percent of percents.slice(1)) {
+    await target.mouse.move(x, at(percent));
+  }
+  await target.mouse.up();
+}
 await mkdir(output, { recursive: true });
 const lightId = 'light.salon_dodatkowe';
 const outletId = 'switch.ogrod_taras_kinkiety';
@@ -102,10 +126,15 @@ states[usageId] = observed(usageId, 'Pstryk Active power', '13586', {
   unit_of_measurement: 'W',
 });
 states['weather.dom'] = observed('weather.dom', 'Home', 'partlycloudy', {
+  apparent_temperature: 12.6,
   humidity: 72,
+  precipitation_unit: 'mm',
+  pressure: 1013,
+  pressure_unit: 'hPa',
   supported_features: 3,
   temperature: 14.2,
   temperature_unit: '°C',
+  wind_bearing: 225,
   wind_speed: 8,
   wind_speed_unit: 'km/h',
 });
@@ -132,10 +161,20 @@ states[climateId] = observed(climateId, 'Air Conditioner', 'heat', {
   target_temp_step: 1,
   temperature: 22,
 });
-const forecast = Array.from({ length: 8 }, (_, index) => ({
-  condition: index < 3 ? 'sunny' : 'partlycloudy',
+// Forty hours reach past tomorrow's midnight; the first one has already started.
+const forecast = Array.from({ length: 40 }, (_, index) => ({
+  condition: index < 3 ? 'sunny' : index % 9 === 8 ? 'rainy' : 'partlycloudy',
   datetime: new Date(hour + index * 3600000).toISOString(),
+  precipitation_probability: (index * 5) % 60,
   temperature: 15 + index / 10,
+}));
+// Daily entries name their calendar day in the dashboard time zone, from today on.
+const dailyForecast = Array.from({ length: 8 }, (_, index) => ({
+  condition: index % 3 === 2 ? 'rainy' : 'sunny',
+  datetime: `${new Date(hour + index * 86_400_000).toLocaleDateString('en-CA', { timeZone: 'Europe/Warsaw' })}T00:00:00+00:00`,
+  precipitation_probability: index * 10,
+  temperature: 17 + index / 10,
+  templow: 9 + index / 10,
 }));
 let forecastStatus = 200;
 let forecastRequests = 0;
@@ -196,12 +235,19 @@ const api = createServer(async (request, response) => {
       for await (const chunk of request) {
         body += chunk;
       }
-      assert.deepEqual(JSON.parse(body), { entity_id: 'weather.dom', type: 'hourly' });
+      const { entity_id: forecastEntity, type: forecastType, ...extra } = JSON.parse(body);
+      assert.equal(forecastEntity, 'weather.dom');
+      assert.ok(['hourly', 'daily'].includes(forecastType));
+      assert.deepEqual(extra, {});
       assert.ok(url.searchParams.has('return_response'));
       forecastRequests++;
-      response
-        .writeHead(forecastStatus)
-        .end(JSON.stringify({ service_response: { 'weather.dom': { forecast } } }));
+      response.writeHead(forecastStatus).end(
+        JSON.stringify({
+          service_response: {
+            'weather.dom': { forecast: forecastType === 'daily' ? dailyForecast : forecast },
+          },
+        }),
+      );
       return;
     }
     const climateMatch = url.pathname.match(
@@ -344,7 +390,7 @@ try {
               name: 'Room energy',
               usage: 'sensor.pstryk_multisensor_activepower_0',
             },
-            { type: 'weather', entity: 'weather.dom', name: 'Outdoor weather' },
+            { type: 'weather', entity: 'weather.dom', name: 'Outdoor weather', forecast: 'daily' },
           ],
         },
         {
@@ -352,6 +398,61 @@ try {
           title: 'Sensors',
           badges: [{ type: 'temperature', entity: 'sensor.fixture_living_temp' }],
         },
+        ...(url.searchParams.has('weather')
+          ? [
+              {
+                id: 'fixture-weather',
+                title: 'Weather layouts',
+                cards: [
+                  { type: 'weather', entity: 'weather.dom', name: 'Full two rows' },
+                  { type: 'weather', entity: 'weather.dom', name: 'Half two rows', size: 'half' },
+                  {
+                    type: 'weather',
+                    entity: 'weather.dom',
+                    name: 'Daily half two rows',
+                    size: 'half',
+                    forecast: 'daily',
+                  },
+                  {
+                    type: 'weather',
+                    entity: 'weather.dom',
+                    name: 'Quarter two rows',
+                    size: 'quarter',
+                  },
+                  {
+                    type: 'weather',
+                    entity: 'weather.dom',
+                    name: 'Daily quarter two rows',
+                    size: 'quarter',
+                    forecast: 'daily',
+                  },
+                  { type: 'weather', entity: 'weather.dom', name: 'Full one row', rows: 1 },
+                  {
+                    type: 'weather',
+                    entity: 'weather.dom',
+                    name: 'Half one row',
+                    size: 'half',
+                    rows: 1,
+                  },
+                  {
+                    type: 'weather',
+                    entity: 'weather.dom',
+                    name: 'Daily half one row',
+                    size: 'half',
+                    forecast: 'daily',
+                    rows: 1,
+                  },
+                  {
+                    type: 'weather',
+                    entity: 'weather.dom',
+                    name: 'Quarter one row',
+                    size: 'quarter',
+                    rows: 1,
+                  },
+                ],
+              },
+            ]
+          : []),
         ...(url.searchParams.has('extras')
           ? [
               {
@@ -385,11 +486,33 @@ try {
             ]
           : []),
       ];
+      // One view of widgets of every width and tiles, to check how the grid lays them out.
+      const widthViews = [
+        {
+          id: 'fixture-widths',
+          title: 'Widths',
+          badges: [],
+          cards: [
+            { type: 'clock', name: 'Quarter one' },
+            { type: 'clock', name: 'Quarter two' },
+            { type: 'clock', name: 'Quarter three' },
+            { type: 'clock', name: 'Half one', size: 'half' },
+            { type: 'clock', name: 'Half two', size: 'half' },
+            { type: 'clock', name: 'Full row', size: 'full' },
+            { type: 'value', entity: 'sensor.fixture_living_temp', name: 'Tile one' },
+            { type: 'value', entity: 'sensor.fixture_living_temp', name: 'Tile two' },
+            { type: 'value', entity: 'sensor.fixture_living_temp', name: 'Tile three' },
+            { type: 'value', entity: 'sensor.fixture_living_temp', name: 'Tile four' },
+          ],
+        },
+      ];
       const config = {
         ...dashboardDocument,
         views: url.searchParams.has('sensors-only')
           ? fixtureViews.filter((view) => view.id === 'fixture-sensors')
-          : fixtureViews,
+          : url.searchParams.has('widths-only')
+            ? widthViews
+            : fixtureViews,
       };
       await route.fulfill({
         json: { mode: 'direct', configured: true, revision: 'fixture-v1', config },
@@ -625,8 +748,30 @@ try {
   await expect(page.getByText('Next hour', { exact: true }).locator('..')).toContainText('0.45');
   await expect(page.getByTestId('weather-temperature')).toHaveText('14.2°C');
   const weather = page.getByRole('region', { exact: true, name: 'Current weather' });
-  await expect(weather.locator('[data-forecast-hour]')).toHaveCount(5);
   await expect(weather.locator('[data-forecast-hour]').first()).toContainText('15.1°C');
+  // The strip holds the next day and a half, not just a few hours, and says where tomorrow starts.
+  expect(await weather.locator('[data-forecast-hour]').count()).toBeGreaterThanOrEqual(36);
+  await expect(weather.locator('[data-forecast-day-break]').first()).toHaveText('Tomorrow');
+  await expect(weather.getByTestId('weather-feels-like')).toHaveText('Feels like 12.6°C');
+  await expect(weather.getByTestId('weather-range')).toContainText('High 17.0°C');
+  await expect(weather.getByTestId('weather-range')).toContainText('Low 9.0°C');
+  await expect(weather.getByTestId('weather-details')).toContainText('72%');
+  await expect(weather.getByTestId('weather-details')).toContainText('SW 8 km/h');
+  await expect(weather.getByTestId('weather-details')).toContainText('1013 hPa');
+  const strip = weather.getByRole('list', { exact: true, name: 'Hourly forecast' });
+  const fades = () =>
+    strip.evaluate((list) =>
+      [list.nextElementSibling, list.nextElementSibling.nextElementSibling].map(
+        (fade) => getComputedStyle(fade).opacity,
+      ),
+    );
+  expect(await strip.evaluate((list) => list.scrollWidth > list.clientWidth)).toBe(true);
+  expect(await strip.evaluate((list) => getComputedStyle(list).overflowX)).toBe('auto');
+  expect(await fades()).toEqual(['0', '1']);
+  await strip.evaluate((list) => {
+    list.scrollLeft = list.scrollWidth;
+  });
+  await expect.poll(fades).toEqual(['1', '0']);
   expect(forecastRequests).toBeGreaterThan(0);
   forecastStatus = 500;
   await refreshPage();
@@ -634,7 +779,7 @@ try {
   await expect(page.getByTestId('weather-temperature')).toHaveText('14.2°C');
   forecastStatus = 200;
   await refreshPage();
-  await expect(weather.locator('[data-forecast-hour]')).toHaveCount(5);
+  await expect(weather.locator('[data-forecast-hour]').first()).toContainText('15.1°C');
 
   await expect(page.locator('[data-sensor="sensor.czujnik_jadalnia_temperatura"]')).toContainText(
     '21.2',
@@ -666,17 +811,31 @@ try {
   await page.getByTestId('energy-price-bar').nth(8).click();
   await expect(page.getByTestId('energy-selected-price')).toContainText('-0,10');
   for (const width of [1024, 375, 320]) {
-    await page.setViewportSize({ height: 768, width });
+    await resize(page, { height: 768, width });
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(
       false,
     );
     await page.screenshot({ fullPage: true, path: join(output, `polish-graph-${width}.png`) });
   }
-  await page.setViewportSize({ height: 768, width: 1024 });
+  await resize(page, { height: 768, width: 1024 });
   await page.getByRole('button', { exact: true, name: 'First floor, wybierz pulpit' }).click();
   await page.getByRole('button', { exact: true, name: 'Meter room' }).click();
   await expect(page.getByRole('heading', { exact: true, name: 'Room weather' })).toBeVisible();
   await expect(page.getByRole('heading', { exact: true, name: 'Outdoor weather' })).toBeVisible();
+  // The daily variant lists one entry per day, labelled in the app language.
+  const dailyWeather = page.getByRole('region', { exact: true, name: 'Outdoor weather' });
+  await expect(dailyWeather.locator('[data-forecast-day]')).toHaveCount(8);
+  await expect(dailyWeather.locator('[data-forecast-day]').nth(0)).toContainText('Dziś');
+  await expect(dailyWeather.locator('[data-forecast-day]').nth(0)).toContainText('17,0°C');
+  await expect(dailyWeather.locator('[data-forecast-day]').nth(0)).toContainText('9,0°C');
+  await expect(dailyWeather.locator('[data-forecast-day]').nth(1)).toContainText('Jutro');
+  await expect(dailyWeather.locator('[data-forecast-hour]')).toHaveCount(0);
+  await expect(
+    page
+      .getByRole('region', { exact: true, name: 'Room weather' })
+      .locator('[data-forecast-hour]')
+      .first(),
+  ).toBeVisible();
   await page.getByRole('button', { exact: true, name: 'Meter room, wybierz pulpit' }).click();
   await page.getByRole('button', { exact: true, name: 'First floor' }).click();
 
@@ -922,12 +1081,7 @@ try {
   await page.keyboard.press('Tab');
   await expect(page.getByRole('button', { exact: true, name: 'Close settings' })).toBeFocused();
   const beforeDimming = commands.length;
-  await page.locator('#brightness').evaluate((input) => {
-    for (const value of ['20', '40', '67']) {
-      input.value = value;
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-    }
-  });
+  await dragBrightness(page, [20, 40, 67]);
   await expect(page.locator('#brightness-value')).toHaveText('67%');
   await expect(
     page.getByRole('dialog').getByRole('status', { name: 'Accessory connection' }),
@@ -959,10 +1113,7 @@ try {
   ).toHaveCount(0);
   holdServices = true;
   nextServiceStatus = 500;
-  await page.locator('#brightness').evaluate((input) => {
-    input.value = '12';
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-  });
+  await dragBrightness(page, [40, 12]);
   await expect(page.locator('#brightness-value')).toHaveText('12%');
   await expect(
     page.getByRole('dialog').getByRole('button', { exact: true, name: 'Salon Dodatkowe power' }),
@@ -1081,7 +1232,7 @@ try {
     [375, 812, 'phone'],
     [320, 568, 'small-phone'],
   ]) {
-    await page.setViewportSize({ height, width });
+    await resize(page, { height, width });
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(
       false,
     );
@@ -1098,7 +1249,7 @@ try {
     [1024, 768, 'dark-ipad'],
     [375, 812, 'dark-phone'],
   ]) {
-    await page.setViewportSize({ height, width });
+    await resize(page, { height, width });
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(
       false,
     );
@@ -1163,6 +1314,77 @@ try {
     'Connected to Home Assistant',
   );
   await sensorContext.close();
+
+  // One grid per area: a quarter is as wide as an accessory tile (four, three, two per row) and
+  // becomes a half when tiles are two to a row; widgets and tiles may share a row.
+  const widthContext = await browser.newContext();
+  await routeHaApi(widthContext);
+  const widthPage = await widthContext.newPage();
+  widthPage.on('pageerror', (error) => errors.push(error.message));
+  await widthPage.goto(`${appUrl}?widths-only=1`);
+  await expect(widthPage.getByRole('heading', { name: 'Full row' })).toBeVisible();
+  const widgetBoxes = async () =>
+    widthPage.evaluate(() =>
+      Array.from(document.querySelectorAll('main [data-card="clock"]')).map((element) => {
+        const box = element.getBoundingClientRect();
+
+        return { y: Math.round(box.y), w: box.width, x: box.x };
+      }),
+    );
+  const tileBoxes = async () =>
+    widthPage.evaluate(() =>
+      Array.from(document.querySelectorAll('main [data-value-card="tile"]')).map((element) => {
+        const cell = element.closest('[style*="grid-column"]') ?? element;
+        const box = cell.getBoundingClientRect();
+
+        return { y: Math.round(box.y), w: box.width, x: box.x };
+      }),
+    );
+  const widthShots = process.env.EVERDASH_SMOKE_SHOTS ?? output;
+  for (const [width, height, label, quarters, tilesPerRow] of [
+    [1024, 768, 'tablet-1024', 'quarter', 4],
+    [768, 1024, 'tablet-768', 'quarter', 3],
+    [375, 812, 'tablet-375', 'full', 2],
+  ]) {
+    await resize(widthPage, { height, width });
+    await expect.poll(async () => (await widgetBoxes()).length).toBe(6);
+    const [one, two, three, halfOne, halfTwo, full] = await widgetBoxes();
+    const row = full.w;
+
+    if (quarters === 'quarter') {
+      // Three quarters on one row, each as wide as a tile of the row, and halves two to a row.
+      assert.ok(one.y === two.y && two.y === three.y, `${label}: quarters share a row`);
+      assert.ok(
+        Math.abs(one.w * tilesPerRow + 16 * (tilesPerRow - 1) - row) <= 2,
+        `${label}: a quarter is as wide as an accessory tile, not a half`,
+      );
+      assert.ok(halfOne.y === halfTwo.y, `${label}: halves share a row`);
+      assert.ok(Math.abs(halfOne.w * 2 + 16 - row) <= 2, `${label}: a half is a half`);
+      assert.ok(one.w >= 185, `${label}: a quarter is at least 185px wide`);
+    } else {
+      assert.ok(
+        Math.abs(one.w - row) <= 2,
+        `${label}: a narrow container gives every card the row`,
+      );
+      assert.ok(two.y > one.y && three.y > two.y, `${label}: cards stack`);
+    }
+
+    // Tiles span three, four or six of the twelve columns: four, three or two per row.
+    const tiles = await tileBoxes();
+    assert.equal(tiles.length, 4);
+    const firstRow = tiles.filter((tile) => tile.y === tiles[0].y).length;
+    assert.equal(firstRow, tilesPerRow, `${label}: ${tilesPerRow} tiles per row`);
+    assert.equal(
+      await widthPage.evaluate(() => document.documentElement.scrollWidth > innerWidth),
+      false,
+    );
+    await widthPage.screenshot({
+      animations: 'disabled',
+      fullPage: true,
+      path: join(widthShots, `${label}.png`),
+    });
+  }
+  await widthContext.close();
 
   const pinContext = await browser.newContext();
   await routeHaApi(pinContext);
@@ -1293,6 +1515,201 @@ try {
   await expect(scene).toContainText('Done');
   expect(commands.some((item) => item.domain === 'scene' && item.service === 'turn_on')).toBe(true);
   await extrasContext.close();
+
+  // Weather cards: every width and row count fills its height and keeps inside its card.
+  const weatherContext = await browser.newContext({ viewport: { height: 1400, width: 1024 } });
+  await routeHaApi(weatherContext);
+  const weatherPage = await weatherContext.newPage();
+  weatherPage.on('pageerror', (error) => errors.push(error.message));
+  await weatherPage.addInitScript(() => {
+    localStorage.setItem(
+      'my-home:preferences:v1',
+      JSON.stringify({ appearance: 'light', language: 'en', page: 'fixture-weather' }),
+    );
+  });
+  await weatherPage.goto(`${appUrl}?weather`);
+  await expect(weatherPage.getByRole('heading', { level: 1 })).toHaveText('Weather layouts');
+  const weatherCard = (name) => weatherPage.getByRole('region', { exact: true, name });
+  const cardHeight = async (name) => Math.round((await weatherCard(name).boundingBox()).height);
+  // The card's own title stays the region's name but takes no room on the card.
+  const titleWidth = async (name) =>
+    (await weatherCard(name).getByRole('heading', { name }).boundingBox()).width;
+  // Whether a part of the card lies inside the card's box.
+  const insideCard = (name, selector) =>
+    weatherCard(name).evaluate((card, inner) => {
+      const box = card.getBoundingClientRect();
+      const part = card.querySelector(inner).getBoundingClientRect();
+
+      return (
+        part.left >= box.left - 1 &&
+        part.right <= box.right + 1 &&
+        part.top >= box.top - 1 &&
+        part.bottom <= box.bottom + 1
+      );
+    }, selector);
+  const details = (name) => weatherCard(name).getByTestId('weather-details').locator('li');
+  const spillsOut = (name) =>
+    weatherCard(name).evaluate((card) => card.scrollHeight > card.clientHeight + 1);
+  // Text that is wider than the box it sits in runs into its neighbour.
+  const crowded = (name) =>
+    weatherCard(name).evaluate((card) =>
+      Array.from(
+        card.querySelectorAll(
+          'li strong, [data-testid="weather-temperature"], [data-testid="weather-range"]',
+        ),
+      ).some((part) => part.scrollWidth > part.clientWidth + 1),
+    );
+  const hours = (name) => weatherCard(name).locator('[data-forecast-hour]');
+
+  expect(await cardHeight('Full two rows')).toBe(224);
+  expect(await titleWidth('Full two rows')).toBeGreaterThan(1);
+  await expect(weatherCard('Full two rows').getByTestId('weather-feels-like')).toBeVisible();
+  await expect(weatherCard('Full two rows').getByTestId('weather-range')).toBeVisible();
+  await expect(details('Full two rows')).toHaveCount(4);
+  expect(await hours('Full two rows').count()).toBeGreaterThanOrEqual(36);
+
+  expect(await cardHeight('Half two rows')).toBe(224);
+  await expect(weatherCard('Half two rows').getByTestId('weather-temperature')).toBeVisible();
+  await expect(details('Half two rows')).toHaveCount(4);
+  await expect(hours('Half two rows')).toHaveCount(4);
+  expect(await insideCard('Half two rows', '[data-forecast-hour]:last-of-type')).toBe(true);
+
+  await expect(weatherCard('Daily half two rows').locator('[data-forecast-day]')).toHaveCount(4);
+
+  expect(await titleWidth('Half two rows')).toBeGreaterThan(1);
+  for (const name of [
+    'Full two rows',
+    'Half two rows',
+    'Daily half two rows',
+    'Quarter two rows',
+  ]) {
+    expect(await spillsOut(name), `${name} spills`).toBe(false);
+  }
+  expect(await titleWidth('Quarter two rows')).toBeGreaterThan(1);
+
+  // A daily list keeps the low next to the high.
+  const dailyList = weatherCard('Daily quarter two rows').locator('[data-forecast-day]');
+  await expect(dailyList).toHaveCount(4);
+  await expect(dailyList.first()).toContainText('17.0°C');
+  await expect(dailyList.first()).toContainText('9.0°');
+  expect(await cardHeight('Daily quarter two rows')).toBe(224);
+  expect(await spillsOut('Daily quarter two rows')).toBe(false);
+
+  expect(await cardHeight('Quarter two rows')).toBe(224);
+  await expect(weatherCard('Quarter two rows').getByTestId('weather-temperature')).toBeVisible();
+  await expect(weatherCard('Quarter two rows').getByTestId('weather-details')).toHaveCount(0);
+  await expect(hours('Quarter two rows')).toHaveCount(4);
+  expect(await insideCard('Quarter two rows', '[data-forecast-hour]:last-of-type')).toBe(true);
+
+  // One row is as tall as an accessory tile and nothing in it spills out of the card.
+  const oneRow = ['Full one row', 'Half one row', 'Daily half one row', 'Quarter one row'];
+  const spills = (name) =>
+    weatherCard(name).evaluate((card) => card.scrollHeight > card.clientHeight + 1);
+  const textInside = async (name, text) => {
+    const box = await weatherCard(name).boundingBox();
+    const part = await weatherCard(name).getByText(text).boundingBox();
+
+    return (
+      part.x >= box.x - 1 &&
+      part.x + part.width <= box.x + box.width + 1 &&
+      part.y >= box.y - 1 &&
+      part.y + part.height <= box.y + box.height + 1
+    );
+  };
+  for (const name of oneRow) {
+    expect(await cardHeight(name)).toBe(104);
+    expect(await titleWidth(name)).toBeLessThanOrEqual(1);
+    expect(await spills(name)).toBe(false);
+    expect(await insideCard(name, '[data-testid="weather-temperature"]')).toBe(true);
+  }
+  await expect(details('Full one row')).toHaveCount(4);
+  await expect(hours('Full one row')).toHaveCount(5);
+  expect(await insideCard('Full one row', '[data-forecast-hour]:last-of-type')).toBe(true);
+  await expect(hours('Half one row')).toHaveCount(3);
+  expect(await insideCard('Half one row', '[data-forecast-hour]:last-of-type')).toBe(true);
+  await expect(weatherCard('Daily half one row').locator('[data-forecast-day]')).toHaveCount(3);
+  expect(await insideCard('Daily half one row', '[data-forecast-day]:last-of-type')).toBe(true);
+  await expect(weatherCard('Quarter one row').getByTestId('weather-range')).toBeVisible();
+  await expect(weatherCard('Quarter one row').getByTestId('weather-details')).toHaveCount(0);
+  await expect(hours('Quarter one row')).toHaveCount(0);
+
+  // Without a forecast the one-row cards say so inside the card.
+  forecastStatus = 500;
+  await weatherPage.reload();
+  await expect(weatherCard('Half one row').getByText('Hourly forecast unavailable')).toBeVisible();
+  expect(await textInside('Half one row', 'Hourly forecast unavailable')).toBe(true);
+  expect(await textInside('Full one row', 'Hourly forecast unavailable')).toBe(true);
+  for (const name of oneRow) {
+    expect(await spills(name)).toBe(false);
+  }
+  forecastStatus = 200;
+  await weatherPage.reload();
+  await expect(hours('Half one row')).toHaveCount(3);
+
+  // A quarter that no longer fits a column is drawn as the full row, still one row high.
+  await resize(weatherPage, { height: 1400, width: 600 });
+  await expect(hours('Quarter one row')).toHaveCount(5);
+  await expect(details('Quarter one row')).toHaveCount(0);
+  expect(await cardHeight('Quarter one row')).toBe(104);
+  expect(await spills('Quarter one row')).toBe(false);
+
+  // Nothing in a one-row card runs into its neighbour or out of the card at any width, with or
+  // without a forecast; when no entry fits, none is shown.
+  const assertOneRowFits = async () => {
+    for (const name of oneRow) {
+      expect(await crowded(name), `${name} text is crowded`).toBe(false);
+      expect(await spills(name), `${name} spills`).toBe(false);
+      expect(await insideCard(name, '[data-testid="weather-temperature"]')).toBe(true);
+    }
+  };
+  for (const width of [640, 375, 320]) {
+    await resize(weatherPage, { height: 1400, width });
+    await assertOneRowFits();
+  }
+  forecastStatus = 500;
+  await weatherPage.reload();
+  await expect(weatherCard('Full one row').getByTestId('weather-temperature')).toBeVisible();
+  await assertOneRowFits();
+  for (const name of oneRow) {
+    const message = weatherCard(name).getByText(/forecast unavailable/);
+
+    if ((await message.count()) > 0) {
+      expect(await textInside(name, /forecast unavailable/), `${name} message`).toBe(true);
+    }
+  }
+  forecastStatus = 200;
+  await weatherPage.reload();
+  await weatherContext.close();
+
+  const polishContext = await browser.newContext({ viewport: { height: 1400, width: 1024 } });
+  await routeHaApi(polishContext);
+  const polishPage = await polishContext.newPage();
+  polishPage.on('pageerror', (error) => errors.push(error.message));
+  await polishPage.addInitScript(() => {
+    localStorage.setItem(
+      'my-home:preferences:v1',
+      JSON.stringify({ appearance: 'light', language: 'pl', page: 'fixture-weather' }),
+    );
+  });
+  await polishPage.goto(`${appUrl}?weather`);
+  for (const width of [1024, 768, 640]) {
+    await resize(polishPage, { height: 1400, width });
+    for (const name of ['Half one row', 'Quarter one row', 'Daily half one row']) {
+      const card = polishPage.getByRole('region', { exact: true, name });
+      await expect(card.getByTestId('weather-temperature')).toBeVisible();
+      expect(
+        await card.evaluate((element) =>
+          Array.from(
+            element.querySelectorAll(
+              'li strong, [data-testid="weather-temperature"], [data-testid="weather-range"]',
+            ),
+          ).some((part) => part.scrollWidth > part.clientWidth + 1),
+        ),
+        `${name} in Polish at ${width}`,
+      ).toBe(false);
+    }
+  }
+  await polishContext.close();
 
   const blockedContext = await browser.newContext();
   await routeHaApi(blockedContext);

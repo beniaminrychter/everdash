@@ -1,5 +1,14 @@
-import { cardEntityDomains, isCardEntity } from '@everdash/contracts/config/cardDomains';
-import type { CardConfig, DashboardDocument, ViewConfig } from '@everdash/contracts/config/types';
+import {
+  cardEntityDomains,
+  hasCardEntity,
+  isCardEntity,
+} from '@everdash/contracts/config/cardDomains';
+import type {
+  CardConfig,
+  DashboardDocument,
+  SectionConfig,
+  ViewConfig,
+} from '@everdash/contracts/config/types';
 
 export type CardKind = CardConfig['type'];
 
@@ -8,8 +17,14 @@ export interface CardEditorMessage {
   nonce: string;
   generation: number;
   viewId: string;
+  /** The section the card is in; null or omitted for the cards outside any section. */
+  section?: string | null;
   index: number;
-  offset?: -1 | 1;
+  /** A move names its destination as an offset from the card or as a target index. */
+  offset?: number;
+  to?: number;
+  /** The section a move to `to` ends in; the card's own section when omitted. */
+  toSection?: string | null;
 }
 
 export function isCardEditorMessage(
@@ -32,7 +47,9 @@ export function isCardEditorMessage(
     Number.isInteger(message.index) &&
     message.index! >= 0 &&
     message.index! < cardCount &&
-    (message.type !== 'everdash.editor.card.move' || message.offset === -1 || message.offset === 1)
+    (message.type !== 'everdash.editor.card.move' ||
+      Number.isInteger(message.offset) ||
+      (Number.isInteger(message.to) && message.to! >= 0 && message.to! < cardCount))
   );
 }
 
@@ -50,6 +67,18 @@ export function createView(id: string, title: string): ViewConfig {
   return { id, title, cards: [], badges: [] };
 }
 
+/** A new empty section for the view, with an id no other section of the view uses. */
+export function createSection(view: ViewConfig): SectionConfig {
+  const taken = new Set((view.sections ?? []).map((section) => section.id));
+  let id = `section-${Date.now().toString(36)}`;
+
+  while (taken.has(id)) {
+    id = `${id}-1`;
+  }
+
+  return { id, title: 'New section', cards: [] };
+}
+
 export function createCard(type: CardKind): CardConfig {
   switch (type) {
     case 'light': {
@@ -63,6 +92,9 @@ export function createCard(type: CardKind): CardConfig {
     }
     case 'weather': {
       return { type, entity: 'weather.select_entity' };
+    }
+    case 'clock': {
+      return { type };
     }
     case 'pstryk': {
       return { type, entity: 'sensor.select_entity' };
@@ -82,7 +114,26 @@ export function createCard(type: CardKind): CardConfig {
   }
 }
 
+/** A card the user is still adding: an entity card starts with no entity chosen. */
+export function createPendingCard(type: CardKind): CardConfig {
+  const card = createCard(type);
+
+  // The empty entity is deliberately invalid until one is picked.
+  return hasCardEntity(card) ? ({ ...card, entity: '' } as unknown as CardConfig) : card;
+}
+
+/** The entity a card of this type shows in the preview until a real one is chosen. */
+export function placeholderEntity(type: CardKind): string {
+  const card = createCard(type);
+
+  return hasCardEntity(card) ? card.entity : '';
+}
+
 export function createConfiguredCard(type: CardKind, entity: string): CardConfig {
+  if (cardEntityDomains(type).length === 0) {
+    return createCard(type);
+  }
+
   if (!isCardEntity(type, entity)) {
     throw new Error(
       `Choose a valid ${cardEntityDomains(type).join(' or ')} entity before adding the card.`,
@@ -97,9 +148,15 @@ export function convertCard(card: CardConfig, type: CardKind): CardConfig {
     return card;
   }
 
-  const entity = isCardEntity(type, card.entity) ? card.entity : '';
+  const name = card.name ? { name: card.name } : {};
 
-  return { ...createCard(type), entity, ...(card.name ? { name: card.name } : {}) } as CardConfig;
+  if (cardEntityDomains(type).length === 0) {
+    return { ...createCard(type), ...name } as CardConfig;
+  }
+
+  const entity = hasCardEntity(card) && isCardEntity(type, card.entity) ? card.entity : '';
+
+  return { ...createCard(type), entity, ...name } as CardConfig;
 }
 
 /** Card types that accept an entity, so an existing card can switch type without becoming invalid. */

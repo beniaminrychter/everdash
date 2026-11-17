@@ -1,0 +1,147 @@
+.clock {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  height: 104px;
+  min-height: 104px;
+  max-height: 104px;
+  padding: 14px 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 26px;
+  overflow: hidden;
+}
+.title {
+  margin-bottom: 2px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hiddenTitle {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+.time {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+.primary {
+  display: block;
+  color: var(--text);
+  font-weight: 700;
+  letter-spacing: -1.4px;
+  line-height: 1.05;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.secondary {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.quarter .primary {
+  font-size: 34px;
+}
+.quarter .secondary {
+  font-size: 13px;
+}
+.quarter.timeOnly .primary {
+  font-size: 38px;
+}
+.half .primary {
+  font-size: 42px;
+}
+.half .secondary {
+  font-size: 15px;
+}
+.full .primary {
+  font-size: 46px;
+}
+.full .secondary {
+  font-size: 17px;
+}
+.half.datetime .time,
+.full.datetime .time {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  width: 100%;
+}
+.half.datetime .primary,
+.full.datetime .primary {
+  flex-shrink: 0;
+}
+.half.datetime .secondary,
+.full.datetime .secondary {
+  margin-top: 0;
+  margin-left: 12px;
+  text-align: right;
+}
+
+/* The weekday stands in for the time, so it gets a smaller size that fits a long word. */
+.dateOnly .primary {
+  font-size: 22px;
+  letter-spacing: -0.6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dateOnly .secondary {
+  font-size: 13px;
+}
+.dateOnly.half .primary {
+  font-size: 26px;
+}
+.dateOnly.half .secondary {
+  font-size: 14px;
+}
+.dateOnly.full .primary {
+  font-size: 30px;
+}
+.dateOnly.full .secondary {
+  font-size: 15px;
+}
+@media (max-width: 599px) {
+  .clock {
+    height: 100px;
+    min-height: 100px;
+    max-height: 100px;
+    padding: 12px 16px;
+    border-radius: 24px;
+  }
+  .quarter .primary {
+    font-size: 32px;
+  }
+  .quarter.timeOnly .primary {
+    font-size: 34px;
+  }
+  .half .primary,
+  .full .primary {
+    font-size: 36px;
+  }
+  .half .secondary,
+  .full .secondary {
+    font-size: 14px;
+  }
+  .dateOnly .primary,
+  .dateOnly.half .primary {
+    font-size: 20px;
+  }
+  .dateOnly.full .primary {
+    font-size: 24px;
+  }
+}

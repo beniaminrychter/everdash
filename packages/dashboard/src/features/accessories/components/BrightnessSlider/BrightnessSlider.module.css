@@ -1,0 +1,72 @@
+.pill {
+  position: relative;
+  width: 132px;
+  height: 300px;
+  margin: 0 auto;
+}
+
+.track {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  overflow: hidden;
+  border-radius: 40px;
+  background: var(--surface-strong);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.track[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.track:focus {
+  outline: none;
+}
+
+.track:focus-visible {
+  box-shadow:
+    0 0 0 3px var(--sheet),
+    0 0 0 5px var(--accent);
+}
+
+.fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+.power {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  z-index: 1;
+  width: 56px;
+  height: 56px;
+  margin-left: -28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  color: var(--muted);
+  /* The track reads presses on the glyph, so a drag can start there; the button stays for keyboards. */
+  pointer-events: none;
+}
+
+.power:disabled {
+  opacity: 0.45;
+}
+
+.power .icon {
+  width: 32px;
+  height: 32px;
+}

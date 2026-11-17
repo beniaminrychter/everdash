@@ -1,0 +1,126 @@
+.bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.raised {
+  z-index: 20;
+}
+
+.heading {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.title {
+  max-width: 100%;
+  margin: 0 0 0 -6px;
+  border: 0;
+  border-radius: 8px;
+  padding: 2px 6px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.title:hover {
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.title:focus-visible,
+.selected .title {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+/* The drag handle sits left of the title and shows on hover, on focus and while selected. */
+.handle {
+  position: absolute;
+  top: 50%;
+  left: -24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 30px;
+  margin: -15px 0 0;
+  border: 0;
+  border-radius: 8px;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  cursor: grab;
+  opacity: 0;
+  touch-action: none;
+}
+
+.bar:hover .handle,
+.bar:focus-within .handle,
+.selected .handle {
+  opacity: 1;
+}
+
+.handle:hover {
+  color: var(--text);
+  background: var(--surface-strong);
+}
+
+.handle:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.actions {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  display: flex;
+  align-items: center;
+  margin-top: -17px;
+  border-radius: 999px;
+  padding: 2px 0 2px 8px;
+  background: var(--background);
+  opacity: 0;
+}
+
+.bar:hover .actions,
+.bar:focus-within .actions,
+.selected .actions,
+.raised .actions {
+  opacity: 1;
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  margin: 0 6px 0 0;
+  border: 0;
+  border-radius: 50%;
+  padding: 0;
+  color: #334155;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow:
+    0 1px 3px rgba(15, 23, 42, 0.28),
+    0 0 0 1px rgba(15, 23, 42, 0.06);
+  cursor: pointer;
+}
+
+.action:hover {
+  color: #1d4ed8;
+  background: #ffffff;
+}
+
+.action:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}

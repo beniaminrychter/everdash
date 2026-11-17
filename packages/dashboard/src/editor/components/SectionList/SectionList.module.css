@@ -1,0 +1,18 @@
+/* A section being dragged by its handle: where it will land, and the copy that follows the pointer. */
+.ghost {
+  border-radius: 18px;
+  outline: 2px dashed #2563eb;
+  outline-offset: 6px;
+  background: rgba(37, 99, 235, 0.06);
+}
+.ghost > * {
+  visibility: hidden;
+}
+.lifted {
+  z-index: 1000;
+  border-radius: 18px;
+  background: var(--background);
+  opacity: 0.96;
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.28);
+  cursor: grabbing;
+}

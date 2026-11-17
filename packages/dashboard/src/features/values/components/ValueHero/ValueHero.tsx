@@ -30,7 +30,7 @@ export function ValueHero({ name, titleId, icon, reading, entityId, lastChanged,
       data-value-card="hero"
       data-value-entity={entityId}
     >
-      <Widget title={name} titleId={titleId}>
+      <Widget title={name} titleId={titleId} className={styles.card}>
         <div class={styles.body}>
           <Icon name={icon} className={styles.icon} />
           <div class={styles.reading} data-testid="value-reading">

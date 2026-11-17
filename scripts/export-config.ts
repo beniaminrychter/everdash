@@ -23,7 +23,10 @@ for (const view of input.views) {
       delete badge.icon;
     }
   }
-  for (const card of view.cards || []) {
+  for (const card of [
+    ...(view.cards || []),
+    ...(view.sections || []).flatMap((section: { cards?: unknown[] }) => section.cards || []),
+  ]) {
     if (card.icon === defaults[card.type]) {
       delete card.icon;
     }

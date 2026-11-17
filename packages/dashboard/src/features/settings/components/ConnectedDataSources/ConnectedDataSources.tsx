@@ -1,4 +1,6 @@
+import { viewCards } from '@everdash/contracts/config/sections';
 import { useI18n } from '@everdash/ui/i18n';
+import { Disclosure } from '@everdash/ui/ui/Disclosure/Disclosure';
 import type { EntityReadings } from '../../../../shared/home-assistant/entities';
 import type { LiveClimate } from '../../../climate/data/model';
 import type { ResolvedView } from '../../../dashboard/data/types';
@@ -17,20 +19,21 @@ export function ConnectedDataSources({ view, sunEntityId, devices, climates, rea
   const { t } = useI18n();
   const entityIds = new Set([
     ...view.badges.map((badge) => badge.entity),
-    ...view.cards.flatMap((card) =>
+    ...viewCards(view).flatMap((card) =>
       card.type === 'pstryk'
         ? [card.entity, card.sellPrice, card.nextPrice, card.usage, card.schedule].filter(
             (id): id is `sensor.${string}` => Boolean(id),
           )
-        : [card.entity],
+        : card.type === 'clock'
+          ? []
+          : [card.entity],
     ),
     ...(sunEntityId ? [sunEntityId] : []),
   ]);
 
   return (
-    <details class={styles.sourceDetails}>
-      <summary>{t('Connected data sources')}</summary>
-      <ul>
+    <Disclosure summary={t('Connected data sources')}>
+      <ul class={styles.sources}>
         {[...entityIds].map((entityId) => (
           <li key={entityId}>
             <strong>{entityId}</strong>
@@ -48,6 +51,6 @@ export function ConnectedDataSources({ view, sunEntityId, devices, climates, rea
           </li>
         ))}
       </ul>
-    </details>
+    </Disclosure>
   );
 }

@@ -1,0 +1,160 @@
+/* A strip that scrolls must not widen its card: it adds no width of its own, then fills the card. */
+.box {
+  position: relative;
+  width: 0;
+  min-width: 100%;
+}
+.strip {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.strip::-webkit-scrollbar {
+  display: none;
+}
+.hour,
+.day {
+  position: relative;
+  flex: 0 0 auto;
+  width: 48px;
+  margin-right: 4px;
+  text-align: center;
+}
+.day {
+  width: 52px;
+}
+.hour time,
+.day time {
+  display: block;
+  font-size: 11px;
+  line-height: 1.2;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+  color: #dfae42;
+  margin: 4px auto;
+}
+.hour strong,
+.day strong {
+  display: block;
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 600;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.low,
+.precipitation {
+  display: block;
+  margin-top: 1px;
+  font-size: 10.5px;
+  line-height: 1.15;
+  color: var(--muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.dayBreak {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  margin-right: 4px;
+  padding: 0 8px 0 6px;
+  border-left: 1px solid var(--line);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+/* A soft edge over the end of the strip that still has more to scroll to. */
+.fade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 28px;
+  background: var(--surface);
+  opacity: 0;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to right, #000, transparent);
+  mask-image: linear-gradient(to right, #000, transparent);
+}
+.fadeBefore {
+  left: 0;
+}
+.fadeAfter {
+  right: 0;
+  -webkit-mask-image: linear-gradient(to left, #000, transparent);
+  mask-image: linear-gradient(to left, #000, transparent);
+}
+.moreBefore .fadeBefore,
+.moreAfter .fadeAfter {
+  opacity: 1;
+}
+/* A few entries that share the width and never scroll. */
+.fit .strip {
+  overflow: hidden;
+}
+.fit .hour,
+.fit .day {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+  margin-right: 0;
+  overflow: hidden;
+}
+.fit .hour time,
+.fit .day time {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Compact: only the time, the icon and the temperature, so an entry fits one row of tiles. */
+.compact .low,
+.compact .precipitation {
+  display: none;
+}
+/* Without the chance of precipitation, one line shorter. */
+.hideChance .precipitation {
+  display: none;
+}
+/* Roomy: more space around larger entries. */
+.roomy .hour,
+.roomy .day {
+  width: 56px;
+}
+.roomy .day {
+  width: 60px;
+}
+.roomy .hour time,
+.roomy .day time {
+  font-size: 11.5px;
+}
+.roomy .icon {
+  width: 22px;
+  height: 22px;
+  margin: 6px auto;
+}
+.roomy .hour strong,
+.roomy .day strong {
+  font-size: 14px;
+  font-weight: 650;
+}
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}

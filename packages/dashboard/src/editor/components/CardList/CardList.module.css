@@ -1,0 +1,80 @@
+.zone {
+  position: relative;
+  min-width: 0;
+}
+
+/* An area with no cards stays a visible drop zone. */
+.empty {
+  box-sizing: border-box;
+  min-height: 84px;
+  border: 2px dashed rgba(89, 101, 116, 0.45);
+  border-radius: 18px;
+  padding: 8px;
+}
+
+.empty[data-over] {
+  border-color: #2563eb;
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.hint {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 12px 16px;
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.drop {
+  display: none;
+  color: #2563eb;
+  font-weight: 600;
+}
+
+/* While a card is dragged, the zones say where it can be dropped. */
+:global([data-sorting]) .idle {
+  display: none;
+}
+
+:global([data-sorting]) .drop {
+  display: inline;
+}
+
+/*
+ * Looks of a drag. SortableJS moves the real card; these classes style it where it will land
+ * (the placeholder) and the copy that follows the pointer.
+ */
+
+/* Where the card will land: a card-sized dashed outline with a faint tint, its content hidden. */
+.ghost {
+  border-radius: 27px;
+  outline: 2px dashed #2563eb;
+  outline-offset: -2px;
+  background: rgba(37, 99, 235, 0.08);
+}
+.ghost > * {
+  visibility: hidden;
+}
+
+/* The copy that follows the pointer, lifted off the page. */
+.lifted {
+  z-index: 1000;
+  border-radius: 27px;
+  opacity: 0.96;
+  box-shadow:
+    0 18px 38px rgba(15, 23, 42, 0.28),
+    0 4px 10px rgba(15, 23, 42, 0.18);
+  cursor: grabbing;
+}
+.lifted [data-editor-nodrag] {
+  display: none;
+}

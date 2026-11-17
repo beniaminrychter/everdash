@@ -1,13 +1,20 @@
-import type { ComponentChildren } from 'preact';
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useRef } from 'preact/hooks';
+import { defaultCardRows } from '@everdash/contracts/config/cardRows';
+import { defaultForecastType, forecastKey } from '@everdash/contracts/config/weatherForecast';
 import { translateText, useI18n } from '@everdash/ui/i18n/index';
 import { createClimate } from '../../../climate/data/model';
 import type { LiveClimate, ClimateChange } from '../../../climate/data/model';
 import { ClimateCard } from '../../../climate/components/ClimateCard/ClimateCard';
-import { groupCards, isControlToggle } from '../../data/discovery';
+import { isControlToggle, isWidget } from '../../data/discovery';
+import type { CardLocation, EditorHandler } from '../../data/editorEvent';
+import type { EditorKit } from '../../data/editorKit';
+import { cardSpan, effectiveSize, widgetSize } from '../../data/gridLayout';
+import { useContainerWidth } from '../../hooks/useContainerWidth';
+import { usePackedGrids } from '../../hooks/usePackedGrids';
 import type {
   EntityReadings,
   ResolvedAccessory,
+  ResolvedCard,
   ResolvedView,
   ResolvedWidget,
 } from '../../data/types';
@@ -15,6 +22,7 @@ import type { LiveDevice } from '../../../accessories/data/model';
 import { AccessoryCard } from '../../../accessories/components/AccessoryCard/AccessoryCard';
 import { EnergyCard } from '../../../energy/components/EnergyCard/EnergyCard';
 import { WeatherCard } from '../../../weather/components/WeatherCard/WeatherCard';
+import { ClockCard } from '../../../clock/components/ClockCard/ClockCard';
 import { ValueTile } from '../../../values/components/ValueTile/ValueTile';
 import { ValueCompact } from '../../../values/components/ValueCompact/ValueCompact';
 import { ValueHero } from '../../../values/components/ValueHero/ValueHero';
@@ -43,131 +51,22 @@ interface Props {
   onActivate?: (id: string) => Promise<void>;
   readOnly?: boolean;
   editorMode?: boolean;
-  editorKeys?: readonly string[];
-  /** Editor only: index of the card to outline as selected. */
-  selectedIndex?: number;
-  onEditorAction?: (action: 'edit' | 'delete' | 'move', index: number, offset?: number) => void;
+  /** Editor only: the chrome around the cards. The tablet never passes it, so it never loads it. */
+  editor?: EditorKit;
+  /** Editor only: stable keys for the cards of the unsectioned area or of a section, by its id. */
+  editorKeys?: (section: string | null) => readonly string[] | undefined;
+  /** Editor only: the card to outline as selected. */
+  selectedCard?: CardLocation;
+  /** Editor only: the id of the section to outline as selected. */
+  selectedSection?: string;
+  /** Editor only: new cards that still need an entity. */
+  incompleteCards?: readonly CardLocation[];
+  onEditorEvent?: EditorHandler;
 }
 
-type ActionIconName = 'delete' | 'grip' | 'up' | 'down' | 'left' | 'right';
-
-const actionIconPaths: Record<ActionIconName, string> = {
-  delete: 'M3 6h18M8 6V4h8v2m3 0-1 15H6L5 6M10 11v6m4-6v6',
-  grip: 'M9 6h.01M9 12h.01M9 18h.01M15 6h.01M15 12h.01M15 18h.01',
-  up: 'm6 14 6-6 6 6',
-  down: 'm6 10 6 6 6-6',
-  left: 'm14 6-6 6 6 6',
-  right: 'm10 6 6 6-6 6',
-};
-
-function ActionIcon({ name }: { name: ActionIconName }) {
-  return (
-    <svg
-      class={styles.actionIcon}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width={name === 'grip' ? '3' : '1.8'}
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-    >
-      <path d={actionIconPaths[name]} />
-    </svg>
-  );
-}
-
-type EditorAction = (action: 'edit' | 'delete' | 'move', index: number, offset?: number) => void;
-
-/**
- * Editor only: the card plus a transparent layer over it. Clicking anywhere on the card selects it
- * for the inspector, because the card's own controls are inert in the editor.
- */
-function EditorCard({
-  index,
-  name,
-  selected,
-  onAction,
-  children,
-}: {
-  index: number;
-  name: string;
-  selected: boolean;
-  onAction?: EditorAction;
-  children: ComponentChildren;
-}) {
-  return (
-    <div class={selected ? `${styles.editorCard} ${styles.selectedCard}` : styles.editorCard}>
-      {children}
-      <button
-        type="button"
-        class={styles.selectLayer}
-        aria-label={`Edit ${name}`}
-        aria-pressed={selected}
-        title={`Edit ${name}`}
-        onClick={() => onAction?.('edit', index)}
-      />
-    </div>
-  );
-}
-
-function EditorFooter({
-  index,
-  count,
-  name,
-  horizontal,
-  onAction,
-}: {
-  index: number;
-  count: number;
-  name: string;
-  /** Cards in a grid move left and right; stacked widgets move up and down. */
-  horizontal: boolean;
-  onAction?: EditorAction;
-}) {
-  return (
-    <fieldset class={styles.editorFooter} aria-label={`${name} card actions`}>
-      <button
-        type="button"
-        class={styles.dragHandle}
-        draggable
-        aria-label={`Drag ${name} to reorder`}
-        title="Drag to reorder"
-        onDragStart={(event) => {
-          event.dataTransfer?.setData('text/everdash-card', String(index));
-        }}
-      >
-        <ActionIcon name="grip" />
-      </button>
-      <button
-        type="button"
-        onClick={() => onAction?.('move', index, -1)}
-        disabled={index === 0}
-        aria-label={`Move ${name} earlier`}
-        title={horizontal ? 'Move left' : 'Move up'}
-      >
-        <ActionIcon name={horizontal ? 'left' : 'up'} />
-      </button>
-      <button
-        type="button"
-        onClick={() => onAction?.('move', index, 1)}
-        disabled={index === count - 1}
-        aria-label={`Move ${name} later`}
-        title={horizontal ? 'Move right' : 'Move down'}
-      >
-        <ActionIcon name={horizontal ? 'right' : 'down'} />
-      </button>
-      <button
-        type="button"
-        class={styles.deleteAction}
-        onClick={() => onAction?.('delete', index)}
-        aria-label={`Delete ${name}`}
-        title="Delete"
-      >
-        <ActionIcon name="delete" />
-      </button>
-    </fieldset>
-  );
+/** The tablet has no editor to report to. */
+function noEvent() {
+  // Nothing listens.
 }
 
 export function DashboardCards({
@@ -186,25 +85,18 @@ export function DashboardCards({
   onActivate,
   readOnly = false,
   editorMode = false,
+  editor,
   editorKeys,
-  selectedIndex,
-  onEditorAction,
+  selectedCard,
+  selectedSection,
+  incompleteCards,
+  onEditorEvent,
 }: Props) {
   const surface = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(1024);
-  useEffect(() => {
-    const measure = () => setWidth(surface.current?.getBoundingClientRect().width ?? 1024);
-    measure();
-    window.addEventListener('resize', measure);
-    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
-    if (surface.current) {
-      observer?.observe(surface.current);
-    }
-    return () => {
-      window.removeEventListener('resize', measure);
-      observer?.disconnect();
-    };
-  }, []);
+  const width = useContainerWidth(surface);
+
+  usePackedGrids(surface, styles.cards);
+
   const { t, locale } = useI18n();
   const reading = (id: string | undefined) => (id ? readings[id] : undefined);
 
@@ -352,10 +244,25 @@ export function DashboardCards({
             title={card.defaultTitle ? undefined : card.name}
             titleId={titleId}
             entity={reading(card.entity)}
-            forecast={forecasts[card.entity]}
+            forecast={forecasts[forecastKey(card.entity, card.forecast ?? defaultForecastType)]}
+            dailyForecast={forecasts[forecastKey(card.entity, 'daily')]}
+            forecastType={card.forecast ?? defaultForecastType}
             timeZone={timeZone}
             online={online}
             now={now}
+            size={effectiveSize(widgetSize(card), width)}
+            rows={card.rows ?? defaultCardRows}
+          />
+        );
+      }
+
+      case 'clock': {
+        return (
+          <ClockCard
+            title={card.defaultTitle ? undefined : card.name}
+            titleId={titleId}
+            display={card.display ?? 'datetime'}
+            size={effectiveSize(widgetSize(card), width)}
           />
         );
       }
@@ -384,162 +291,182 @@ export function DashboardCards({
     }
   };
 
+  /** The cards of one area: a single grid whose children are exactly its cards, in data order. */
+  const renderCards = (section: string | null, cards: readonly ResolvedCard[]) => {
+    const keys = editorKeys?.(section);
+    const prefix = section === null ? 'cards' : `section-${section}`;
+    const sections = view.sections.map((item) => ({ id: item.id, title: item.title }));
+
+    return cards.map((card, index) => {
+      const titleId = `widget-${encodeURIComponent(view.id)}-${prefix}-${index}`;
+      const widget = isWidget(card);
+      const content = widget ? renderWidget(card, titleId) : renderAccessory(card);
+      const compact = card.type === 'value' && card.template === 'compact';
+      const key = keys?.[index] ?? `${prefix}-${index}`;
+      const style = { gridColumn: `span ${cardSpan(card, width)}` };
+      const classes = compact ? styles.compactItem : undefined;
+      const dataset = widget
+        ? {
+            'data-card': card.type,
+            'data-card-entity': card.type === 'clock' ? undefined : card.entity,
+          }
+        : undefined;
+
+      if (editor && editorMode) {
+        const Card = editor.Card;
+
+        return (
+          <Card
+            key={key}
+            section={section}
+            index={index}
+            count={cards.length}
+            name={card.name}
+            type={card.type}
+            selected={
+              selectedCard !== undefined &&
+              selectedCard.section === section &&
+              selectedCard.index === index
+            }
+            incomplete={(incompleteCards ?? []).some(
+              (item) => item.section === section && item.index === index,
+            )}
+            sections={sections}
+            class={classes}
+            style={style}
+            dataset={dataset}
+            onEvent={onEditorEvent ?? noEvent}
+          >
+            {content}
+          </Card>
+        );
+      }
+
+      // A card that cannot be drawn (its device has not arrived) leaves no gap in the grid.
+      if (!content) {
+        return null;
+      }
+
+      return (
+        <div key={key} class={classes} style={style} {...dataset}>
+          {content}
+        </div>
+      );
+    });
+  };
+
+  /** One area's cards in a grid. In the editor the grid is sortable and, when empty, a drop zone. */
+  const renderArea = (
+    section: string | null,
+    cards: readonly ResolvedCard[],
+    emptyLabel: string,
+  ) => {
+    if (editor && editorMode) {
+      const CardList = editor.CardList;
+
+      return (
+        <CardList
+          section={section}
+          class={styles.cards}
+          empty={cards.length === 0}
+          emptyLabel={emptyLabel}
+          onEvent={onEditorEvent ?? noEvent}
+        >
+          {renderCards(section, cards)}
+        </CardList>
+      );
+    }
+
+    if (cards.length === 0) {
+      return null;
+    }
+
+    return <div class={styles.cards}>{renderCards(section, cards)}</div>;
+  };
+
+  const hasSections = view.sections.length > 0;
+  const total = view.sections.reduce(
+    (sum, section) => sum + section.cards.length,
+    view.cards.length,
+  );
+  const editing = editor !== undefined && editorMode;
+  // Outside the editor an empty area draws nothing, so a view without cards or sections reads as empty.
+  const showRoot = editing ? hasSections || view.cards.length > 0 : view.cards.length > 0;
+
+  const renderSections = () =>
+    view.sections.map((section, position) => {
+      if (!editorMode && section.cards.length === 0) {
+        return null;
+      }
+
+      const headingId = `section-${encodeURIComponent(view.id)}-${encodeURIComponent(section.id)}`;
+
+      return (
+        <section
+          key={section.id}
+          class={styles.section}
+          aria-labelledby={headingId}
+          data-editor-section={editing ? section.id : undefined}
+        >
+          {editing ? (
+            <editor.SectionHeading
+              id={section.id}
+              headingId={headingId}
+              headingClass={styles.sectionTitle}
+              title={section.title}
+              selected={selectedSection === section.id}
+              position={position}
+              count={view.sections.length}
+              onEvent={onEditorEvent ?? noEvent}
+            />
+          ) : (
+            <h2 class={styles.sectionTitle} id={headingId}>
+              {section.title}
+            </h2>
+          )}
+          {renderArea(
+            section.id,
+            section.cards,
+            'No cards in this section yet. Add one or drag one here.',
+          )}
+          {editing && (
+            <editor.AddCardButton
+              label={`Add card to ${section.title || 'section'}`}
+              section={section.id}
+              onEvent={onEditorEvent ?? noEvent}
+            />
+          )}
+        </section>
+      );
+    });
+
   return (
-    <div
-      ref={surface}
-      class={styles.groups}
-      onDragOver={(event) => {
-        if (editorMode) {
-          event.preventDefault();
-        }
-      }}
-      onDrop={(event) => {
-        if (!editorMode) {
-          return;
-        }
-        event.preventDefault();
-        const raw = event.dataTransfer?.getData('text/everdash-card') ?? '';
-        const element =
-          event.target instanceof Element
-            ? event.target.closest<HTMLElement>('[data-editor-index]')
-            : null;
-        const target = element?.dataset.editorIndex;
-        if (!/^\d+$/.test(raw) || target === null || target === undefined) {
-          return;
-        }
-        const source = Number(raw);
-        const destination = Number(target);
-        if (
-          source < view.cards.length &&
-          destination < view.cards.length &&
-          source !== destination
-        ) {
-          onEditorAction?.('move', source, destination - source);
-        }
-      }}
-    >
-      {view.cards.length === 0 && !editorMode && (
+    <div ref={surface} class={styles.content} data-editor-surface={editing ? '' : undefined}>
+      {total === 0 && !editorMode && (
         <p class={styles.emptyView} data-testid="empty-view">
           {t('No cards in this view yet')}
         </p>
       )}
-      {groupCards(view.cards).map((group, groupIndex) =>
-        group.type === 'accessories' ? (
-          <section key={groupIndex} aria-label={t('Accessories')}>
-            <div
-              class={styles.accessoryGrid}
-              style={
-                editorMode
-                  ? {
-                      gridTemplateColumns: `repeat(${width <= 699 ? 2 : width <= 899 ? 3 : 4}, minmax(0, 1fr))`,
-                    }
-                  : undefined
-              }
-              data-testid="accessory-grid"
-            >
-              {group.cards.map((card, cardIndex) => {
-                const content = renderAccessory(card);
-                const index = view.cards.indexOf(card);
-                const selected = editorMode && selectedIndex === index;
-                if (!content) {
-                  return null;
-                }
-                const compact = card.type === 'value' && card.template === 'compact';
-                const classes = [
-                  editorMode ? styles.editorItem : '',
-                  compact ? styles.compactItem : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ');
-                return (
-                  <div
-                    class={classes || undefined}
-                    key={editorKeys?.[index] ?? cardIndex}
-                    data-editor-index={index}
-                  >
-                    {editorMode ? (
-                      <>
-                        <EditorCard
-                          index={index}
-                          name={card.name}
-                          selected={selected}
-                          onAction={onEditorAction}
-                        >
-                          {content}
-                        </EditorCard>
-                        <EditorFooter
-                          index={index}
-                          count={view.cards.length}
-                          name={card.name}
-                          horizontal
-                          onAction={onEditorAction}
-                        />
-                      </>
-                    ) : (
-                      content
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        ) : (
-          <div
-            key={groupIndex}
-            class={styles.widgetGrid}
-            style={
-              editorMode
-                ? {
-                    gridTemplateColumns:
-                      width <= 699 ? 'minmax(0, 1fr)' : 'repeat(2, minmax(0, 1fr))',
-                  }
-                : undefined
-            }
-          >
-            {group.cards.map((card, cardIndex) => {
-              const titleId = `widget-${encodeURIComponent(view.id)}-${groupIndex}-${cardIndex}`;
-              const index = view.cards.indexOf(card);
-              const selected = editorMode && selectedIndex === index;
-              return (
-                <div
-                  class={[
-                    card.type === 'weather' || card.type === 'value' ? styles.wide : '',
-                    editorMode ? styles.editorItem : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                  key={editorKeys?.[index] ?? cardIndex}
-                  data-editor-index={index}
-                  data-card={card.type}
-                  data-card-entity={card.entity}
-                >
-                  {editorMode ? (
-                    <>
-                      <EditorCard
-                        index={index}
-                        name={card.name}
-                        selected={selected}
-                        onAction={onEditorAction}
-                      >
-                        {renderWidget(card, titleId)}
-                      </EditorCard>
-                      <EditorFooter
-                        index={index}
-                        count={view.cards.length}
-                        name={card.name}
-                        horizontal={false}
-                        onAction={onEditorAction}
-                      />
-                    </>
-                  ) : (
-                    renderWidget(card, titleId)
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        ),
+      {showRoot && (
+        <div class={styles.section}>
+          {renderArea(null, view.cards, 'No cards outside sections. Drag one here.')}
+          {editing && hasSections && (
+            <editor.AddCardButton
+              label="Add card outside sections"
+              section={null}
+              onEvent={onEditorEvent ?? noEvent}
+            />
+          )}
+        </div>
       )}
+      {hasSections &&
+        (editing ? (
+          <editor.SectionList class={styles.sections} onEvent={onEditorEvent ?? noEvent}>
+            {renderSections()}
+          </editor.SectionList>
+        ) : (
+          <div class={styles.sections}>{renderSections()}</div>
+        ))}
     </div>
   );
 }

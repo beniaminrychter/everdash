@@ -1,3 +1,4 @@
+import { viewCards } from '@everdash/contracts/config/sections';
 import { Input } from '@/components/ui/input';
 import { useDraft } from '@/app/DraftContext';
 import { InspectorField, InspectorPanel } from './InspectorPanel';
@@ -10,8 +11,9 @@ export function ViewInspector() {
     return null;
   }
 
-  const cardCount = view.cards?.length ?? 0;
+  const cardCount = viewCards(view).length;
   const badgeCount = view.badges?.length ?? 0;
+  const sectionCount = view.sections?.length ?? 0;
 
   return (
     <InspectorPanel eyebrow="View settings" title={view.title || 'Untitled view'}>
@@ -29,9 +31,11 @@ export function ViewInspector() {
       <p className="text-muted-foreground text-xs">
         {cardCount} {cardCount === 1 ? 'card' : 'cards'} · {badgeCount}{' '}
         {badgeCount === 1 ? 'badge' : 'badges'}
+        {sectionCount > 0 && ` · ${sectionCount} ${sectionCount === 1 ? 'section' : 'sections'}`}
       </p>
       <p className="text-muted-foreground rounded-md border border-dashed p-3 text-xs">
-        Click a card or badge in the preview to edit it.
+        Click a card, badge or section title in the preview to edit it. Sections are optional: add
+        one with + Section to group cards under a heading.
       </p>
     </InspectorPanel>
   );

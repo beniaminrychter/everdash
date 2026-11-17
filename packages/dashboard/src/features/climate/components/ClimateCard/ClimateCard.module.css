@@ -1,8 +1,17 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 224px;
+  min-height: 224px;
+  max-height: 224px;
+  overflow: hidden;
+}
 .setpoint {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 18px;
+  margin-top: 4px;
 }
 .step {
   -webkit-appearance: none;
@@ -31,8 +40,9 @@
 }
 .target output {
   display: block;
-  font-size: 36px;
+  font-size: 32px;
   font-weight: 650;
+  line-height: 1.05;
   letter-spacing: -1px;
   font-variant-numeric: tabular-nums;
 }
@@ -41,30 +51,32 @@
 }
 .options {
   padding: 0;
-  margin: 18px 0 0;
+  margin: 5px 0 0;
   border: 0;
   min-width: 0;
 }
 .options legend {
   padding: 0;
-  margin-bottom: 7px;
-  font-size: 13px;
+  margin-bottom: 2px;
+  font-size: 11px;
+  line-height: 1.15;
   color: var(--muted);
 }
 .buttons {
   display: flex;
-  padding: 3px;
-  border-radius: 13px;
+  padding: 2px;
+  border-radius: 11px;
   background: var(--icon-bg);
 }
 .buttons button {
   flex: 1;
   min-width: 0;
-  min-height: 44px;
-  padding: 7px 3px;
-  border-radius: 10px;
-  font-size: 15px;
+  min-height: 28px;
+  padding: 4px 3px;
+  border-radius: 9px;
+  font-size: 13px;
   font-weight: 600;
+  line-height: 1.15;
   color: var(--muted);
 }
 .buttons button[aria-pressed='true'] {
@@ -80,9 +92,10 @@
   cursor: default;
 }
 .status {
-  margin-top: 12px;
+  margin-top: 3px;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 11px;
+  line-height: 1.15;
 }
 
 .step svg {
@@ -95,9 +108,22 @@
   stroke-linecap: round;
 }
 
+@media (max-width: 599px) {
+  .card {
+    height: 216px;
+    min-height: 216px;
+    max-height: 216px;
+  }
+}
+
 @media (max-width: 360px) {
+  .card {
+    height: 210px;
+    min-height: 210px;
+    max-height: 210px;
+  }
   .buttons button {
-    font-size: 13px;
+    font-size: 12px;
     padding-right: 1px;
     padding-left: 1px;
   }

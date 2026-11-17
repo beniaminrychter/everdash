@@ -2,11 +2,14 @@ import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { DraftAlerts } from '@/app/DraftAlerts';
 import { useDraft } from '@/app/DraftContext';
 import { PageHeader } from '@/app/PageHeader';
+import type { CardConfig } from '@everdash/contracts/config/types';
 import type { DraftState } from '@/app/draft/draftReducer';
+import { isIncomplete } from '@/app/draft/incomplete';
 import { CanvasIsland } from './CanvasIsland';
 import { CanvasToolbar } from './CanvasToolbar';
 import { DeleteItemDialog } from './DeleteItemDialog';
 import type { DeleteTarget } from './DeleteItemDialog';
+import { focusInspectorField } from './focusInspectorField';
 import { Inspector } from './Inspector';
 import { pendingPreview } from './pendingPreview';
 import { ViewTabs } from './ViewTabs';
@@ -17,29 +20,50 @@ function deleteRequest(message: unknown, state: DraftState): DeleteTarget | null
     return null;
   }
 
-  const { type, index, generation, viewId } = message as Record<string, unknown>;
+  const { type, index, section, generation, viewId } = message as Record<string, unknown>;
+  const view = state.document.views.find((item) => item.id === state.viewId);
+
+  if (generation !== state.generation || viewId !== state.viewId) {
+    return null;
+  }
+
+  if (type === 'everdash.editor.section.delete') {
+    const exists = view?.sections?.some((item) => item.id === section);
+
+    return typeof section === 'string' && exists ? { kind: 'section', id: section } : null;
+  }
+
   const kind =
     type === 'everdash.editor.card.delete'
       ? 'card'
       : type === 'everdash.editor.badge.delete'
         ? 'badge'
         : null;
-  const view = state.document.views.find((item) => item.id === state.viewId);
-  const count = (kind === 'card' ? view?.cards : view?.badges)?.length ?? 0;
+  const sectionId = typeof section === 'string' ? section : null;
+  const list =
+    kind === 'card'
+      ? sectionId === null
+        ? view?.cards
+        : view?.sections?.find((item) => item.id === sectionId)?.cards
+      : view?.badges;
 
   if (
     !kind ||
-    generation !== state.generation ||
-    viewId !== state.viewId ||
+    (section !== undefined && section !== null && typeof section !== 'string') ||
     typeof index !== 'number' ||
     !Number.isInteger(index) ||
     index < 0 ||
-    index >= count
+    index >= (list?.length ?? 0)
   ) {
     return null;
   }
 
-  return { kind, index };
+  // A card that was only just added is deleted at once by the draft; there is nothing to confirm.
+  if (kind === 'card' && isIncomplete((list as readonly CardConfig[])[index]!)) {
+    return null;
+  }
+
+  return kind === 'card' ? { kind, section: sectionId, index } : { kind, index };
 }
 
 export function EditorPage() {
@@ -61,6 +85,16 @@ export function EditorPage() {
 
       if (request) {
         setDeleting(request);
+      }
+
+      // "Rename" in a section's menu selects the section and puts the cursor in its name.
+      if (
+        typeof message === 'object' &&
+        message !== null &&
+        (message as Record<string, unknown>).type === 'everdash.editor.section.rename' &&
+        (message as Record<string, unknown>).generation === latest.current.generation
+      ) {
+        focusInspectorField('section-name');
       }
     },
     [dispatch],
@@ -100,6 +134,7 @@ export function EditorPage() {
                 viewId={state.viewId}
                 generation={state.generation}
                 selection={preview.selection}
+                incomplete={preview.incomplete}
                 onMessage={handleMessage}
               />
             </div>

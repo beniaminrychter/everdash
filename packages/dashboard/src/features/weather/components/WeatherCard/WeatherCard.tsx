@@ -1,81 +1,169 @@
-import { useI18n, translateText } from '@everdash/ui/i18n/index';
-import { formatTemperature } from '../../../../shared/dashboard/readings';
+import { useI18n } from '@everdash/ui/i18n/index';
+import type { CardRows } from '@everdash/contracts/config/cardRows';
+import { defaultCardRows } from '@everdash/contracts/config/cardRows';
+import type { CardSize } from '@everdash/contracts/config/cardSize';
+import { defaultForecastType } from '@everdash/contracts/config/weatherForecast';
+import type { ForecastType } from '@everdash/contracts/config/weatherForecast';
 import { mapWeather } from '../../data/forecast';
+import { fullRowZones, halfRowEntries } from '../../data/fit';
+import { weatherView } from '../../data/view';
+import { useElementWidth } from '../../hooks/useElementWidth';
+import type { WeatherView } from '../../data/view';
 import type { Entity } from '../../../../shared/home-assistant/entities';
 import { Widget } from '@everdash/ui/ui/Widget/Widget';
-import { Icon } from '@everdash/ui/ui/Icon/Icon';
+import { ForecastList } from '../ForecastList/ForecastList';
+import { ForecastStrip } from '../ForecastStrip/ForecastStrip';
+import { WeatherCurrent } from '../WeatherCurrent/WeatherCurrent';
+import { WeatherDetails } from '../WeatherDetails/WeatherDetails';
 import styles from './WeatherCard.module.css';
 
 interface Props {
   entity: Entity | undefined;
+  /** The forecast the card asked for, as Home Assistant returned it. */
   forecast?: readonly unknown[];
+  /** The daily forecast, read for today's high and low when the card shows hourly entries. */
+  dailyForecast?: readonly unknown[];
+  /** The forecast the card asked for; the entity may only offer the other one. */
+  forecastType?: ForecastType;
   title?: string;
   titleId?: string;
   online: boolean;
   now: number;
   timeZone?: string;
+  /** How wide the card is drawn; each size has its own layout. */
+  size?: CardSize;
+  /** One row is as tall as an accessory tile, two rows as two tiles. */
+  rows?: CardRows;
 }
+
+/** How a layout shows the forecast: a short vertical list, a few entries across, or the full strip. */
+type ForecastKind = 'list' | 'fit' | 'strip';
+
+/** The entries a two-row short forecast shows. */
+const shortForecast = 4;
+
+const layoutClasses: Record<CardSize, string> = {
+  quarter: styles.quarter,
+  half: styles.half,
+  full: styles.full,
+};
+const rowClasses: Record<CardRows, string> = { 1: styles.oneRow, 2: styles.twoRows };
+
 export function WeatherCard({
   entity,
   forecast: rawForecast,
+  dailyForecast,
+  forecastType = defaultForecastType,
   online,
   now,
   timeZone,
   title,
   titleId = 'weather-title',
+  size = 'full',
+  rows = defaultCardRows,
 }: Props) {
   const { t, locale } = useI18n();
-  const reading = mapWeather(entity, rawForecast, now);
-  const available = online && reading.available;
-  const forecast = available ? reading.forecast : [];
-  return (
-    <Widget title={title || t('Current weather')} titleId={titleId}>
-      <div class={styles.strip}>
-        <div class={styles.current}>
-          <Icon name={reading.icon} className={styles.currentIcon} />
-          <div>
-            <strong class={styles.temperature} data-testid="weather-temperature">
-              {available && reading.temperature !== null
-                ? `${formatTemperature(reading.temperature, locale)}${reading.temperatureUnit}`
-                : '—'}
-            </strong>
-            <p class={styles.condition}>
-              {available
-                ? translateText(reading.condition, t)
-                : online
-                  ? t('Weather unavailable')
-                  : t('Offline')}
-            </p>
-          </div>
-        </div>
-        {forecast.length ? (
-          <ol class={styles.forecast} aria-label={t('Next five hours')}>
-            {forecast.map((hour) => (
-              <li key={hour.time} data-forecast-hour={hour.time}>
-                <time dateTime={new Date(hour.time).toISOString()}>
-                  {new Date(hour.time).toLocaleTimeString(locale, {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    timeZone,
-                  })}
-                </time>
-                <span title={translateText(hour.condition, t)}>
-                  <Icon name={hour.icon} className={styles.hourIcon} />
-                  <span class={styles.conditionLabel}>{translateText(hour.condition, t)}</span>
-                </span>
-                <strong>
-                  {formatTemperature(hour.temperature, locale)}
-                  {reading.temperatureUnit}
-                </strong>
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <p class={styles.note}>
-            {online ? t('Hourly forecast unavailable') : t('Forecast unavailable offline')}
-          </p>
+  const reading = mapWeather(entity, rawForecast, now, {
+    dailyForecast,
+    timeZone,
+    type: forecastType,
+  });
+  const view = weatherView({ forecastType, locale, online, reading, t });
+  // A one-row card shows only the entries that fit the width it was given.
+  const [rowRef, rowWidth] = useElementWidth<HTMLDivElement>();
+
+  const forecast = (kind: ForecastKind, view: WeatherView, limit = shortForecast) => {
+    // No room for even two entries: a one-row card shows the conditions alone.
+    if (limit === 0) {
+      return null;
+    }
+
+    if (view.entries.length === 0 || !view.forecastType) {
+      return <p class={styles.unavailable}>{view.unavailable}</p>;
+    }
+
+    const common = {
+      temperatureUnit: reading.temperatureUnit,
+      timeZone,
+      type: view.forecastType,
+    };
+
+    return (
+      <div class={styles.forecast}>
+        {kind === 'list' && (
+          <ForecastList entries={view.entries.slice(0, shortForecast)} {...common} />
         )}
+        {kind === 'fit' && (
+          <ForecastStrip
+            entries={view.entries}
+            limit={limit}
+            fit
+            compact={rows === 1}
+            hideChance={rows === 2}
+            {...common}
+          />
+        )}
+        {kind === 'strip' && <ForecastStrip entries={view.entries} roomy {...common} />}
+        {view.fellBack && <p class={styles.fallback}>{view.note}</p>}
       </div>
+    );
+  };
+
+  return (
+    <Widget
+      title={title || t('Current weather')}
+      titleId={titleId}
+      className={`${styles.card} ${layoutClasses[size]} ${rowClasses[rows]}`}
+      hideTitle={rows === 1 || !title}
+    >
+      {rows === 1 && size === 'quarter' && (
+        <WeatherCurrent view={view} variant="glance" size="quarter" />
+      )}
+      {rows === 1 && size === 'half' && (
+        <div class={styles.row} ref={rowRef}>
+          <div class={styles.zone}>
+            <WeatherCurrent view={view} variant="glance" size="half" />
+          </div>
+          {forecast('fit', view, halfRowEntries(rowWidth))}
+        </div>
+      )}
+      {rows === 1 && size === 'full' && (
+        <div class={styles.row} ref={rowRef}>
+          <div class={styles.zone}>
+            <WeatherCurrent view={view} variant="inline" size="full" />
+          </div>
+          {fullRowZones(rowWidth).details && (
+            <div class={styles.rowDetails}>
+              <WeatherDetails details={view.details} layout="grid" />
+            </div>
+          )}
+          {forecast('fit', view, fullRowZones(rowWidth).entries)}
+        </div>
+      )}
+      {rows === 2 && size === 'quarter' && (
+        <>
+          <WeatherCurrent view={view} variant="inline" size="quarter" />
+          <div class={styles.list}>{forecast('list', view)}</div>
+        </>
+      )}
+      {rows === 2 && size === 'half' && (
+        <>
+          <WeatherCurrent view={view} variant="inline" size="half" />
+          <div class={styles.details}>
+            <WeatherDetails details={view.details} layout="grid" />
+          </div>
+          {forecast('fit', view)}
+        </>
+      )}
+      {rows === 2 && size === 'full' && (
+        <>
+          <div class={styles.top}>
+            <WeatherCurrent view={view} variant="large" size="full" />
+            <WeatherDetails details={view.details} layout="row" />
+          </div>
+          {forecast('strip', view)}
+        </>
+      )}
     </Widget>
   );
 }
