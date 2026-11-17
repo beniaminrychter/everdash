@@ -11,6 +11,19 @@ EverDash gives legacy tablets new possibilities as Home Assistant dashboards. It
 
 ## Run with Docker
 
+### Published image
+
+The release workflow publishes versioned `linux/amd64` and `linux/arm64` images to GitHub Container Registry. Once the release image is published and the package is public, install it alongside an existing Home Assistant instance:
+
+```sh
+export EVERDASH_IMAGE=ghcr.io/beniaminrychter/everdash:0.2.3
+docker compose -f compose.published.yaml up -d
+```
+
+Open `http://YOUR-SERVER:8095/admin/` and sign in using the address of your existing Home Assistant instance. The named `everdash-data` volume stores configuration and credentials; back it up before upgrading. To upgrade, select a new version, then run `docker compose -f compose.published.yaml pull` and `docker compose -f compose.published.yaml up -d` with the same `EVERDASH_IMAGE` setting.
+
+### Build locally with Home Assistant
+
 ```sh
 docker compose up -d --build
 ```
