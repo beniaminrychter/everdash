@@ -2,7 +2,7 @@ import { useI18n, translateText } from '@everdash/ui/i18n/index';
 import type { Device } from '@everdash/contracts/types/index';
 import { Icon } from '@everdash/ui/ui/Icon/Icon';
 import type { IconName } from '@everdash/ui/ui/Icon/Icon';
-import { deviceTint } from '../../data/tint';
+import { deviceTint } from '../../../../shared/color/tint';
 import styles from './AccessoryCard.module.css';
 
 interface AccessoryCardProps {

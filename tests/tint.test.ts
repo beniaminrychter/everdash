@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { defaultAccent, deviceTint } from '@everdash/dashboard/features/accessories/data/tint';
+import { defaultAccent, deviceTint, glyphOn } from '@everdash/dashboard/shared/color/tint';
 
 function luminance(hex: string): number {
   const [r, g, b] = [1, 3, 5].map((start) => {
@@ -61,4 +61,12 @@ test('a malformed device colour falls back to the default accent without NaN', (
     assert.deepEqual(tint, deviceTint(defaultAccent));
     assert.ok(!JSON.stringify(tint).includes('NaN'), bad);
   }
+});
+
+test('the glyph on a solid fill is white, or dark when the fill is pale', () => {
+  assert.equal(glyphOn('#ff0000'), '#ffffff');
+  assert.equal(glyphOn('#5aaff5'), '#ffffff');
+  assert.equal(glyphOn('#f4e9cf'), '#1c2533');
+  assert.equal(glyphOn('#ffd60a'), '#1c2533');
+  assert.equal(glyphOn('not a colour'), glyphOn(defaultAccent));
 });

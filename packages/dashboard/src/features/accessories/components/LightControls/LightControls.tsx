@@ -1,8 +1,7 @@
 import { useI18n, translateText } from '@everdash/ui/i18n/index';
 import type { Device } from '@everdash/contracts/types/index';
-import { Icon } from '@everdash/ui/ui/Icon/Icon';
 import type { IconName } from '@everdash/ui/ui/Icon/Icon';
-import { PowerToggle } from '../PowerToggle/PowerToggle';
+import { BrightnessSlider } from '../BrightnessSlider/BrightnessSlider';
 import styles from './LightControls.module.css';
 
 const swatches = [
@@ -30,82 +29,60 @@ export function LightControls({
   disabled = false,
 }: LightControlsProps) {
   const { t } = useI18n();
-  const brightness = device.on ? device.brightness : 0;
+  const dimmable = device.dimmable !== false;
+  const brightness = device.on ? (dimmable ? device.brightness : 100) : 0;
   const unavailable =
     disabled || Boolean(device.availability && device.availability !== 'available');
+  const customColor = !swatches.some((swatch) => swatch.value === device.color);
+
   return (
     <>
-      <div class={styles.lightPreview} style={{ color: device.color }}>
-        <Icon name={device.icon as IconName} className={styles.icon} />
-      </div>
-      <div class={styles.sheetPower}>
-        <span>{t('Power')}</span>
-        <PowerToggle
-          id="sheet-power"
-          on={device.on}
-          label={t('{name} power', { name: device.name })}
-          onToggle={onToggle}
-          disabled={unavailable}
-          className={styles.powerToggle}
-        />
-      </div>
-      {device.dimmable !== false && (
-        <>
-          <label class={styles.brightnessLabel} for="brightness">
-            {t('Brightness')}
-            <output id="brightness-value" for="brightness">
-              {brightness}%
-            </output>
-          </label>
-          <input
-            class={styles.brightnessSlider}
-            id="brightness"
-            type="range"
-            disabled={unavailable}
-            aria-label={t('Brightness')}
-            min="0"
-            max="100"
-            step="1"
-            value={brightness}
-            style={{ '--brightness': `${brightness}%` }}
-            onInput={(event) => onBrightness(Number(event.currentTarget.value))}
-          />
-        </>
-      )}
+      <output class={styles.level} id="brightness-value" for="brightness">
+        {brightness > 0 ? `${brightness}%` : t('Off')}
+      </output>
+      <BrightnessSlider
+        value={brightness}
+        color={device.color}
+        icon={device.icon as IconName}
+        label={t('Brightness')}
+        powerLabel={t('{name} power', { name: device.name })}
+        on={device.on}
+        disabled={unavailable}
+        // A light that cannot dim is on or off: dragging past the bottom edge only toggles it.
+        onChange={dimmable ? onBrightness : (value) => value > 0 !== device.on && onToggle()}
+        onToggle={onToggle}
+      />
       {device.colorCapable && (
-        <>
-          <div class={styles.colorHeading}>
-            <span>{t('Color')}</span>
-            <label class={styles.customColorLabel}>
-              {t('Custom')}
-              <input
-                class={styles.customColor}
-                id="custom-color"
-                type="color"
-                disabled={unavailable}
-                value={device.color}
-                aria-label={t('Custom light color')}
-                onInput={(event) => onColor(event.currentTarget.value)}
-              />
-            </label>
-          </div>
-          <div class={styles.colorSwatches}>
-            {swatches.map((swatch) => (
-              <button
-                type="button"
-                key={swatch.value}
-                disabled={unavailable}
-                class={styles.colorSwatch}
-                style={{ '--swatch': swatch.value }}
-                aria-label={translateText(swatch.name, t)}
-                aria-pressed={device.color === swatch.value}
-                onClick={() => onColor(swatch.value)}
-              >
-                <Icon name="check" className={styles.icon} />
-              </button>
-            ))}
-          </div>
-        </>
+        <div class={styles.colors}>
+          {swatches.map((swatch) => (
+            <button
+              type="button"
+              key={swatch.value}
+              disabled={unavailable}
+              class={styles.colorDot}
+              style={{ '--swatch': swatch.value }}
+              aria-label={translateText(swatch.name, t)}
+              aria-pressed={device.color === swatch.value}
+              onClick={() => onColor(swatch.value)}
+            />
+          ))}
+          <label
+            class={`${styles.colorDot} ${styles.customDot}`}
+            style={{ '--swatch': device.color }}
+            data-selected={customColor}
+          >
+            <span class={styles.customCurrent} />
+            <input
+              class={styles.customColor}
+              id="custom-color"
+              type="color"
+              disabled={unavailable}
+              value={device.color}
+              aria-label={t('Custom light color')}
+              onInput={(event) => onColor(event.currentTarget.value)}
+            />
+          </label>
+        </div>
       )}
     </>
   );

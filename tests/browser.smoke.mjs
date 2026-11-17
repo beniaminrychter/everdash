@@ -23,6 +23,19 @@ async function resize(target, size) {
     () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
   );
 }
+/** Presses the brightness pill at the first percentage and drags it through the rest. */
+async function dragBrightness(target, percents) {
+  const box = await target.locator('#brightness').boundingBox();
+  const at = (percent) => box.y + box.height * (1 - percent / 100);
+  const x = box.x + box.width / 2;
+
+  await target.mouse.move(x, at(percents[0]));
+  await target.mouse.down();
+  for (const percent of percents.slice(1)) {
+    await target.mouse.move(x, at(percent));
+  }
+  await target.mouse.up();
+}
 await mkdir(output, { recursive: true });
 const lightId = 'light.salon_dodatkowe';
 const outletId = 'switch.ogrod_taras_kinkiety';
@@ -1068,12 +1081,7 @@ try {
   await page.keyboard.press('Tab');
   await expect(page.getByRole('button', { exact: true, name: 'Close settings' })).toBeFocused();
   const beforeDimming = commands.length;
-  await page.locator('#brightness').evaluate((input) => {
-    for (const value of ['20', '40', '67']) {
-      input.value = value;
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-    }
-  });
+  await dragBrightness(page, [20, 40, 67]);
   await expect(page.locator('#brightness-value')).toHaveText('67%');
   await expect(
     page.getByRole('dialog').getByRole('status', { name: 'Accessory connection' }),
@@ -1105,10 +1113,7 @@ try {
   ).toHaveCount(0);
   holdServices = true;
   nextServiceStatus = 500;
-  await page.locator('#brightness').evaluate((input) => {
-    input.value = '12';
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-  });
+  await dragBrightness(page, [40, 12]);
   await expect(page.locator('#brightness-value')).toHaveText('12%');
   await expect(
     page.getByRole('dialog').getByRole('button', { exact: true, name: 'Salon Dodatkowe power' }),

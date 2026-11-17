@@ -1,7 +1,11 @@
 import { useI18n } from '@everdash/ui/i18n/index';
 import { Icon } from '@everdash/ui/ui/Icon/Icon';
 import type { IconName } from '@everdash/ui/ui/Icon/Icon';
+import { deviceTint } from '../../../../shared/color/tint';
 import styles from './ToggleCard.module.css';
+
+/** A toggle has no colour of its own, so it takes the accent an outlet tile has. */
+const toggleAccent = '#3489fa';
 
 interface Props {
   name: string;
@@ -34,6 +38,15 @@ export function ToggleCard({
   // Only tappable controls use the bright "on" tile; a read-only sensor just tints its icon and state.
   const stateClass = readOnly ? (active ? styles.isActive : '') : active ? styles.isOn : '';
   const className = `${styles.card} ${stateClass} ${problem ? styles.isUnavailable : ''}`;
+  const tint = deviceTint(toggleAccent);
+  const tintStyle = {
+    '--device-color': tint.color,
+    '--device-fill': tint.fill,
+    '--device-ring': tint.ring,
+    '--device-disc': tint.disc,
+    '--device-ink-light': tint.inkLight,
+    '--device-ink-dark': tint.inkDark,
+  };
   const content = (
     <>
       <span class={styles.disc}>
@@ -52,6 +65,7 @@ export function ToggleCard({
     return (
       <div
         class={className}
+        style={tintStyle}
         role="switch"
         aria-checked={on && !problem}
         aria-readonly="true"
@@ -68,6 +82,7 @@ export function ToggleCard({
     <button
       type="button"
       class={`${className} ${styles.control}`}
+      style={tintStyle}
       role="switch"
       aria-checked={on}
       aria-label={t('{name} power', { name })}

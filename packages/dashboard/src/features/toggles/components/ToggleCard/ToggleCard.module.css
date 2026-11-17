@@ -16,24 +16,32 @@
     background 0.18s,
     color 0.18s;
 }
+/* The glyph and status of a lit card are a tone of the device colour: darker on the light theme. */
+.card {
+  --device-ink: var(--device-ink-dark);
+}
+:global([data-theme='light']) .card {
+  --device-ink: var(--device-ink-light);
+}
 .control {
   -webkit-appearance: none;
   appearance: none;
 }
+/* The tint sits over the opaque surface, not over the page behind the card. */
 .isOn {
-  background: var(--on-bg, #f8f9fb);
-  color: var(--on-text, #18202b);
-  box-shadow: inset 0 0 0 2px var(--on-ring, transparent);
+  background-color: var(--surface);
+  background-image: linear-gradient(var(--device-fill), var(--device-fill));
+  box-shadow: inset 0 0 0 1.5px var(--device-ring);
 }
 .isUnavailable {
   background: var(--icon-bg);
 }
 .isActive .disc {
-  background: #3489fa;
-  color: #fff;
+  background: var(--device-disc);
+  color: var(--device-ink);
 }
 .isActive .status {
-  color: var(--accent);
+  color: var(--device-ink);
   font-weight: 600;
 }
 .disc {
@@ -53,8 +61,8 @@
   height: 100%;
 }
 .isOn .disc {
-  background: #3489fa;
-  color: #fff;
+  background: var(--device-disc);
+  color: var(--device-ink);
 }
 .isUnavailable .disc {
   opacity: 0.5;
@@ -80,7 +88,7 @@
   line-height: 1.25;
 }
 .isOn .status {
-  color: var(--on-status, #4a5360);
+  color: var(--device-ink);
 }
 .isUnavailable .name {
   color: var(--muted);

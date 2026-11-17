@@ -103,3 +103,10 @@ export function deviceTint(accent: string): DeviceTint {
     inkDark: readableInk(values, darkSurface, 255, 0.35),
   };
 }
+
+/** The glyph colour that reads on a solid `accent` fill: white, or near-black when the accent is pale. */
+export function glyphOn(accent: string): string {
+  const values = channels(hexColor.test(accent) ? accent : defaultAccent);
+
+  return contrast(values, [255, 255, 255]) >= 2 ? '#ffffff' : '#1c2533';
+}
