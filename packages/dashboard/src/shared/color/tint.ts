@@ -3,10 +3,7 @@ export const defaultAccent = '#ffd60a';
 
 export interface DeviceTint {
   color: string;
-  /** The lit tile's tint, laid over the tile surface. */
-  fill: string;
-  ring: string;
-  /** The icon disc of a lit tile. */
+  /** The icon disc of a lit tile, laid over the tile surface. */
   disc: string;
   /** Glyph and status text on the light theme: the accent mixed toward black until it is readable. */
   inkLight: string;
@@ -16,14 +13,14 @@ export interface DeviceTint {
 
 const hexColor = /^#[0-9a-f]{6}$/i;
 
-/** The tile surface of each theme, which the tint is laid over (the `--surface` tokens). */
+/** The lit tile surface of each theme, which the disc is laid over (the `--card-on` tokens). */
 const lightSurface: readonly number[] = [255, 255, 255];
-const darkSurface: readonly number[] = [40, 52, 68];
+const darkSurface: readonly number[] = [53, 68, 88];
 
-/** The tint's strength over the surface; keep in step with the alpha of `fill`. */
-const fillAlpha = 0.17;
+/** The disc's strength over the surface; keep in step with the alpha of `disc`. */
+const discAlpha = 0.26;
 
-/** The text contrast the ink must reach against the lit tile as drawn (WCAG AA). */
+/** The text contrast the ink must reach against the disc as drawn (WCAG AA). */
 const minContrast = 4.5;
 
 function channels(hex: string): [number, number, number] {
@@ -65,7 +62,7 @@ function contrast(first: readonly number[], second: readonly number[]): number {
 
 /**
  * The accent mixed toward `target` (0 or 255), starting at `from` and going further until it can be
- * read on the lit tile: the accent over `surface`.
+ * read on the icon disc: the accent over `surface`.
  */
 function readableInk(
   values: readonly number[],
@@ -73,13 +70,13 @@ function readableInk(
   target: number,
   from: number,
 ): string {
-  const tile = values.map((value, index) =>
-    Math.round(value * fillAlpha + surface[index]! * (1 - fillAlpha)),
+  const disc = values.map((value, index) =>
+    Math.round(value * discAlpha + surface[index]! * (1 - discAlpha)),
   );
   let amount = from;
 
   while (amount < 1) {
-    if (contrast(mixChannels(values, target, amount), tile) >= minContrast) {
+    if (contrast(mixChannels(values, target, amount), disc) >= minContrast) {
       break;
     }
 
@@ -89,16 +86,14 @@ function readableInk(
   return toHex(mixChannels(values, target, amount));
 }
 
-/** The colours an accessory tile takes from its device colour, as the CSS custom properties need them. */
+/** The colours an accessory tile's icon takes from its device colour, as the CSS custom properties need them. */
 export function deviceTint(accent: string): DeviceTint {
   const color = hexColor.test(accent) ? accent.toLowerCase() : defaultAccent;
   const values = channels(color);
 
   return {
     color,
-    fill: rgba(values, fillAlpha),
-    ring: rgba(values, 0.45),
-    disc: rgba(values, 0.26),
+    disc: rgba(values, discAlpha),
     inkLight: readableInk(values, lightSurface, 0, 0.45),
     inkDark: readableInk(values, darkSurface, 255, 0.35),
   };

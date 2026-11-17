@@ -16,6 +16,9 @@
   --background: #e4eaf1;
   --surface: #ffffff;
   --surface-strong: #eaf0f4;
+  --card-on: #ffffff;
+  --card-off: rgba(255, 255, 255, 0.5);
+  --off-glyph: #7b8594;
   --line: rgba(255, 255, 255, 0.4);
   --sheet: #f8fafc;
   --icon-bg: rgba(0, 0, 0, 0.045);

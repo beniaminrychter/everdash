@@ -20,13 +20,13 @@ function contrast(first: string, second: string): number {
 
 const accents = ['#ffc414', '#ff6b6b', '#2f95ff', defaultAccent, '#3489fa', '#ffffff', '#0000ff'];
 
-/** The lit tile as drawn: the accent at 17% over the tile surface. */
-function litTile(accent: string, surface: string): string {
+/** The icon disc as drawn: the accent at 26% over the lit tile surface. */
+function litDisc(accent: string, surface: string): string {
   const hex = [1, 3, 5].map((start) => {
     const channel = Number.parseInt(accent.slice(start, start + 2), 16);
     const base = Number.parseInt(surface.slice(start, start + 2), 16);
 
-    return Math.round(channel * 0.17 + base * 0.83)
+    return Math.round(channel * 0.26 + base * 0.74)
       .toString(16)
       .padStart(2, '0');
   });
@@ -34,23 +34,21 @@ function litTile(accent: string, surface: string): string {
   return `#${hex.join('')}`;
 }
 
-test('a device colour becomes a fill, ring and disc tint plus a light and a dark ink', () => {
+test('a device colour becomes a disc tint plus a light and a dark ink', () => {
   assert.deepEqual(deviceTint('#ffc414'), {
     color: '#ffc414',
-    fill: 'rgba(255, 196, 20, 0.17)',
-    ring: 'rgba(255, 196, 20, 0.45)',
     disc: 'rgba(255, 196, 20, 0.26)',
-    inkLight: '#8c6c0b',
-    inkDark: '#ffd966',
+    inkLight: '#80620a',
+    inkDark: '#ffdf7e',
   });
 });
 
-test('the ink is readable on the lit tile as drawn, in the light and the dark theme', () => {
+test('the ink is readable on the icon disc as drawn, in the light and the dark theme', () => {
   for (const accent of accents) {
     const tint = deviceTint(accent);
 
-    assert.ok(contrast(tint.inkLight, litTile(accent, '#ffffff')) >= 4.5, `${accent} light ink`);
-    assert.ok(contrast(tint.inkDark, litTile(accent, '#283444')) >= 4.5, `${accent} dark ink`);
+    assert.ok(contrast(tint.inkLight, litDisc(accent, '#ffffff')) >= 4.5, `${accent} light ink`);
+    assert.ok(contrast(tint.inkDark, litDisc(accent, '#354458')) >= 4.5, `${accent} dark ink`);
   }
 });
 

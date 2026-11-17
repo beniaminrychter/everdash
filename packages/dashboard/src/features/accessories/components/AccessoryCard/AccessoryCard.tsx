@@ -42,8 +42,6 @@ export function AccessoryCard({
       data-device={device.id}
       style={{
         '--device-color': tint.color,
-        '--device-fill': tint.fill,
-        '--device-ring': tint.ring,
         '--device-disc': tint.disc,
         '--device-ink-light': tint.inkLight,
         '--device-ink-dark': tint.inkDark,

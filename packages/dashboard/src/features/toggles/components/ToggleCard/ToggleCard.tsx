@@ -41,8 +41,6 @@ export function ToggleCard({
   const tint = deviceTint(toggleAccent);
   const tintStyle = {
     '--device-color': tint.color,
-    '--device-fill': tint.fill,
-    '--device-ring': tint.ring,
     '--device-disc': tint.disc,
     '--device-ink-light': tint.inkLight,
     '--device-ink-dark': tint.inkDark,

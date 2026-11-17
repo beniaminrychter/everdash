@@ -13,6 +13,9 @@
   --background: #202b3a;
   --surface: #283444;
   --surface-strong: #354458;
+  --card-on: #354458;
+  --card-off: rgba(255, 255, 255, 0.05);
+  --off-glyph: #8d98aa;
   --line: rgba(240, 244, 255, 0.1);
   --sheet: #303d50;
   --icon-bg: rgba(0, 0, 0, 0.12);
@@ -33,6 +36,9 @@
   --background: #e4eaf1;
   --surface: #ffffff;
   --surface-strong: #eaf0f4;
+  --card-on: #ffffff;
+  --card-off: rgba(255, 255, 255, 0.5);
+  --off-glyph: #7b8594;
   --line: rgba(255, 255, 255, 0.4);
   --sheet: #f8fafc;
   --icon-bg: rgba(0, 0, 0, 0.045);
