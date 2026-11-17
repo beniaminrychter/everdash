@@ -286,5 +286,13 @@ export const polish = {
   'Finish the setup in administration to choose who can open this dashboard.':
     'Dokończ konfigurację w panelu administracyjnym, aby zdecydować, kto może otwierać ten pulpit.',
   'Open administration': 'Otwórz panel administracyjny',
+  'Register device': 'Zarejestruj urządzenie',
+  'Enter the registration code from Devices in administration.':
+    'Wpisz kod rejestracji z sekcji Urządzenia w panelu administracyjnym.',
+  '{count} of 6 digits entered': 'Wpisano cyfr: {count} z 6',
+  'Registering…': 'Rejestrowanie…',
+  'Invalid registration code. Try again.': 'Nieprawidłowy kod rejestracji. Spróbuj ponownie.',
+  Register: 'Zarejestruj',
+  'Unregister device': 'Wyrejestruj urządzenie',
 } as const;
 export type TranslationKey = keyof typeof polish;

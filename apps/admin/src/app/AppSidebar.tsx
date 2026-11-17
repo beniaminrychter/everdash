@@ -50,7 +50,7 @@ const groups: { label: string; items: { route: Route; icon: LucideIcon }[] }[] =
   {
     label: 'Setup',
     items: [
-      { route: 'tablets', icon: TabletIcon },
+      { route: 'devices', icon: TabletIcon },
       { route: 'home-assistant', icon: HouseIcon },
     ],
   },

@@ -73,8 +73,8 @@ test(
 
       const access = await fetch(new URL('api/access', url));
       assert.deepEqual(await access.json(), { path: '/api/access', method: 'GET' });
-      const unlock = await fetch(new URL('api/access/unlock', url), { method: 'POST' });
-      assert.deepEqual(await unlock.json(), { path: '/api/access/unlock', method: 'POST' });
+      const register = await fetch(new URL('api/access/register', url), { method: 'POST' });
+      assert.deepEqual(await register.json(), { path: '/api/access/register', method: 'POST' });
 
       const exited = once(child, 'exit');
       child.kill('SIGTERM');

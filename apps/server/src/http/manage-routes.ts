@@ -16,7 +16,7 @@ export function registerManageRoutes(app: FastifyInstance, dependencies: ServerD
     if (!requireAdminAccess(request, reply, dependencies)) {
       return;
     }
-    return { status: dependencies.tabletAccess?.status() ?? 'open' };
+    return { status: dependencies.tabletAccess?.status() ?? 'registration_required' };
   });
 
   app.get<{ Querystring: { q?: string; domain?: string; limit?: string } }>(

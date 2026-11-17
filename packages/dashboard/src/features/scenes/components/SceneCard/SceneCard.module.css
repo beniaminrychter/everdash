@@ -99,6 +99,14 @@
     padding: 10px;
   }
 }
+:global([data-bp-899]) .card {
+  padding: 12px;
+}
+:global([data-bp-899]) .disc {
+  width: 46px;
+  height: 46px;
+  padding: 10px;
+}
 @media (max-width: 599px) {
   .card {
     height: 100px;
@@ -121,4 +129,25 @@
   .status {
     font-size: 14px;
   }
+}
+:global([data-bp-599]) .card {
+  height: 100px;
+  min-height: 100px;
+  max-height: 100px;
+  border-radius: 24px;
+  padding: 12px 10px;
+}
+:global([data-bp-599]) .disc {
+  width: 44px;
+  height: 44px;
+  padding: 8px;
+}
+:global([data-bp-599]) .text {
+  padding-left: 9px;
+}
+:global([data-bp-599]) .name {
+  font-size: 14px;
+}
+:global([data-bp-599]) .status {
+  font-size: 14px;
 }

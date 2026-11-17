@@ -99,6 +99,14 @@
     padding: 10px;
   }
 }
+:global([data-bp-899]) .accessory {
+  padding: 12px;
+}
+:global([data-bp-899]) .iconButton {
+  width: 46px;
+  height: 46px;
+  padding: 10px;
+}
 @media (max-width: 599px) {
   .accessory {
     height: 100px;
@@ -122,6 +130,27 @@
     font-size: 14px;
   }
 }
+:global([data-bp-599]) .accessory {
+  height: 100px;
+  min-height: 100px;
+  max-height: 100px;
+  border-radius: 24px;
+  padding: 12px 10px;
+}
+:global([data-bp-599]) .iconButton {
+  width: 44px;
+  height: 44px;
+  padding: 8px;
+}
+:global([data-bp-599]) .accessoryLabel {
+  padding-left: 9px;
+}
+:global([data-bp-599]) .deviceName {
+  font-size: 14px;
+}
+:global([data-bp-599]) .deviceStatus {
+  font-size: 14px;
+}
 @media (max-width: 360px) {
   .accessory {
     padding: 10px 8px;
@@ -137,4 +166,18 @@
   .deviceName {
     font-size: 13px;
   }
+}
+:global([data-bp-360]) .accessory {
+  padding: 10px 8px;
+}
+:global([data-bp-360]) .iconButton {
+  width: 44px;
+  height: 44px;
+  padding: 7px;
+}
+:global([data-bp-360]) .accessoryLabel {
+  padding-left: 8px;
+}
+:global([data-bp-360]) .deviceName {
+  font-size: 13px;
 }

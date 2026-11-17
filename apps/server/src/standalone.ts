@@ -6,7 +6,7 @@ import { ConnectorRepository } from './auth/connector-repository';
 import { HouseholdCredentialProvider } from './auth/credential-provider';
 import { OAuthCoordinator } from './auth/oauth-coordinator';
 import { actualOrigin } from './auth/oauth-http';
-import { ADMIN_COOKIE, readCookie } from './auth/admin-cookies';
+import { ADMIN_COOKIE, TABLET_COOKIE, readCookie } from './auth/admin-cookies';
 import { createHomeAssistantClient } from './home-assistant/client';
 import { TabletAccess } from './auth/tablet-access';
 
@@ -48,7 +48,7 @@ export async function createStandaloneApp(options: StandaloneOptions = {}) {
         return !!session && !!oauth.readSession(session);
       },
       isTablet: (request) =>
-        tabletAccess.authorized(readCookie(request.headers.cookie, 'everdash_tablet') ?? ''),
+        tabletAccess.authorized(readCookie(request.headers.cookie, TABLET_COOKIE) ?? ''),
     },
     homeAssistant: createHomeAssistantClient({ provider }),
     staticDirectory: options.staticDirectory ?? resolve('dist'),

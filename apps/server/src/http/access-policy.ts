@@ -30,7 +30,7 @@ export function requireTabletAccess(
     return true;
   }
 
-  reply.code(401).send(apiError('TABLET_ACCESS_REQUIRED', 'Tablet access is locked.'));
+  reply.code(401).send(apiError('TABLET_ACCESS_REQUIRED', 'Device registration is required.'));
   return false;
 }
 

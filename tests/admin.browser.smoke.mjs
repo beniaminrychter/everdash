@@ -14,6 +14,27 @@ let savedConfig = structuredClone(config);
 let saveCount = 0;
 let previewCount = 0;
 let deviceCommandCount = 0;
+let adminRegistrationCode = '123456';
+let adminDevices = [
+  {
+    id: 'device11111111111111111111111111',
+    name: '',
+    ip: '192.168.1.42',
+    deviceType: 'iPad',
+    screenSize: '768 × 1024',
+    registeredAt: 1700000000000,
+    lastSeenAt: 1700000000000,
+  },
+  {
+    id: 'device22222222222222222222222222',
+    name: 'Hallway iPhone',
+    ip: '192.168.1.55',
+    deviceType: 'iPhone',
+    screenSize: '390 × 844',
+    registeredAt: 1700000001000,
+    lastSeenAt: 1700000001000,
+  },
+];
 // The first save is rejected as a revision conflict, so the draft must survive it.
 let conflictsLeft = 1;
 // Serves a stored dashboard whose card has no entity, as a recovery load would.
@@ -143,17 +164,42 @@ const server = createServer(async (request, response) => {
       return;
     }
     if (url.pathname === '/api/manage/access') {
+      sendJson(200, { status: 'registration_required' });
+      return;
+    }
+    if (url.pathname === '/api/manage/devices' && request.method === 'GET') {
       sendJson(200, {
-        hostName: 'homeassistant',
-        addresses: ['192.168.1.20'],
-        httpPort: 8095,
-        httpsPort: null,
-        errors: [],
+        registrationCode: adminRegistrationCode,
+        codeCreatedAt: 1700000000000,
+        devices: adminDevices,
       });
       return;
     }
-    if (url.pathname === '/api/manage/devices') {
-      sendJson(200, []);
+    if (url.pathname === '/api/manage/devices/code' && request.method === 'POST') {
+      adminRegistrationCode = '918273';
+      sendJson(200, { registrationCode: adminRegistrationCode, codeCreatedAt: 1700000001000 });
+      return;
+    }
+    if (url.pathname.startsWith('/api/manage/devices/') && request.method === 'PATCH') {
+      const id = url.pathname.slice('/api/manage/devices/'.length);
+      let body = '';
+      for await (const chunk of request) {
+        body += chunk;
+      }
+      const { name } = JSON.parse(body);
+      const target = adminDevices.find((device) => device.id === id);
+      if (!target) {
+        sendJson(404, { code: 'DEVICE_NOT_FOUND' });
+        return;
+      }
+      target.name = name.trim();
+      sendJson(200, { device: target });
+      return;
+    }
+    if (url.pathname.startsWith('/api/manage/devices/') && request.method === 'DELETE') {
+      const id = url.pathname.slice('/api/manage/devices/'.length);
+      adminDevices = adminDevices.filter((device) => device.id !== id);
+      sendJson(200, { ok: true });
       return;
     }
     if (url.pathname === '/api/manage/preview' && request.method === 'POST') {
@@ -185,6 +231,22 @@ const server = createServer(async (request, response) => {
             entity_id: 'sensor.lounge_temperature',
             state: '19.6',
             attributes: { friendly_name: 'Lounge Temperature', unit_of_measurement: '°C' },
+          },
+          {
+            entity_id: 'weather.home',
+            state: 'sunny',
+            attributes: {
+              friendly_name: 'Home Weather',
+              temperature: 6.3,
+              temperature_unit: '°C',
+              humidity: 76,
+              wind_speed: 6.1,
+              wind_speed_unit: 'km/h',
+              wind_bearing: 135,
+              pressure: 994,
+              pressure_unit: 'hPa',
+              supported_features: 3,
+            },
           },
         ],
         forecasts: {},
@@ -342,12 +404,87 @@ try {
   await expect(page.getByText('Loading the tablet renderer…')).toHaveCount(0);
   await expect(page.getByRole('status', { name: 'Loading preview' })).toHaveCount(0);
 
-  await sidebar('Tablets & PIN').click();
-  await expect(page.getByRole('heading', { name: 'Tablets & PIN' })).toBeVisible();
-  await expect(page.getByText('Tablet access', { exact: true })).toBeVisible();
-  await page.getByRole('switch', { name: 'PIN protection' }).click();
-  await expect(page.getByLabel('PIN', { exact: true })).toBeVisible();
+  await sidebar('Devices').click();
+  await expect(page.getByRole('heading', { name: 'Devices' })).toBeVisible();
+  await expect(page.getByText('Register a device', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Registration code', { exact: true })).toHaveText('123 456');
+  await page.getByRole('button', { name: 'Regenerate', exact: true }).click();
+  await expect(page.getByLabel('Registration code', { exact: true })).toHaveText('918 273');
+  await expect(page.getByText('192.168.1.42', { exact: true })).toBeVisible();
+  await expect(page.getByText('iPad', { exact: true })).toBeVisible();
+  await expect(page.getByText('768 × 1024', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Rename iPad' }).click();
+  await page.getByLabel('Device name', { exact: true }).fill('Wall iPad');
+  await page.getByRole('button', { name: 'Save name', exact: true }).click();
+  await expect(page.getByText('Wall iPad', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Remove Wall iPad' }).click();
+  await expect(page.getByRole('heading', { name: 'Remove device?' })).toBeVisible();
+  await page.getByRole('button', { name: 'Remove', exact: true }).click();
+  await expect(page.getByText('Wall iPad', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Hallway iPhone', { exact: true })).toBeVisible();
   await sidebar('Editor').click();
+
+  const viewportFrame = page.locator('[data-preview-viewport]');
+  const canvasRoot = page.locator('[data-canvas-island] main');
+  await expect(viewportFrame).toHaveAttribute('data-preview-viewport', 'default');
+  await expect(page.getByRole('button', { name: 'Portrait', exact: true })).toHaveCount(0);
+  await page.getByRole('combobox', { name: 'Preview viewport' }).click();
+  await page.getByRole('option', { name: /Hallway iPhone/ }).click();
+  await expect(viewportFrame).toHaveAttribute(
+    'data-preview-viewport',
+    'device22222222222222222222222222',
+  );
+  await expect(viewportFrame).toHaveAttribute('data-preview-orientation', 'portrait');
+  await expect(page.locator('[data-preview-size]')).toHaveText('390 × 844');
+  await expect(canvasRoot).toHaveAttribute('data-bp-699', '');
+  await expect(canvasRoot).toHaveAttribute('data-bp-599', '');
+  await page.getByRole('combobox', { name: 'Preview zoom' }).click();
+  await page.getByRole('option', { name: '100%', exact: true }).click();
+  assert.equal(Math.round((await viewportFrame.boundingBox()).width), 390);
+  const viewportBox = await page.getByRole('combobox', { name: 'Preview viewport' }).boundingBox();
+  const addCardBox = await page.getByRole('button', { name: '+ Add card' }).boundingBox();
+  assert.ok(viewportBox && addCardBox && Math.abs(viewportBox.y - addCardBox.y) <= 6);
+  const toolbarTopBeforeScroll = addCardBox.y;
+  const scrollPane = page
+    .locator('[data-preview-viewport]')
+    .locator('xpath=ancestor::div[contains(@class, "overflow-y-auto")][1]');
+  await scrollPane.evaluate((element) => {
+    element.scrollTop = 240;
+  });
+  const addCardBoxAfterScroll = await page
+    .getByRole('button', { name: '+ Add card' })
+    .boundingBox();
+  assert.ok(
+    addCardBoxAfterScroll && Math.abs(addCardBoxAfterScroll.y - toolbarTopBeforeScroll) <= 1,
+  );
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  const viewportBox1280 = await page
+    .getByRole('combobox', { name: 'Preview viewport' })
+    .boundingBox();
+  const addCardBox1280 = await page.getByRole('button', { name: '+ Add card' }).boundingBox();
+  assert.ok(
+    viewportBox1280 && addCardBox1280 && Math.abs(viewportBox1280.y - addCardBox1280.y) <= 6,
+  );
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.getByRole('button', { name: 'Portrait', exact: true }).click();
+  await expect(viewportFrame).toHaveAttribute('data-preview-orientation', 'landscape');
+  await expect(page.locator('[data-preview-size]')).toHaveText('844 × 390');
+  await expect(canvasRoot).not.toHaveAttribute('data-bp-699');
+  assert.equal(Math.round((await viewportFrame.boundingBox()).width), 844);
+  await page.getByRole('combobox', { name: 'Preview zoom' }).click();
+  await page.getByRole('option', { name: '50%', exact: true }).click();
+  assert.equal(Math.round((await viewportFrame.boundingBox()).width), 422);
+  assert.equal(await viewportFrame.evaluate((element) => element.clientWidth), 844);
+  await page.getByRole('combobox', { name: 'Preview zoom' }).click();
+  await page.getByRole('option', { name: '75%', exact: true }).click();
+  assert.equal(Math.round((await viewportFrame.boundingBox()).width), 633);
+  await page.getByRole('combobox', { name: 'Preview zoom' }).click();
+  await page.getByRole('option', { name: 'Fit to screen', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Preview viewport' }).click();
+  await page.getByRole('option', { name: 'Default', exact: true }).click();
+  await expect(viewportFrame).toHaveAttribute('data-preview-viewport', 'default');
+  await expect(page.getByRole('button', { name: /Portrait|Landscape/ })).toHaveCount(0);
+  await expect(page.getByRole('combobox', { name: 'Preview zoom' })).toHaveCount(0);
 
   await page.getByRole('button', { name: '+ View' }).click();
   await expect(viewTab('New view')).toHaveAttribute('aria-selected', 'true');
@@ -637,6 +774,17 @@ try {
   await rowsField.getByRole('button', { name: '2 rows' }).click();
   await rowsPage.getByRole('button', { name: 'Save', exact: true }).click();
   await expect.poll(() => 'rows' in savedConfig.views[0].cards[0]).toBe(false);
+  await rowsPage.getByRole('combobox', { name: 'Preview viewport' }).click();
+  await rowsPage.getByRole('option', { name: /Hallway iPhone/ }).click();
+  const weatherCard = rowsPage.locator('[data-card="weather"]');
+  const currentBlock = weatherCard.locator('strong', { hasText: '6.3°C' });
+  const detailsList = weatherCard.locator('ul');
+  const currentBox = await currentBlock.boundingBox();
+  const detailsBox = await detailsList.boundingBox();
+  assert.ok(
+    detailsBox.y >= currentBox.y + currentBox.height - 2,
+    'weather details must stack under current conditions on phone-sized previews',
+  );
   await rowsPage.close();
 
   // Badges are edited like cards: click to edit, a ⋮ menu, and drag and drop to reorder.
@@ -1158,7 +1306,8 @@ try {
       {
         result: 'PASS',
         checks: [
-          'PIN protection switch on the Tablets & PIN page',
+          'registration code, device metadata, rename, and removal on the Devices page',
+          'editor preview device viewport simulation and portrait/landscape toggle',
           'view creation and rename through the inspector',
           'view ordering and boundary move states',
           'view deletion preserves the final view',

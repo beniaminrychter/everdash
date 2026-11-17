@@ -1,8 +1,10 @@
 export const TRANSACTION_COOKIE = 'everdash_oauth';
 export const ADMIN_COOKIE = 'everdash_admin';
+export const TABLET_COOKIE = 'everdash_tablet';
 
-// Cookie-safe token characters. Tablet sessions are dot-separated (generation.nonce.signature).
+// Cookie-safe token characters. Tablet sessions are dot-separated (deviceId.nonce.signature).
 const OPAQUE = /^[A-Za-z0-9._-]+$/;
+const TABLET_COOKIE_MAX_AGE = 315_360_000;
 
 function cookie(
   name: string,
@@ -45,6 +47,17 @@ export function adminCookie(value: string, secure: boolean): string {
 
 export function clearAdminCookie(secure: boolean): string {
   return cookie(ADMIN_COOKIE, '', '/api/manage', 'Strict', secure, 0);
+}
+
+export function tabletCookie(value: string, secure: boolean): string {
+  if (!value) {
+    throw new Error('Invalid cookie value');
+  }
+  return cookie(TABLET_COOKIE, value, '/api', 'Strict', secure, TABLET_COOKIE_MAX_AGE);
+}
+
+export function clearTabletCookie(secure: boolean): string {
+  return cookie(TABLET_COOKIE, '', '/api', 'Strict', secure, 0);
 }
 
 export function readCookie(header: string | undefined, name: string): string | null {

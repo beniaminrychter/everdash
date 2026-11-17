@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 
-export type Route = 'editor' | 'settings' | 'json' | 'tablets' | 'home-assistant';
+export type Route = 'editor' | 'settings' | 'json' | 'devices' | 'home-assistant';
 
 export const routeTitles: Record<Route, string> = {
   editor: 'Editor',
   settings: 'Dashboard settings',
   json: 'JSON import / export',
-  tablets: 'Tablets & PIN',
+  devices: 'Devices',
   'home-assistant': 'Home Assistant',
 };
 
@@ -25,6 +25,10 @@ function isRoute(value: string): value is Route {
 
 function readRoute(): Route {
   const name = window.location.hash.replace(/^#\/?/, '');
+
+  if (name === 'tablets') {
+    return 'devices';
+  }
 
   return isRoute(name) ? name : 'editor';
 }

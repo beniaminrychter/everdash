@@ -365,7 +365,7 @@ try {
   const apiUrl = `http://127.0.0.1:${api.address().port}`;
   const routeHaApi = async (browserContext) => {
     await browserContext.route('**/api/access', (route) =>
-      route.fulfill({ json: { status: 'open' } }),
+      route.fulfill({ json: { status: 'registered' } }),
     );
     await browserContext.route('**/api/bootstrap', async (route) => {
       const source = route.request().headers().referer || route.request().url();
@@ -1386,29 +1386,41 @@ try {
   }
   await widthContext.close();
 
-  const pinContext = await browser.newContext();
-  await routeHaApi(pinContext);
-  let pinUnlocked = false;
-  await pinContext.route('**/api/access', (route) =>
-    route.fulfill({ json: { status: pinUnlocked ? 'unlocked' : 'pin_required' } }),
+  const registerContext = await browser.newContext();
+  await routeHaApi(registerContext);
+  let deviceRegistered = false;
+  await registerContext.route('**/api/access', (route) =>
+    route.fulfill({ json: { status: deviceRegistered ? 'registered' : 'registration_required' } }),
   );
-  await pinContext.route('**/api/access/unlock', (route) => {
-    assert.equal(route.request().postDataJSON().pin, '0012');
-    pinUnlocked = true;
-    return route.fulfill({ json: { ok: true } });
+  await registerContext.route('**/api/access/register', (route) => {
+    const payload = route.request().postDataJSON();
+    assert.equal(payload.code, '482910');
+    assert.ok(typeof payload.deviceType === 'string' && payload.deviceType.length > 0);
+    assert.ok(typeof payload.screenSize === 'string' && payload.screenSize.length > 0);
+    deviceRegistered = true;
+    return route.fulfill({ json: { ok: true, deviceId: 'dev1' } });
   });
-  const pinPage = await pinContext.newPage();
-  await pinPage.goto(appUrl);
-  await expect(pinPage.getByRole('heading', { name: 'Unlock dashboard' })).toBeVisible();
-  await pinPage.screenshot({ path: join(output, 'pin-gate.png') });
-  for (const digit of ['0', '0', '1', '2']) {
-    await pinPage.getByRole('button', { name: digit, exact: true }).click();
+  const registerPage = await registerContext.newPage();
+  await registerPage.goto(appUrl);
+  await expect(registerPage.getByRole('heading', { name: 'Register device' })).toBeVisible();
+  await registerPage.screenshot({ path: join(output, 'register-gate.png') });
+  await expect(registerPage.getByRole('button', { name: '4', exact: true })).toHaveCSS(
+    'touch-action',
+    'manipulation',
+  );
+  for (const digit of ['4', '8', '2', '9', '1', '0']) {
+    await registerPage.getByRole('button', { name: digit, exact: true }).click();
   }
-  await pinPage.getByRole('button', { name: 'Unlock', exact: true }).click();
-  await expect(pinPage.getByRole('heading', { level: 1 })).toHaveText('First floor');
-  await pinPage.reload();
-  await expect(pinPage.getByRole('heading', { level: 1 })).toHaveText('First floor');
-  await pinContext.close();
+  await expect(registerPage.getByRole('img', { name: '6 of 6 digits entered' })).toHaveText(
+    '482910',
+  );
+  // Typing the 6th digit must not auto-submit before pressing Register.
+  assert.equal(deviceRegistered, false);
+  await registerPage.getByRole('button', { name: 'Register', exact: true }).click();
+  await expect(registerPage.getByRole('heading', { level: 1 })).toHaveText('First floor');
+  await registerPage.reload();
+  await expect(registerPage.getByRole('heading', { level: 1 })).toHaveText('First floor');
+  await registerContext.close();
 
   const logoutContext = await browser.newContext();
   await routeHaApi(logoutContext);
@@ -1423,18 +1435,18 @@ try {
       json: { mode: 'direct', configured: true, revision: 'logout-v1', config: dashboardDocument },
     });
   });
-  await logoutContext.route('**/api/access/lock', async (route) => {
+  await logoutContext.route('**/api/access/unregister', async (route) => {
     logoutRequests++;
     logoutCompleted = true;
     await route.fulfill({
-      json: { success: true },
+      json: { ok: true },
       headers: {
-        'set-cookie': 'everdash_device=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict',
+        'set-cookie': 'everdash_tablet=; Path=/api; Max-Age=0; HttpOnly; SameSite=Strict',
       },
     });
   });
   await logoutContext.route('**/api/access', (route) =>
-    route.fulfill({ json: { status: logoutCompleted ? 'pin_required' : 'unlocked' } }),
+    route.fulfill({ json: { status: logoutCompleted ? 'registration_required' : 'registered' } }),
   );
   const logoutPage = await logoutContext.newPage();
   logoutPage.on('pageerror', (error) => errors.push(error.message));
@@ -1444,8 +1456,8 @@ try {
     localStorage.getItem('my-home:preferences:v1'),
   );
   await openSettings(logoutPage);
-  await logoutPage.getByRole('button', { name: 'Lock dashboard', exact: true }).click();
-  await expect(logoutPage.getByRole('heading', { name: 'Unlock dashboard' })).toBeVisible();
+  await logoutPage.getByRole('button', { name: 'Unregister device', exact: true }).click();
+  await expect(logoutPage.getByRole('heading', { name: 'Register device' })).toBeVisible();
   assert.equal(logoutRequests, 1);
   assert.equal(
     await logoutPage.evaluate(() => localStorage.getItem('everdash:offline-config:v1')),
@@ -1797,10 +1809,10 @@ try {
         appUrl,
         checks: [
           'same-origin dashboard API with isolated Home Assistant fixture',
-          'optional PIN gate with no pairing requests',
+          'device registration gate persists across reload',
           'JSON editor import, previous recovery, validation, stale-save preservation and publish',
           'open tablet dashboards refresh published configuration revisions',
-          'Lock clears the tablet session and offline snapshot',
+          'Unregister clears the tablet session and offline snapshot',
           'management mode does not register a service worker',
           'configured views, persistent selection, shared control state, badge-only view and widget order',
           'saved appearance and HA sunrise/sunset',

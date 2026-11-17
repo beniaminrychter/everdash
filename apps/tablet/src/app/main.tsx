@@ -1,5 +1,5 @@
 /* oxlint-disable no-use-before-define -- Dashboard bootstrap and retry callbacks are mutually recursive. */
-import { PinGate } from './PinGate';
+import { RegisterDeviceGate } from './RegisterDeviceGate';
 import { render } from 'preact';
 import { useCallback, useEffect, useState } from 'preact/hooks';
 import { App } from './App';
@@ -36,9 +36,19 @@ function RuntimeApp({
 }) {
   const [accessLost, setAccessLost] = useState(false);
   const handleUnauthorized = useCallback(() => {
+    try {
+      localStorage.removeItem('everdash:offline-config:v1');
+    } catch {
+      // Ignore storage errors when returning to registration.
+    }
     setAccessLost(true);
     loadDashboard();
   }, []);
+  useEffect(() => {
+    window.addEventListener('everdash-unauthorized', handleUnauthorized);
+
+    return () => window.removeEventListener('everdash-unauthorized', handleUnauthorized);
+  }, [handleUnauthorized]);
   const { snapshot, publish, authorized } = useRuntimeConfig(
     initial,
     handleUnauthorized,
@@ -161,13 +171,10 @@ function loadDashboard() {
   request.addEventListener('load', () => {
     try {
       const access = JSON.parse(request.responseText) as { status: string };
-      if (access.status === 'open' || access.status === 'unlocked') {
-        loadAuthorizedDashboard(access.status === 'unlocked');
+      if (access.status === 'registered') {
+        loadAuthorizedDashboard(true);
       } else {
-        render(
-          <PinGate setupRequired={access.status === 'setup_required'} onUnlock={loadDashboard} />,
-          root,
-        );
+        render(<RegisterDeviceGate onRegistered={loadDashboard} />, root);
       }
     } catch {
       render(<p>Cannot check dashboard access. Reload to retry.</p>, root);
@@ -178,14 +185,14 @@ function loadDashboard() {
   request.send();
 }
 window.addEventListener('everdash-lock', () => {
-  render(<p>Locking…</p>, root);
+  render(<p>Unregistering…</p>, root);
   try {
     localStorage.removeItem('everdash:offline-config:v1');
   } catch {
-    // Lock the server session even when browser storage is unavailable.
+    // Unregister on the server even when browser storage is unavailable.
   }
   const request = new XMLHttpRequest();
-  request.open('POST', '/api/access/lock');
+  request.open('POST', '/api/access/unregister');
   request.timeout = 10_000;
   request.setRequestHeader('X-EverDash-Request', '1');
   request.addEventListener('loadend', loadDashboard);

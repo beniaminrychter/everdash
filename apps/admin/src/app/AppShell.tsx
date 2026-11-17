@@ -1,8 +1,8 @@
+import { DevicesPage } from '@/features/devices/DevicesPage';
 import { EditorPage } from '@/features/editor/EditorPage';
 import { HomeAssistantPage } from '@/features/home-assistant/HomeAssistantPage';
 import { JsonPage } from '@/features/json/JsonPage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
-import { TabletsPage } from '@/features/tablets/TabletsPage';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { Toaster } from '@/components/ui/sonner';
 import { AppSidebar } from './AppSidebar';
@@ -21,8 +21,8 @@ function RoutePage({ route, origin }: { route: Exclude<Route, 'editor'>; origin:
       return <JsonPage />;
     }
 
-    case 'tablets': {
-      return <TabletsPage />;
+    case 'devices': {
+      return <DevicesPage />;
     }
 
     default: {

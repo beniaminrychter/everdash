@@ -1,4 +1,4 @@
-/* The lock screen uses the dashboard's theme tokens (App.module.css), so it follows light and dark. */
+/* The registration screen uses the dashboard's theme tokens (App.module.css), so it follows light and dark. */
 .gate {
   position: fixed;
   top: 0;
@@ -7,6 +7,7 @@
   left: 0;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
+  touch-action: manipulation;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -37,7 +38,7 @@
   color: var(--accent);
 }
 
-.lockIcon {
+.badgeIcon {
   width: 28px;
   height: 28px;
 }
@@ -56,39 +57,49 @@
   line-height: 1.4;
 }
 
-.dots {
+.digits {
   display: flex;
   justify-content: center;
-  margin-top: 28px;
+  margin-top: 24px;
 }
 
-.dot {
-  width: 14px;
-  height: 14px;
-  margin: 0 8px;
-  border: 2px solid var(--muted);
-  border-radius: 50%;
+.digitSlot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 52px;
+  margin: 0 4px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 24px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
   transition:
-    background-color 0.12s ease,
     border-color 0.12s ease,
     transform 0.12s ease;
 }
 
+.active {
+  border-color: var(--accent);
+}
+
 .filled {
   border-color: var(--text);
-  background: var(--text);
-  transform: scale(1.1);
 }
 
 .shake {
-  animation: pinShake 0.4s ease;
+  animation: codeShake 0.4s ease;
 }
 
-.shake .dot {
+.shake .digitSlot {
   border-color: var(--danger);
 }
 
-@keyframes pinShake {
+@keyframes codeShake {
   0%,
   100% {
     transform: translateX(0);
@@ -135,6 +146,7 @@
   font-size: 30px;
   font-weight: 400;
   line-height: 1;
+  touch-action: manipulation;
   transition:
     background-color 0.1s ease,
     opacity 0.1s ease;
@@ -158,7 +170,7 @@
   opacity: 0.35;
 }
 
-.unlock:not(:disabled) {
+.submit:not(:disabled) {
   background: var(--accent);
   color: var(--background);
 }
@@ -166,18 +178,6 @@
 .keyIcon {
   width: 28px;
   height: 28px;
-}
-
-.setupLink {
-  display: inline-block;
-  margin-top: 24px;
-  border-radius: 14px;
-  padding: 14px 22px;
-  background: var(--accent);
-  color: var(--background);
-  font-size: 17px;
-  font-weight: 600;
-  text-decoration: none;
 }
 
 @media (max-height: 640px) {

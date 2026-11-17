@@ -56,6 +56,13 @@ export function createClient(baseUrl = ''): HomeAssistantClient {
           } catch {
             code = '';
           }
+          if (
+            code === 'TABLET_ACCESS_REQUIRED' &&
+            typeof window !== 'undefined' &&
+            typeof window.dispatchEvent === 'function'
+          ) {
+            window.dispatchEvent(new Event('everdash-unauthorized'));
+          }
           fail(
             code.startsWith('HA_')
               ? 'EverDash could not connect to Home Assistant.'

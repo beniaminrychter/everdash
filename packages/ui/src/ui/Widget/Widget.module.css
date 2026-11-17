@@ -39,3 +39,7 @@
     border-radius: 24px;
   }
 }
+:global([data-bp-599]) .widget {
+  padding: 12px 14px;
+  border-radius: 24px;
+}

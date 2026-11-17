@@ -17,7 +17,8 @@ export function useContainerWidth(element: RefObject<HTMLElement>): number {
 
   useLayoutEffect(() => {
     const measure = () => {
-      const measured = element.current?.getBoundingClientRect().width;
+      const node = element.current;
+      const measured = node ? node.clientWidth || node.getBoundingClientRect().width : undefined;
 
       if (measured) {
         setWidth(Math.round(measured));

@@ -1,14 +1,22 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { RegisteredDevice } from '@everdash/contracts/auth/devices';
 import { DraftAlerts } from '@/app/DraftAlerts';
 import { useDraft } from '@/app/DraftContext';
 import { PageHeader } from '@/app/PageHeader';
 import type { CardConfig } from '@everdash/contracts/config/types';
 import type { DraftState } from '@/app/draft/draftReducer';
 import { isIncomplete } from '@/app/draft/incomplete';
+import { readDevicesOverview } from '@/features/devices/useDevices';
 import { CanvasIsland } from './CanvasIsland';
 import { CanvasToolbar } from './CanvasToolbar';
 import { DeleteItemDialog } from './DeleteItemDialog';
 import type { DeleteTarget } from './DeleteItemDialog';
+import {
+  resolveDeviceViewport,
+  resolvePreviewScale,
+  toDeviceViewportOptions,
+} from './deviceViewport';
+import type { PreviewZoom, ViewportOrientation } from './deviceViewport';
 import { focusInspectorField } from './focusInspectorField';
 import { Inspector } from './Inspector';
 import { pendingPreview } from './pendingPreview';
@@ -70,11 +78,157 @@ export function EditorPage() {
   const { state, dispatch } = useDraft();
   const [deleting, setDeleting] = useState<DeleteTarget | null>(null);
   const [viewSheetOpen, setViewSheetOpen] = useState(false);
+  const [devices, setDevices] = useState<RegisteredDevice[]>([]);
+  const [viewportSelection, setViewportSelection] = useState<{
+    deviceId: string;
+    orientation: ViewportOrientation;
+  } | null>(null);
+  const [zoom, setZoom] = useState<PreviewZoom>('fit');
+  const [availableSpace, setAvailableSpace] = useState({ width: 0, height: 0 });
+  const [frameHeight, setFrameHeight] = useState(0);
+  const scrollPaneRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
   const latest = useRef(state);
 
   useLayoutEffect(() => {
     latest.current = state;
   });
+
+  useEffect(() => {
+    let active = true;
+
+    const refreshDevices = async () => {
+      const overview = await readDevicesOverview();
+
+      if (!active || !overview) {
+        return;
+      }
+
+      setDevices(overview.devices);
+    };
+
+    refreshDevices();
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        refreshDevices();
+      }
+    };
+
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      active = false;
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, []);
+
+  const deviceOptions = useMemo(() => toDeviceViewportOptions(devices), [devices]);
+
+  const activeViewport = useMemo(() => {
+    if (!viewportSelection) {
+      return null;
+    }
+
+    const option = deviceOptions.find((item) => item.id === viewportSelection.deviceId);
+
+    return option ? resolveDeviceViewport(option, viewportSelection.orientation) : null;
+  }, [deviceOptions, viewportSelection]);
+
+  useLayoutEffect(() => {
+    if (!activeViewport) {
+      return;
+    }
+
+    const measure = () => {
+      const scrollPane = scrollPaneRef.current;
+      const stage = stageRef.current;
+      const frame = frameRef.current;
+
+      if (scrollPane && stage) {
+        const scrollRect = scrollPane.getBoundingClientRect();
+        const stageRect = stage.getBoundingClientRect();
+        const stageTop = stageRect.top - scrollRect.top + scrollPane.scrollTop;
+        const nextWidth = Math.max(0, stage.clientWidth - 4);
+        const nextHeight = Math.max(240, scrollPane.clientHeight - stageTop - 24);
+
+        setAvailableSpace((current) =>
+          current.width === nextWidth && current.height === nextHeight
+            ? current
+            : { width: nextWidth, height: nextHeight },
+        );
+      }
+
+      if (frame) {
+        const nextFrameHeight = frame.offsetHeight;
+
+        setFrameHeight((current) => (current === nextFrameHeight ? current : nextFrameHeight));
+      }
+    };
+
+    measure();
+
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+
+    if (scrollPaneRef.current) {
+      observer?.observe(scrollPaneRef.current);
+    }
+
+    if (stageRef.current) {
+      observer?.observe(stageRef.current);
+    }
+
+    if (frameRef.current) {
+      observer?.observe(frameRef.current);
+    }
+
+    window.addEventListener('resize', measure);
+
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [activeViewport]);
+
+  const previewScale = useMemo(
+    () => (activeViewport ? resolvePreviewScale(zoom, activeViewport, availableSpace) : 1),
+    [activeViewport, availableSpace, zoom],
+  );
+
+  const handleSelectViewport = useCallback(
+    (deviceId: string) => {
+      if (deviceId === 'default') {
+        setViewportSelection(null);
+
+        return;
+      }
+
+      const option = deviceOptions.find((item) => item.id === deviceId);
+
+      if (!option) {
+        setViewportSelection(null);
+
+        return;
+      }
+
+      setViewportSelection({ deviceId: option.id, orientation: option.defaultOrientation });
+    },
+    [deviceOptions],
+  );
+
+  const handleToggleOrientation = useCallback(() => {
+    setViewportSelection((current) => {
+      if (!current) {
+        return null;
+      }
+
+      return {
+        ...current,
+        orientation: current.orientation === 'portrait' ? 'landscape' : 'portrait',
+      };
+    });
+  }, []);
 
   const handleMessage = useCallback(
     (message: unknown) => {
@@ -118,25 +272,81 @@ export function EditorPage() {
     [state.document, state.viewId, state.selection],
   );
 
+  const scaledWidth = activeViewport ? Math.round(activeViewport.width * previewScale) : 0;
+  const scaledHeight = activeViewport
+    ? Math.round(Math.max(activeViewport.height, frameHeight) * previewScale)
+    : 0;
+
   return (
     <div className="flex h-svh min-h-0 flex-col">
       <PageHeader>
         <ViewTabs onRename={renameView} />
       </PageHeader>
       <div className="flex min-h-0 flex-1">
-        <div className="bg-muted min-w-0 flex-1 overflow-y-auto p-4 md:p-6">
-          <div className="mx-auto max-w-4xl space-y-4">
-            <DraftAlerts />
-            <div>
-              <CanvasToolbar />
-              <CanvasIsland
-                document={preview.document}
-                viewId={state.viewId}
-                generation={state.generation}
-                selection={preview.selection}
-                incomplete={preview.incomplete}
-                onMessage={handleMessage}
+        <div className="bg-muted flex min-w-0 flex-1 flex-col">
+          <div className="border-border/60 bg-muted shrink-0 border-b px-4 py-2.5 xl:px-6">
+            <div className="mx-auto max-w-4xl">
+              <CanvasToolbar
+                deviceOptions={deviceOptions}
+                selectedViewport={activeViewport}
+                zoom={zoom}
+                onSelectViewport={handleSelectViewport}
+                onToggleOrientation={handleToggleOrientation}
+                onChangeZoom={setZoom}
               />
+            </div>
+          </div>
+          <div ref={scrollPaneRef} className="min-h-0 flex-1 overflow-y-auto p-4 md:p-6">
+            <div className="mx-auto mb-4 max-w-4xl space-y-4 empty:hidden">
+              <DraftAlerts />
+            </div>
+            <div ref={stageRef} className={activeViewport ? 'overflow-x-auto pb-2' : undefined}>
+              <div
+                data-preview-scale={activeViewport ? String(previewScale) : undefined}
+                className={activeViewport ? 'relative mx-auto' : undefined}
+                style={
+                  activeViewport && previewScale !== 1
+                    ? { width: `${scaledWidth}px`, height: `${scaledHeight}px` }
+                    : undefined
+                }
+              >
+                <div
+                  ref={frameRef}
+                  data-preview-viewport={activeViewport?.deviceId ?? 'default'}
+                  data-preview-orientation={activeViewport?.orientation}
+                  className={
+                    activeViewport
+                      ? 'ring-border mx-auto overflow-hidden rounded-xl bg-[#e4eaf1] shadow-sm ring-1'
+                      : 'mx-auto max-w-4xl'
+                  }
+                  style={
+                    activeViewport
+                      ? {
+                          width: `${activeViewport.width}px`,
+                          minHeight: `${activeViewport.height}px`,
+                          ...(previewScale === 1
+                            ? undefined
+                            : {
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                transform: `scale(${previewScale})`,
+                                transformOrigin: 'top left',
+                              }),
+                        }
+                      : undefined
+                  }
+                >
+                  <CanvasIsland
+                    document={preview.document}
+                    viewId={state.viewId}
+                    generation={state.generation}
+                    selection={preview.selection}
+                    incomplete={preview.incomplete}
+                    onMessage={handleMessage}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>

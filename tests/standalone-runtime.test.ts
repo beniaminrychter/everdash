@@ -36,9 +36,11 @@ test('all management data routes reject spoofed identity and device cookies', as
       ['GET', '/api/manage/entities'],
       ['GET', '/api/manage/access'],
       ['GET', '/api/manage/devices'],
+      ['POST', '/api/manage/devices/code'],
       ['POST', '/api/manage/config/validate'],
       ['POST', '/api/manage/preview'],
       ['PUT', '/api/manage/config'],
+      ['PATCH', '/api/manage/devices/00000000000000000000000000000000'],
       ['DELETE', '/api/manage/devices/00000000000000000000000000000000'],
     ] as const) {
       const response = await app.inject({
@@ -51,7 +53,7 @@ test('all management data routes reject spoofed identity and device cookies', as
           'x-everdash-request': '1',
         },
       });
-      assert.equal(response.statusCode, url.includes('/devices') ? 404 : 401, `${method} ${url}`);
+      assert.equal(response.statusCode, 401, `${method} ${url}`);
     }
   } finally {
     await app.close();
@@ -64,12 +66,12 @@ test('rejects blanket proxy trust configuration', async () => {
   await assert.rejects(createStandaloneApp({ trustedProxyCidrs: ['loopback'] }), /proxy/i);
 });
 
-test('imported dashboards require an explicit access choice', async () => {
+test('imported dashboards require device registration', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'everdash-import-'));
   await writeFile(join(directory, 'dashboard.json'), '{}');
   const { app } = await createStandaloneApp({ dataDirectory: directory, logger: false });
   try {
-    assert.equal((await app.inject('/api/access')).json().status, 'setup_required');
+    assert.equal((await app.inject('/api/access')).json().status, 'registration_required');
     assert.equal((await app.inject('/api/ha/states')).statusCode, 401);
   } finally {
     await app.close();
@@ -77,30 +79,41 @@ test('imported dashboards require an explicit access choice', async () => {
   }
 });
 
-test('PIN unlock issues a session cookie and lock clears it', async () => {
-  const directory = await mkdtemp(join(tmpdir(), 'everdash-unlock-'));
+test('device registration issues a persistent cookie, regenerates single-use code, and unregister clears it', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'everdash-register-'));
   const { app, tabletAccess } = await createStandaloneApp({
     dataDirectory: directory,
     logger: false,
   });
   try {
-    await tabletAccess.setPin('0012');
+    const code = tabletAccess.overview().registrationCode;
     const headers = { origin: 'http://localhost', 'x-everdash-request': '1' };
-    const unlocked = await app.inject({
+    const registered = await app.inject({
       method: 'POST',
-      url: '/api/access/unlock',
+      url: '/api/access/register',
       headers,
-      payload: { pin: '0012' },
+      payload: { code, deviceType: 'iPad', screenSize: '768 × 1024' },
     });
-    assert.equal(unlocked.statusCode, 200);
-    assert.match(String(unlocked.headers['set-cookie']), /HttpOnly/);
+    assert.equal(registered.statusCode, 200);
+    const setCookie = String(registered.headers['set-cookie']);
+    assert.match(setCookie, /HttpOnly/);
+    assert.match(setCookie, /Max-Age=315360000/);
 
-    // The issued session must be accepted on the next requests, or the tablet stays on the PIN gate.
-    const session = /everdash_tablet=([^;]+)/.exec(String(unlocked.headers['set-cookie']))?.[1];
+    // Code is single-use and cannot be reused.
+    const reuse = await app.inject({
+      method: 'POST',
+      url: '/api/access/register',
+      headers,
+      payload: { code },
+    });
+    assert.equal(reuse.statusCode, 401);
+
+    // The issued device cookie stays authorized across requests.
+    const session = /everdash_tablet=([^;]+)/.exec(setCookie)?.[1];
     assert.ok(session);
     const cookie = `everdash_tablet=${session}`;
     const status = await app.inject({ method: 'GET', url: '/api/access', headers: { cookie } });
-    assert.deepEqual(status.json(), { status: 'unlocked' });
+    assert.deepEqual(status.json(), { status: 'registered' });
     const bootstrap = await app.inject({
       method: 'GET',
       url: '/api/bootstrap',
@@ -108,9 +121,18 @@ test('PIN unlock issues a session cookie and lock clears it', async () => {
     });
     assert.notEqual(bootstrap.statusCode, 401);
 
-    const locked = await app.inject({ method: 'POST', url: '/api/access/lock', headers });
-    assert.equal(locked.statusCode, 200);
-    assert.match(String(locked.headers['set-cookie']), /Max-Age=0/);
+    const unregistered = await app.inject({
+      method: 'POST',
+      url: '/api/access/unregister',
+      headers: { ...headers, cookie },
+    });
+    assert.equal(unregistered.statusCode, 200);
+    assert.match(String(unregistered.headers['set-cookie']), /Max-Age=0/);
+    assert.equal(tabletAccess.overview().devices.length, 0);
+    assert.equal(
+      (await app.inject({ method: 'GET', url: '/api/access', headers: { cookie } })).json().status,
+      'registration_required',
+    );
   } finally {
     await app.close();
     await rm(directory, { recursive: true, force: true });

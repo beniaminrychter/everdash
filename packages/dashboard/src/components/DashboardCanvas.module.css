@@ -30,3 +30,9 @@
   --on-status: #5b4600;
   --on-ring: #d9a400;
 }
+:global([data-bp-599]).mainContent {
+  padding: 20px 16px;
+}
+:global([data-bp-360]).mainContent {
+  padding: 20px 14px;
+}

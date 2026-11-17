@@ -119,11 +119,13 @@ export function Settings({
       <button type="button" class={styles.refresh} disabled={!online} onClick={onRefresh}>
         {t('Refresh')}
       </button>
-      <h3>{t('Tablet access')}</h3>
       {canLogout && (
-        <button type="button" onClick={() => window.dispatchEvent(new Event('everdash-lock'))}>
-          Lock dashboard
-        </button>
+        <>
+          <h3>{t('Tablet access')}</h3>
+          <button type="button" onClick={() => window.dispatchEvent(new Event('everdash-lock'))}>
+            {t('Unregister device')}
+          </button>
+        </>
       )}
       {accessMode === 'management' && (
         <>

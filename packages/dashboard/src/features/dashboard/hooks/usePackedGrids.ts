@@ -24,9 +24,10 @@ function cardGap(grid: HTMLElement): number {
 }
 
 /** Snaps standard 1-row and 2-row card heights so two stacked 1-row tiles match one 2-row widget. */
-function snapCardHeight(height: number, gap: number): number {
+function snapCardHeight(height: number, gap: number, grid: HTMLElement): number {
   const narrow =
-    typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 599px)').matches;
+    Boolean(grid.closest('[data-bp-599]')) ||
+    (typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 599px)').matches);
   const oneRow = narrow ? 100 : 104;
   const twoRows = oneRow * 2 + gap;
 
@@ -55,7 +56,7 @@ export function packGrid(grid: HTMLElement) {
   const gap = cardGap(grid);
 
   // Measure everything before changing anything, so the browser lays out only once.
-  const heights = cards.map((card) => snapCardHeight(card.offsetHeight, gap));
+  const heights = cards.map((card) => snapCardHeight(card.offsetHeight, gap, grid));
 
   cards.forEach((card, index) => {
     const rows = `span ${heights[index] + gap}`;

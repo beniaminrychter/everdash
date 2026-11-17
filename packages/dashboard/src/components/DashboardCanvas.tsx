@@ -1,11 +1,12 @@
 import { editorKeys } from './editorKeys';
-import { useMemo } from 'preact/hooks';
+import { useMemo, useRef } from 'preact/hooks';
 import type { AppConfig, DashboardDocument } from '@everdash/contracts/config/types';
 import { validateDashboard } from '@everdash/contracts/config/validate';
 import { LanguageProvider } from '@everdash/ui/i18n/index';
 import { createDevice, mapState } from '../features/accessories/data/model';
 import { mapClimate, createClimate } from '../features/climate/data/model';
 import { DashboardCards } from '../features/dashboard/components/DashboardCards/DashboardCards';
+import { useContainerWidth } from '../features/dashboard/hooks/useContainerWidth';
 import type {
   CardLocation,
   EditorEvent,
@@ -48,6 +49,15 @@ export function DashboardCanvas({
   editorKit,
   onAction,
 }: DashboardCanvasInnerProps) {
+  const canvasRef = useRef<HTMLElement>(null);
+  const canvasWidth = useContainerWidth(canvasRef);
+  const breakpoints = {
+    'data-bp-899': canvasWidth <= 899 ? '' : undefined,
+    'data-bp-699': canvasWidth <= 699 ? '' : undefined,
+    'data-bp-599': canvasWidth <= 599 ? '' : undefined,
+    'data-bp-360': canvasWidth <= 360 ? '' : undefined,
+  };
+
   const model = useMemo(() => {
     if (!snapshot) {
       return null;
@@ -76,7 +86,7 @@ export function DashboardCanvas({
   const currentSnapshot = snapshot;
   if (!model || !currentSnapshot) {
     return (
-      <main class={styles.mainContent}>
+      <main ref={canvasRef} class={styles.mainContent} {...breakpoints}>
         <p>Open the dashboard builder to load its current view.</p>
       </main>
     );
@@ -85,7 +95,7 @@ export function DashboardCanvas({
     model.resolved.views.find((item) => item.id === selectedView) ?? model.resolved.views[0];
   if (!view) {
     return (
-      <main class={styles.mainContent}>
+      <main ref={canvasRef} class={styles.mainContent} {...breakpoints}>
         <p>This dashboard has no view to display.</p>
       </main>
     );
@@ -113,7 +123,7 @@ export function DashboardCanvas({
 
   return (
     <LanguageProvider language="en">
-      <main class={styles.mainContent} data-theme="light">
+      <main ref={canvasRef} class={styles.mainContent} data-theme="light" {...breakpoints}>
         <SensorBadges
           badges={view.badges}
           readings={model.readings}

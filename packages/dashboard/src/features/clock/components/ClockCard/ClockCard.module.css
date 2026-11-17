@@ -145,3 +145,31 @@
     font-size: 24px;
   }
 }
+:global([data-bp-599]) .clock {
+  height: 100px;
+  min-height: 100px;
+  max-height: 100px;
+  padding: 12px 16px;
+  border-radius: 24px;
+}
+:global([data-bp-599]) .quarter .primary {
+  font-size: 32px;
+}
+:global([data-bp-599]) .quarter.timeOnly .primary {
+  font-size: 34px;
+}
+:global([data-bp-599]) .half .primary,
+:global([data-bp-599]) .full .primary {
+  font-size: 36px;
+}
+:global([data-bp-599]) .half .secondary,
+:global([data-bp-599]) .full .secondary {
+  font-size: 14px;
+}
+:global([data-bp-599]) .dateOnly .primary,
+:global([data-bp-599]) .dateOnly.half .primary {
+  font-size: 20px;
+}
+:global([data-bp-599]) .dateOnly.full .primary {
+  font-size: 24px;
+}

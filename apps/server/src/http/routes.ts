@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { validateDashboard } from '@everdash/contracts/config/validate';
 import type { ServerDependencies } from '../app';
+import { readCookie, TABLET_COOKIE } from '../auth/admin-cookies';
 import { filterConfiguredStates, validateServiceCommand } from '../home-assistant/policy';
 import { expectedOriginFor, requireTabletAccess } from './access-policy';
 import { apiError } from './errors';
@@ -26,6 +27,10 @@ export function registerApiRoutes(app: FastifyInstance, dependencies: ServerDepe
   app.get('/api/bootstrap', async (request, reply) => {
     if (!requireTabletAccess(request, reply, dependencies)) {
       return;
+    }
+    if (dependencies.tabletAccess) {
+      const session = readCookie(request.headers.cookie, TABLET_COOKIE) ?? '';
+      dependencies.tabletAccess.touchSession(session, request.ip);
     }
     const snapshot = config.read();
     if (!snapshot) {

@@ -57,8 +57,22 @@
     margin-right: 12px;
   }
 }
+:global([data-bp-599]) .card {
+  max-height: 216px;
+}
+:global([data-bp-599]) .reading strong {
+  font-size: 40px;
+}
+:global([data-bp-599]) .icon {
+  width: 36px;
+  height: 36px;
+  margin-right: 12px;
+}
 @media (max-width: 360px) {
   .card {
     max-height: 210px;
   }
+}
+:global([data-bp-360]) .card {
+  max-height: 210px;
 }

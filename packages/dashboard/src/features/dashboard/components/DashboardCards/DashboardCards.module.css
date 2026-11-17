@@ -16,6 +16,9 @@
     grid-gap: 10px;
   }
 }
+:global([data-bp-360]) .cards {
+  grid-gap: 10px;
+}
 
 /*
  * Once hooks/usePackedGrids.ts has measured the cards, the rows are 1px high and each card spans
@@ -33,6 +36,10 @@
     grid-column-gap: 10px;
     margin-bottom: -10px;
   }
+}
+:global([data-bp-360]) .cards[data-packed] {
+  grid-column-gap: 10px;
+  margin-bottom: -10px;
 }
 
 .emptyView {

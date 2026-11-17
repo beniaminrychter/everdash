@@ -203,6 +203,11 @@
     max-height: 216px;
   }
 }
+:global([data-bp-599]) .card {
+  height: 216px;
+  min-height: 216px;
+  max-height: 216px;
+}
 
 @media (max-width: 360px) {
   .card {
@@ -223,4 +228,19 @@
   .usage {
     padding-left: 10px;
   }
+}
+:global([data-bp-360]) .card {
+  height: 210px;
+  min-height: 210px;
+  max-height: 210px;
+}
+:global([data-bp-360]) .price strong,
+:global([data-bp-360]) .usage strong {
+  font-size: 24px;
+}
+:global([data-bp-360]) .priceRow {
+  grid-gap: 10px;
+}
+:global([data-bp-360]) .usage {
+  padding-left: 10px;
 }
