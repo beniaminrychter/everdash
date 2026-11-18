@@ -8,7 +8,10 @@ import { apiError } from './errors';
 import { registerManageRoutes } from './manage-routes';
 import { requestSignal } from './request-signal';
 import { requireMutationOrigin } from './security';
-import { registerTabletAccessRoutes } from './tablet-access-routes';
+import {
+  registerTabletAccessRoutes,
+  registerTabletDeviceManagementRoutes,
+} from './tablet-access-routes';
 
 function recoveryError(reply: FastifyReply, message: string) {
   reply.code(503).send(apiError('CONFIG_RECOVERY_REQUIRED', message));
@@ -17,6 +20,17 @@ function recoveryError(reply: FastifyReply, message: string) {
 export function registerApiRoutes(app: FastifyInstance, dependencies: ServerDependencies) {
   const config = dependencies.config;
   const expectedOrigin = expectedOriginFor(dependencies);
+
+  if (dependencies.ingress) {
+    if (dependencies.tabletAccess) {
+      registerTabletDeviceManagementRoutes(app, dependencies, dependencies.tabletAccess);
+    }
+    registerManageRoutes(app, dependencies);
+    app.setNotFoundHandler((_request, reply) => {
+      reply.code(404).send(apiError('NOT_FOUND', 'The requested endpoint was not found.'));
+    });
+    return;
+  }
 
   if (dependencies.tabletAccess) {
     registerTabletAccessRoutes(app, dependencies, dependencies.tabletAccess);

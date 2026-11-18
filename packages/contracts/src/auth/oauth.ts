@@ -10,9 +10,14 @@ export interface AuthStartResponse {
 export interface AuthSessionResponse {
   authenticated: boolean;
   connection: 'unconfigured' | 'connected' | 'repair-required';
+  connectionMode?: 'oauth' | 'supervisor';
   durability?: 'uncertain';
   /** The saved Home Assistant address, when connected. */
   homeAssistantOrigin?: string;
+  /** True when served through Home Assistant Ingress. */
+  ingress?: boolean;
+  /** Direct HTTP port serving the tablet dashboard, when served over Ingress. */
+  tabletPort?: number;
 }
 
 export type DiscoverySource = 'mdns' | 'network' | 'local';

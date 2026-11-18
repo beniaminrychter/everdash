@@ -218,8 +218,12 @@ export class OAuthCoordinator {
   }
 
   /** Forgets the connection so an administrator can connect another instance. */
-  async disconnect(session: string, secure: boolean): Promise<{ clearAdminCookie: string }> {
-    if (!this.readSession(session)) {
+  async disconnect(
+    session: string,
+    secure: boolean,
+    options?: { allowIngress?: boolean },
+  ): Promise<{ clearAdminCookie: string }> {
+    if (!options?.allowIngress && !this.readSession(session)) {
       throw new OAuthFlowError('INVALID_REQUEST');
     }
 
@@ -229,7 +233,9 @@ export class OAuthCoordinator {
       () => undefined,
     );
     const removed = await operation;
-    this.sessions.logout(session);
+    if (session) {
+      this.sessions.logout(session);
+    }
 
     if (removed) {
       try {

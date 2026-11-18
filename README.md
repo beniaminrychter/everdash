@@ -34,8 +34,8 @@ Click the button below to add the EverDash repository to your Home Assistant ins
 </details>
 
 1. Find **EverDash** in the App Store, click **Install**, and **Start** the app.
-2. Click **Open Web UI** (or open `http://YOUR-HA-HOST:8095/admin/`).
-3. Continue to [First-time setup](#first-time-setup).
+2. Open **EverDash** from your Home Assistant sidebar (or click **Open Web UI**) — no separate sign-in or Home Assistant URL setup is required.
+3. Build your views and cards in the **Editor**, click **Save**, then open **Devices** to pair your tablets using the dashboard URL and 6-digit registration code.
 
 ### Option 2: Docker (standalone)
 

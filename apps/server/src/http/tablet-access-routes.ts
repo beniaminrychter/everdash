@@ -12,6 +12,67 @@ import { expectedOriginFor, requireAdminAccess } from './access-policy';
 import { apiError } from './errors';
 import { requireMutationOrigin } from './security';
 
+/** Admin device management routes (`/api/manage/devices*`). */
+export function registerTabletDeviceManagementRoutes(
+  app: FastifyInstance,
+  dependencies: ServerDependencies,
+  access: TabletAccess,
+) {
+  const expectedOrigin = expectedOriginFor(dependencies);
+
+  app.get('/api/manage/devices', async (request, reply) => {
+    if (!requireAdminAccess(request, reply, dependencies)) {
+      return;
+    }
+    return access.overview();
+  });
+
+  app.post('/api/manage/devices/code', async (request, reply) => {
+    if (
+      !requireAdminAccess(request, reply, dependencies) ||
+      !(await requireMutationOrigin(request, reply, expectedOrigin))
+    ) {
+      return;
+    }
+    return access.regenerateCode();
+  });
+
+  app.patch<{ Params: { id: string }; Body: { name?: unknown } }>(
+    '/api/manage/devices/:id',
+    async (request, reply) => {
+      if (
+        !requireAdminAccess(request, reply, dependencies) ||
+        !(await requireMutationOrigin(request, reply, expectedOrigin))
+      ) {
+        return;
+      }
+      if (typeof request.body?.name !== 'string' || request.body.name.trim().length > 80) {
+        return reply
+          .code(400)
+          .send(apiError('INVALID_DEVICE_NAME', 'Device name must be 80 characters or fewer.'));
+      }
+      const device = access.renameDevice(request.params.id, request.body.name);
+      if (!device) {
+        return reply.code(404).send(apiError('DEVICE_NOT_FOUND', 'Device not found.'));
+      }
+      return { device };
+    },
+  );
+
+  app.delete<{ Params: { id: string } }>('/api/manage/devices/:id', async (request, reply) => {
+    if (
+      !requireAdminAccess(request, reply, dependencies) ||
+      !(await requireMutationOrigin(request, reply, expectedOrigin))
+    ) {
+      return;
+    }
+    if (!access.removeDevice(request.params.id)) {
+      return reply.code(404).send(apiError('DEVICE_NOT_FOUND', 'Device not found.'));
+    }
+    return { ok: true };
+  });
+}
+
 /** Device registration status, registration/unregistration, and admin device management. */
 export function registerTabletAccessRoutes(
   app: FastifyInstance,
@@ -98,55 +159,5 @@ export function registerTabletAccessRoutes(
       .send({ ok: true });
   });
 
-  app.get('/api/manage/devices', async (request, reply) => {
-    if (!requireAdminAccess(request, reply, dependencies)) {
-      return;
-    }
-    return access.overview();
-  });
-
-  app.post('/api/manage/devices/code', async (request, reply) => {
-    if (
-      !requireAdminAccess(request, reply, dependencies) ||
-      !(await requireMutationOrigin(request, reply, expectedOrigin))
-    ) {
-      return;
-    }
-    return access.regenerateCode();
-  });
-
-  app.patch<{ Params: { id: string }; Body: { name?: unknown } }>(
-    '/api/manage/devices/:id',
-    async (request, reply) => {
-      if (
-        !requireAdminAccess(request, reply, dependencies) ||
-        !(await requireMutationOrigin(request, reply, expectedOrigin))
-      ) {
-        return;
-      }
-      if (typeof request.body?.name !== 'string' || request.body.name.trim().length > 80) {
-        return reply
-          .code(400)
-          .send(apiError('INVALID_DEVICE_NAME', 'Device name must be 80 characters or fewer.'));
-      }
-      const device = access.renameDevice(request.params.id, request.body.name);
-      if (!device) {
-        return reply.code(404).send(apiError('DEVICE_NOT_FOUND', 'Device not found.'));
-      }
-      return { device };
-    },
-  );
-
-  app.delete<{ Params: { id: string } }>('/api/manage/devices/:id', async (request, reply) => {
-    if (
-      !requireAdminAccess(request, reply, dependencies) ||
-      !(await requireMutationOrigin(request, reply, expectedOrigin))
-    ) {
-      return;
-    }
-    if (!access.removeDevice(request.params.id)) {
-      return reply.code(404).send(apiError('DEVICE_NOT_FOUND', 'Device not found.'));
-    }
-    return { ok: true };
-  });
+  registerTabletDeviceManagementRoutes(app, dependencies, access);
 }

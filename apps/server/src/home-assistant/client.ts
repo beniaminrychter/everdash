@@ -19,6 +19,7 @@ export interface HomeAssistantTransport {
 
 export interface SupervisorHomeAssistantOptions {
   token: string;
+  apiRoot?: string;
   request?: typeof fetch;
 }
 
@@ -225,5 +226,9 @@ export function createHomeAssistantClient(
 export function createSupervisorHomeAssistant(
   options: SupervisorHomeAssistantOptions,
 ): HomeAssistantTransport {
-  return createHomeAssistantClient({ apiRoot: API_ROOT, ...options });
+  return createHomeAssistantClient({
+    apiRoot: options.apiRoot ?? API_ROOT,
+    token: options.token,
+    request: options.request,
+  });
 }

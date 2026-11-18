@@ -10,6 +10,7 @@ import {
   isCardEditorMessage,
   moveItem,
 } from '../apps/admin/src/app/draft/builder';
+import { adminHomeUrl, apiUrl } from '../apps/admin/src/lib/api';
 
 test('builder moves ordered items without changing their content', () => {
   const cards = [
@@ -138,4 +139,23 @@ test('card move intents accept any integer offset or an in-range target index', 
   assert.equal(isCardEditorMessage({ ...move, to: 4 }, 'n', 1, 'home', 4), false);
   assert.equal(isCardEditorMessage({ ...move, offset: 1.5 }, 'n', 1, 'home', 4), false);
   assert.equal(isCardEditorMessage(move, 'n', 1, 'home', 4), false);
+});
+
+test('admin URL helpers resolve API and home paths across /admin/, root /, and HA Ingress mounts', () => {
+  assert.equal(apiUrl('api/manage/config', '/admin/'), '/api/manage/config');
+  assert.equal(apiUrl('/api/manage/config', '/admin/index.html'), '/api/manage/config');
+  assert.equal(apiUrl('api/manage/config', '/'), '/api/manage/config');
+  assert.equal(
+    apiUrl('api/manage/config', '/api/hassio_ingress/token123/'),
+    '/api/hassio_ingress/token123/api/manage/config',
+  );
+  assert.equal(
+    apiUrl('api/manage/devices/code', '/api/hassio_ingress/token123/admin/'),
+    '/api/hassio_ingress/token123/api/manage/devices/code',
+  );
+
+  assert.equal(adminHomeUrl('/admin/'), '/admin/');
+  assert.equal(adminHomeUrl('/admin/index.html'), '/admin/');
+  assert.equal(adminHomeUrl('/'), '/');
+  assert.equal(adminHomeUrl('/api/hassio_ingress/token123/'), '/api/hassio_ingress/token123/');
 });

@@ -44,8 +44,30 @@ export function onUnauthorized(listener: UnauthorizedListener): () => void {
   };
 }
 
+function directoryOf(pathname: string): string {
+  if (pathname.endsWith('/')) {
+    return pathname;
+  }
+
+  const lastSlash = pathname.lastIndexOf('/');
+
+  return lastSlash !== -1 ? pathname.slice(0, lastSlash + 1) : '/';
+}
+
+export function adminHomeUrl(pathname = window.location.pathname): string {
+  return directoryOf(pathname);
+}
+
+export function apiUrl(path: string, pathname = window.location.pathname): string {
+  const normalized = path.replace(/^\/+/, '');
+  const dir = directoryOf(pathname);
+  const root = dir.endsWith('/admin/') ? dir.slice(0, -'admin/'.length) : dir;
+
+  return `${root}${normalized}`;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`/${path.replace(/^\/+/, '')}`, {
+  const response = await fetch(apiUrl(path), {
     credentials: 'same-origin',
     headers: {
       Accept: 'application/json',

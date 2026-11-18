@@ -29,6 +29,7 @@ import {
   SidebarRail,
 } from '@/components/ui/sidebar';
 import { toast } from 'sonner';
+import { adminHomeUrl, apiUrl } from '@/lib/api';
 import { routeTitles } from './useHashRoute';
 import type { Route } from './useHashRoute';
 
@@ -36,6 +37,8 @@ interface AppSidebarProps {
   route: Route;
   onNavigate: (route: Route) => void;
   origin: string;
+  connectionMode?: 'oauth' | 'supervisor';
+  ingress?: boolean;
 }
 
 const groups: { label: string; items: { route: Route; icon: LucideIcon }[] }[] = [
@@ -58,7 +61,7 @@ const groups: { label: string; items: { route: Route; icon: LucideIcon }[] }[] =
 
 async function logout() {
   try {
-    await fetch('/api/manage/auth/logout', {
+    await fetch(apiUrl('api/manage/auth/logout'), {
       method: 'POST',
       headers: { 'X-EverDash-Request': '1' },
     });
@@ -68,7 +71,7 @@ async function logout() {
     return;
   }
 
-  window.location.assign('/admin/');
+  window.location.assign(adminHomeUrl());
 }
 
 function hostOf(origin: string): string {
@@ -79,7 +82,19 @@ function hostOf(origin: string): string {
   }
 }
 
-export function AppSidebar({ route, onNavigate, origin }: AppSidebarProps) {
+export function AppSidebar({
+  route,
+  onNavigate,
+  origin,
+  connectionMode,
+  ingress,
+}: AppSidebarProps) {
+  const subtitle = origin
+    ? hostOf(origin)
+    : connectionMode === 'supervisor'
+      ? 'Home Assistant'
+      : '';
+
   return (
     <Sidebar collapsible="icon">
       {/* Same height as the page's top bar, so the two line up across the window. */}
@@ -97,8 +112,8 @@ export function AppSidebar({ route, onNavigate, origin }: AppSidebarProps) {
               </div>
               <div className="grid min-w-0 flex-1 text-left leading-tight">
                 <span className="truncate text-sm font-semibold">EverDash</span>
-                {origin && (
-                  <span className="text-muted-foreground truncate text-xs">{hostOf(origin)}</span>
+                {subtitle && (
+                  <span className="text-muted-foreground truncate text-xs">{subtitle}</span>
                 )}
               </div>
             </SidebarMenuButton>
@@ -128,27 +143,29 @@ export function AppSidebar({ route, onNavigate, origin }: AppSidebarProps) {
           </SidebarGroup>
         ))}
       </SidebarContent>
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton tooltip="Account">
-                  <UserIcon />
-                  <span>Administrator</span>
-                  <ChevronsUpDownIcon className="ml-auto" />
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="top" align="start" className="min-w-48">
-                <DropdownMenuItem onSelect={() => logout()}>
-                  <LogOutIcon />
-                  Log out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
+      {!ingress && (
+        <SidebarFooter>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton tooltip="Account">
+                    <UserIcon />
+                    <span>Administrator</span>
+                    <ChevronsUpDownIcon className="ml-auto" />
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="top" align="start" className="min-w-48">
+                  <DropdownMenuItem onSelect={() => logout()}>
+                    <LogOutIcon />
+                    Log out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
+      )}
       <SidebarRail />
     </Sidebar>
   );

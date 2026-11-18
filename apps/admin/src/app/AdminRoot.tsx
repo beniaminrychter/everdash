@@ -9,6 +9,9 @@ interface Session {
   authenticated: boolean;
   connected: boolean;
   origin: string;
+  connectionMode?: 'oauth' | 'supervisor';
+  ingress?: boolean;
+  tabletPort?: number;
 }
 
 export function AdminRoot() {
@@ -29,6 +32,9 @@ export function AdminRoot() {
           authenticated: result.authenticated,
           connected: result.connection !== 'unconfigured',
           origin: result.homeAssistantOrigin ?? '',
+          connectionMode: result.connectionMode,
+          ingress: result.ingress,
+          tabletPort: result.tabletPort,
         });
       })
       .catch(() => {
@@ -66,7 +72,12 @@ export function AdminRoot() {
 
   return (
     <DraftProvider>
-      <AppShell origin={session.origin} />
+      <AppShell
+        origin={session.origin}
+        connectionMode={session.connectionMode}
+        ingress={session.ingress}
+        tabletPort={session.tabletPort}
+      />
     </DraftProvider>
   );
 }

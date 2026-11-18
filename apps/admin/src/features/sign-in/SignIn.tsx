@@ -21,6 +21,7 @@ import {
   useHomeAssistantDiscovery,
 } from '@/features/home-assistant/useHomeAssistantDiscovery';
 import { cn } from '@/lib/utils';
+import { apiUrl } from '@/lib/api';
 import { authErrorMessage } from './authErrors';
 
 interface SignInProps {
@@ -51,7 +52,7 @@ export function SignIn({ connected, savedOrigin, initialError }: SignInProps) {
     setError('');
 
     try {
-      const response = await fetch('/api/manage/auth/start', {
+      const response = await fetch(apiUrl('api/manage/auth/start'), {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json', 'X-EverDash-Request': '1' },

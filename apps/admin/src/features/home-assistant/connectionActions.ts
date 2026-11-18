@@ -1,8 +1,9 @@
 import type { AuthDiscoverResponse, DiscoveredHomeAssistant } from '@everdash/contracts/auth/oauth';
+import { adminHomeUrl, apiUrl } from '@/lib/api';
 
 /** Starts the Home Assistant sign-in again. Returns false when the server refused. */
 export async function reconnectHomeAssistant(): Promise<boolean> {
-  const response = await fetch('/api/manage/auth/start', {
+  const response = await fetch(apiUrl('api/manage/auth/start'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-EverDash-Request': '1' },
     body: JSON.stringify({ intent: 'reconnect' }),
@@ -21,7 +22,7 @@ export async function reconnectHomeAssistant(): Promise<boolean> {
 
 /** Forgets the Home Assistant connection. Returns false when the server refused. */
 export async function disconnectHomeAssistant(): Promise<boolean> {
-  const response = await fetch('/api/manage/auth/disconnect', {
+  const response = await fetch(apiUrl('api/manage/auth/disconnect'), {
     method: 'POST',
     credentials: 'same-origin',
     headers: { 'X-EverDash-Request': '1' },
@@ -31,7 +32,7 @@ export async function disconnectHomeAssistant(): Promise<boolean> {
     return false;
   }
 
-  window.location.assign('/admin/');
+  window.location.assign(adminHomeUrl());
 
   return true;
 }
@@ -40,7 +41,7 @@ export async function disconnectHomeAssistant(): Promise<boolean> {
 export async function discoverHomeAssistantInstances(
   signal?: AbortSignal,
 ): Promise<DiscoveredHomeAssistant[]> {
-  const response = await fetch('/api/manage/auth/discover', {
+  const response = await fetch(apiUrl('api/manage/auth/discover'), {
     method: 'POST',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json', 'X-EverDash-Request': '1' },
@@ -59,7 +60,7 @@ export async function discoverHomeAssistantInstances(
 
 /** Disconnects the current Home Assistant and starts OAuth sign-in against `origin`. */
 export async function switchHomeAssistant(origin: string): Promise<boolean> {
-  const disconnected = await fetch('/api/manage/auth/disconnect', {
+  const disconnected = await fetch(apiUrl('api/manage/auth/disconnect'), {
     method: 'POST',
     credentials: 'same-origin',
     headers: { 'X-EverDash-Request': '1' },
@@ -69,7 +70,7 @@ export async function switchHomeAssistant(origin: string): Promise<boolean> {
     return false;
   }
 
-  const started = await fetch('/api/manage/auth/start', {
+  const started = await fetch(apiUrl('api/manage/auth/start'), {
     method: 'POST',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json', 'X-EverDash-Request': '1' },
@@ -77,7 +78,7 @@ export async function switchHomeAssistant(origin: string): Promise<boolean> {
   }).catch(() => null);
 
   if (!started) {
-    window.location.assign('/admin/?auth_error=HA_UNREACHABLE');
+    window.location.assign(`${adminHomeUrl()}?auth_error=HA_UNREACHABLE`);
 
     return true;
   }
@@ -90,7 +91,7 @@ export async function switchHomeAssistant(origin: string): Promise<boolean> {
   if (!started.ok || !result.authorizationUrl) {
     const code = result.error ?? 'HA_UNREACHABLE';
 
-    window.location.assign(`/admin/?auth_error=${encodeURIComponent(code)}`);
+    window.location.assign(`${adminHomeUrl()}?auth_error=${encodeURIComponent(code)}`);
 
     return true;
   }

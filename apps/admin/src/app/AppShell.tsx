@@ -11,7 +11,26 @@ import { PageHeader } from './PageHeader';
 import { routeTitles, useHashRoute } from './useHashRoute';
 import type { Route } from './useHashRoute';
 
-function RoutePage({ route, origin }: { route: Exclude<Route, 'editor'>; origin: string }) {
+interface AppShellProps {
+  origin: string;
+  connectionMode?: 'oauth' | 'supervisor';
+  ingress?: boolean;
+  tabletPort?: number;
+}
+
+function RoutePage({
+  route,
+  origin,
+  connectionMode,
+  ingress,
+  tabletPort,
+}: {
+  route: Exclude<Route, 'editor'>;
+  origin: string;
+  connectionMode?: 'oauth' | 'supervisor';
+  ingress?: boolean;
+  tabletPort?: number;
+}) {
   switch (route) {
     case 'settings': {
       return <SettingsPage />;
@@ -22,21 +41,27 @@ function RoutePage({ route, origin }: { route: Exclude<Route, 'editor'>; origin:
     }
 
     case 'devices': {
-      return <DevicesPage />;
+      return <DevicesPage ingress={ingress} tabletPort={tabletPort} />;
     }
 
     default: {
-      return <HomeAssistantPage origin={origin} />;
+      return <HomeAssistantPage origin={origin} connectionMode={connectionMode} />;
     }
   }
 }
 
-export function AppShell({ origin }: { origin: string }) {
+export function AppShell({ origin, connectionMode, ingress, tabletPort }: AppShellProps) {
   const [route, navigate] = useHashRoute();
 
   return (
     <SidebarProvider>
-      <AppSidebar route={route} onNavigate={navigate} origin={origin} />
+      <AppSidebar
+        route={route}
+        onNavigate={navigate}
+        origin={origin}
+        connectionMode={connectionMode}
+        ingress={ingress}
+      />
       <SidebarInset className="min-w-0">
         {route === 'editor' ? (
           <EditorPage />
@@ -60,7 +85,13 @@ export function AppShell({ origin }: { origin: string }) {
             <main className="min-h-0 flex-1 overflow-y-auto p-4">
               <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
                 <DraftAlerts />
-                <RoutePage route={route} origin={origin} />
+                <RoutePage
+                  route={route}
+                  origin={origin}
+                  connectionMode={connectionMode}
+                  ingress={ingress}
+                  tabletPort={tabletPort}
+                />
               </div>
             </main>
           </div>

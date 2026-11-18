@@ -79,7 +79,32 @@ function errorCode(error: unknown): AuthErrorCode {
   return error instanceof OAuthFlowError ? error.code : 'AUTH_FAILED';
 }
 
-export function registerOAuthRoutes(app: FastifyInstance, coordinator: OAuthCoordinator): void {
+export interface OAuthHttpOptions {
+  isIngress?: boolean;
+  supervisorConnected?: boolean;
+  tabletPort?: number;
+  isAdmin?: (request: FastifyRequest) => boolean;
+}
+
+export function registerOAuthRoutes(
+  app: FastifyInstance,
+  coordinator: OAuthCoordinator,
+  options?: OAuthHttpOptions,
+): void {
+  const isIngress = options?.isIngress ?? false;
+  const requireAuthorizedAdmin = (request: FastifyRequest, reply: FastifyReply): boolean => {
+    if (isIngress && options?.isAdmin) {
+      if (options.isAdmin(request)) {
+        return true;
+      }
+
+      reply.code(401).send({ error: 'UNAUTHORIZED' });
+      return false;
+    }
+
+    return requireAdmin(request, reply, coordinator);
+  };
+
   app.addHook('onRequest', async (request, reply) => {
     if (request.routeOptions.url?.startsWith(`${prefix}/`)) {
       secureHeaders(reply);
@@ -94,7 +119,7 @@ export function registerOAuthRoutes(app: FastifyInstance, coordinator: OAuthCoor
     if (!validStart(request.body)) {
       return reply.code(400).send({ error: 'INVALID_REQUEST' });
     }
-    if (request.body.intent === 'reconnect' && !requireAdmin(request, reply, coordinator)) {
+    if (request.body.intent === 'reconnect' && !requireAuthorizedAdmin(request, reply)) {
       return reply;
     }
     try {
@@ -150,10 +175,26 @@ export function registerOAuthRoutes(app: FastifyInstance, coordinator: OAuthCoor
   app.get(`${prefix}/session`, async (request, reply) => {
     const cookie = readCookie(request.headers.cookie, ADMIN_COOKIE);
     const status = coordinator.status();
-    const authenticated = !!cookie && !!coordinator.readSession(cookie);
-    const result: AuthSessionResponse = { authenticated, connection: status.state };
-    // Not secret: /start already redirects any visitor to this address.
-    if (status.state === 'connected') {
+    const authenticated = isIngress
+      ? Boolean(options?.isAdmin ? options.isAdmin(request) : true)
+      : !!cookie && !!coordinator.readSession(cookie);
+    const supervisorActive =
+      isIngress && status.state === 'unconfigured' && Boolean(options?.supervisorConnected);
+    const result: AuthSessionResponse = {
+      authenticated,
+      connection: supervisorActive ? 'connected' : status.state,
+    };
+    if (isIngress) {
+      result.ingress = true;
+      if (options?.tabletPort) {
+        result.tabletPort = options.tabletPort;
+      }
+    }
+    if (supervisorActive) {
+      result.connectionMode = 'supervisor';
+    } else if (status.state === 'connected') {
+      result.connectionMode = 'oauth';
+      // Not secret: /start already redirects any visitor to this address.
       result.homeAssistantOrigin = status.origin;
     }
     if (status.state === 'connected' && status.durability === 'uncertain') {
@@ -167,11 +208,13 @@ export function registerOAuthRoutes(app: FastifyInstance, coordinator: OAuthCoor
     if (!origin) {
       return reply.code(403).send({ error: 'FORBIDDEN' });
     }
-    if (!requireAdmin(request, reply, coordinator)) {
+    if (!requireAuthorizedAdmin(request, reply)) {
       return reply;
     }
     const cookie = readCookie(request.headers.cookie, ADMIN_COOKIE) ?? '';
-    const result = await coordinator.disconnect(cookie, origin.startsWith('https:'));
+    const result = await coordinator.disconnect(cookie, origin.startsWith('https:'), {
+      allowIngress: isIngress,
+    });
     return reply.header('Set-Cookie', result.clearAdminCookie).send({ ok: true });
   });
 
@@ -194,7 +237,7 @@ export function registerOAuthRoutes(app: FastifyInstance, coordinator: OAuthCoor
 
     const status = coordinator.status();
 
-    if (status.state !== 'unconfigured' && !requireAdmin(request, reply, coordinator)) {
+    if (status.state !== 'unconfigured' && !requireAuthorizedAdmin(request, reply)) {
       return reply;
     }
 

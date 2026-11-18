@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { DevicesOverview, RegisteredDevice } from '@everdash/contracts/auth/devices';
+import { apiUrl } from '@/lib/api';
 
 export async function readDevicesOverview(): Promise<DevicesOverview | null> {
   try {
-    const response = await fetch('/api/manage/devices', { credentials: 'same-origin' });
+    const response = await fetch(apiUrl('api/manage/devices'), { credentials: 'same-origin' });
 
     if (!response.ok) {
       return null;
@@ -94,7 +95,7 @@ export function useDevices() {
 
   const regenerateCode = useCallback(async (): Promise<boolean> => {
     try {
-      const response = await fetch('/api/manage/devices/code', {
+      const response = await fetch(apiUrl('api/manage/devices/code'), {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'X-EverDash-Request': '1' },
@@ -117,7 +118,7 @@ export function useDevices() {
 
   const renameDevice = useCallback(async (id: string, name: string): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/manage/devices/${encodeURIComponent(id)}`, {
+      const response = await fetch(apiUrl(`api/manage/devices/${encodeURIComponent(id)}`), {
         method: 'PATCH',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json', 'X-EverDash-Request': '1' },
@@ -140,7 +141,7 @@ export function useDevices() {
 
   const removeDevice = useCallback(async (id: string): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/manage/devices/${encodeURIComponent(id)}`, {
+      const response = await fetch(apiUrl(`api/manage/devices/${encodeURIComponent(id)}`), {
         method: 'DELETE',
         credentials: 'same-origin',
         headers: { 'X-EverDash-Request': '1' },

@@ -20,8 +20,14 @@ test('Home Assistant repository and app manifests match the published EverDash i
   assert.equal(manifestValue(appManifest, 'version'), packageJson.version);
 });
 
-test('Home Assistant app uses host networking with configurable port, Web UI, and watchdog health check', () => {
+test('Home Assistant app uses host networking with configurable port, Ingress sidebar, and Core API access', () => {
   assert.equal(manifestValue(appManifest, 'host_network'), 'true');
+  assert.equal(manifestValue(appManifest, 'ingress'), 'true');
+  assert.equal(manifestValue(appManifest, 'ingress_port'), '8099');
+  assert.equal(manifestValue(appManifest, 'panel_icon'), 'mdi:tablet-dashboard');
+  assert.equal(manifestValue(appManifest, 'panel_title'), 'EverDash');
+  assert.equal(manifestValue(appManifest, 'panel_admin'), 'true');
+  assert.equal(manifestValue(appManifest, 'homeassistant_api'), 'true');
   assert.match(appManifest, /^\s+8095\/tcp:\s+8095$/m);
   assert.equal(manifestValue(appManifest, 'webui'), 'http://[HOST]:[PORT:8095]/admin/');
   assert.equal(manifestValue(appManifest, 'watchdog'), 'http://[HOST]:[PORT:8095]/health');

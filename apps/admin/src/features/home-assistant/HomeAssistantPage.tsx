@@ -47,13 +47,20 @@ async function reconnect() {
   }
 }
 
-export function HomeAssistantPage({ origin }: { origin: string }) {
+export function HomeAssistantPage({
+  origin,
+  connectionMode,
+}: {
+  origin: string;
+  connectionMode?: 'oauth' | 'supervisor';
+}) {
   const [confirming, setConfirming] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [switchTarget, setSwitchTarget] = useState<DiscoveredHomeAssistant | null>(null);
   const [switching, setSwitching] = useState(false);
   const [selectedUrls, setSelectedUrls] = useState<Record<string, string>>({});
-  const discovery = useHomeAssistantDiscovery(true);
+  const isSupervisor = connectionMode === 'supervisor';
+  const discovery = useHomeAssistantDiscovery(!isSupervisor);
 
   async function disconnect() {
     setDisconnecting(true);
@@ -81,6 +88,30 @@ export function HomeAssistantPage({ origin }: { origin: string }) {
     setSwitching(false);
     setSwitchTarget(null);
     toast.error('Unable to switch Home Assistant instance.');
+  }
+
+  if (isSupervisor) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Connection</CardTitle>
+          <CardDescription>
+            EverDash talks to Home Assistant through the built-in app connection on behalf of every
+            tablet.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between gap-4 rounded-md border p-3">
+            <span className="text-sm font-medium">Home Assistant Supervisor</span>
+            <Badge variant="secondary">Connected</Badge>
+          </div>
+          <p className="text-muted-foreground text-xs">
+            Managed automatically while running inside Home Assistant. No separate login or OAuth
+            token is required.
+          </p>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (

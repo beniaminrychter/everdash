@@ -1,11 +1,16 @@
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
 import { createServer } from 'node:http';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createStandaloneApp } from '../apps/server/src/standalone';
-import { listenWithHostFallback, resolveListenPort } from '../apps/server/src/entry';
+import {
+  listenWithHostFallback,
+  resolveIngressNetwork,
+  resolveIngressPort,
+  resolveListenPort,
+} from '../apps/server/src/entry';
 
 test('standalone starts without credentials and protects management', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'everdash-standalone-'));
@@ -321,6 +326,309 @@ test('resolveListenPort honors EVERDASH_PORT and reads Supervisor Network port o
   } finally {
     await new Promise<void>((resolve) => {
       server.close(() => resolve());
+    });
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('resolveIngressPort reads Supervisor ingress settings and supports env overrides', async () => {
+  assert.equal(await resolveIngressPort({ env: {} }), undefined);
+  assert.equal(await resolveIngressPort({ env: { EVERDASH_INGRESS_PORT: '0' } }), undefined);
+  assert.equal(await resolveIngressPort({ env: { EVERDASH_INGRESS_PORT: 'off' } }), undefined);
+  assert.equal(await resolveIngressPort({ env: { EVERDASH_INGRESS_PORT: '8105' } }), 8105);
+  await assert.rejects(
+    resolveIngressPort({ env: { EVERDASH_INGRESS_PORT: 'invalid' } }),
+    /Invalid EVERDASH_INGRESS_PORT/,
+  );
+
+  const socketRoot = tmpdir().length <= 60 ? tmpdir() : '/tmp';
+  const directory = await mkdtemp(join(socketRoot, 'ed-ing-'));
+  const socketPath = join(directory, 'sup.sock');
+  let ingressEnabled = true;
+  let ingressPort: number | null = 62345;
+  const server = createServer((req, res) => {
+    if (req.url === '/addons/self/info') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          result: 'ok',
+          data: { ingress: ingressEnabled, ingress_port: ingressPort },
+        }),
+      );
+      return;
+    }
+
+    res.writeHead(404);
+    res.end();
+  });
+
+  try {
+    await new Promise<void>((resolve) => {
+      server.listen(socketPath, resolve);
+    });
+
+    assert.equal(await resolveIngressPort({ env: { SUPERVISOR_SOCKET: socketPath } }), 62345);
+
+    ingressEnabled = false;
+    assert.equal(await resolveIngressPort({ env: { SUPERVISOR_SOCKET: socketPath } }), undefined);
+
+    ingressEnabled = true;
+    ingressPort = null;
+    assert.equal(await resolveIngressPort({ env: { SUPERVISOR_SOCKET: socketPath } }), undefined);
+
+    assert.equal(
+      await resolveIngressPort({
+        env: { SUPERVISOR_SOCKET: join(directory, 'missing.sock') },
+        timeoutMs: 250,
+      }),
+      8099,
+    );
+  } finally {
+    await new Promise<void>((resolve) => {
+      server.close(() => resolve());
+    });
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('resolveIngressNetwork selects matching bridge interface and honors explicit overrides', async () => {
+  const network = await resolveIngressNetwork({
+    env: {},
+    lookupSupervisor: async () => ['172.30.32.2'],
+    interfaces: () => ({
+      lo: [
+        {
+          address: '127.0.0.1',
+          netmask: '255.0.0.0',
+          family: 'IPv4',
+          mac: '00:00:00:00:00:00',
+          internal: true,
+          cidr: '127.0.0.1/8',
+        },
+      ],
+      hassio: [
+        {
+          address: '172.30.32.1',
+          netmask: '255.255.254.0',
+          family: 'IPv4',
+          mac: '02:42:ac:1e:20:01',
+          internal: false,
+          cidr: '172.30.32.1/23',
+        },
+      ],
+    }),
+  });
+  assert.deepEqual(network, {
+    bindHost: '172.30.32.1',
+    allowedProxyIps: ['172.30.32.2'],
+  });
+
+  const overridden = await resolveIngressNetwork({
+    env: {
+      EVERDASH_INGRESS_HOST: '127.0.0.1',
+      EVERDASH_INGRESS_PROXY_IPS: '127.0.0.1, ::1',
+    },
+  });
+  assert.deepEqual(overridden, {
+    bindHost: '127.0.0.1',
+    allowedProxyIps: ['127.0.0.1', '::1'],
+  });
+});
+
+test('Ingress listener grants zero-login admin and Supervisor HA access while rejecting non-proxy peers', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'everdash-ingress-'));
+  const adminDir = join(directory, 'admin');
+  const tabletDir = join(directory, 'tablet');
+  await Promise.all([mkdir(adminDir), mkdir(tabletDir)]);
+  await Promise.all([
+    writeFile(join(adminDir, 'index.html'), '<main>Admin</main>'),
+    writeFile(join(tabletDir, 'index.html'), '<main>Tablet</main>'),
+  ]);
+
+  const seenTokens: string[] = [];
+  const haMock = createServer((req, res) => {
+    seenTokens.push(String(req.headers.authorization ?? ''));
+    if (req.url === '/core/api/states') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(
+        JSON.stringify([
+          {
+            entity_id: 'light.living_room',
+            state: 'on',
+            attributes: { friendly_name: 'Living Room' },
+          },
+        ]),
+      );
+      return;
+    }
+
+    res.writeHead(404);
+    res.end();
+  });
+
+  await new Promise<void>((resolve) => {
+    haMock.listen(0, '127.0.0.1', resolve);
+  });
+  const haAddress = haMock.address();
+  assert.ok(haAddress && typeof haAddress !== 'string');
+
+  const { app, ingressApp, tabletAccess } = await createStandaloneApp({
+    dataDirectory: join(directory, 'data'),
+    staticDirectory: tabletDir,
+    adminStaticDirectory: adminDir,
+    logger: false,
+    supervisorToken: 'supervisor-secret-token',
+    supervisorApiRoot: `http://127.0.0.1:${haAddress.port}/core/api/`,
+    ingress: {
+      allowedProxyIps: ['172.30.32.2'],
+      tabletPort: 8089,
+    },
+  });
+
+  try {
+    assert.ok(ingressApp);
+
+    // Direct LAN peer must be rejected on the Ingress listener even with spoofed headers.
+    const directAttempt = await ingressApp.inject({
+      method: 'GET',
+      url: '/api/manage/auth/session',
+      remoteAddress: '192.168.1.50',
+      headers: { 'x-remote-user-id': 'admin' },
+    });
+    assert.equal(directAttempt.statusCode, 403);
+
+    // Requests from Supervisor proxy are trusted without EverDash OAuth cookies.
+    const ingressSession = await ingressApp.inject({
+      method: 'GET',
+      url: '/api/manage/auth/session',
+      remoteAddress: '172.30.32.2',
+      headers: { host: 'homeassistant.local:8123' },
+    });
+    assert.equal(ingressSession.statusCode, 200);
+    assert.deepEqual(ingressSession.json(), {
+      authenticated: true,
+      connection: 'connected',
+      connectionMode: 'supervisor',
+      ingress: true,
+      tabletPort: 8089,
+    });
+
+    // Ingress root serves the Admin builder, not the tablet app or tablet API routes.
+    const rootPage = await ingressApp.inject({
+      method: 'GET',
+      url: '/',
+      remoteAddress: '172.30.32.2',
+    });
+    assert.equal(rootPage.statusCode, 200);
+    assert.match(rootPage.body, /Admin/);
+    assert.equal(
+      (
+        await ingressApp.inject({
+          method: 'GET',
+          url: '/api/bootstrap',
+          remoteAddress: '172.30.32.2',
+        })
+      ).statusCode,
+      404,
+    );
+
+    // Entity picker and config save work immediately via SUPERVISOR_TOKEN and forwarded HTTPS origin.
+    const entities = await ingressApp.inject({
+      method: 'GET',
+      url: '/api/manage/entities',
+      remoteAddress: '172.30.32.2',
+    });
+    assert.equal(entities.statusCode, 200);
+    assert.equal(entities.json().entities[0].entityId, 'light.living_room');
+    assert.equal(seenTokens.at(-1), 'Bearer supervisor-secret-token');
+
+    const currentConfig = await ingressApp.inject({
+      method: 'GET',
+      url: '/api/manage/config',
+      remoteAddress: '172.30.32.2',
+    });
+    assert.equal(currentConfig.statusCode, 200);
+    const baseRevision = currentConfig.json().revision as string;
+
+    const badOriginSave = await ingressApp.inject({
+      method: 'PUT',
+      url: '/api/manage/config',
+      remoteAddress: '172.30.32.2',
+      headers: {
+        'x-forwarded-proto': 'https',
+        'x-forwarded-host': 'ben.sprytnydom.xyz',
+        origin: 'https://attacker.example',
+        'x-everdash-request': '1',
+      },
+      payload: {
+        baseRevision,
+        config: {
+          schemaVersion: 1,
+          views: [
+            {
+              id: 'home',
+              title: 'Home',
+              cards: [{ type: 'light', entity: 'light.living_room' }],
+              badges: [],
+            },
+          ],
+        },
+      },
+    });
+    assert.equal(badOriginSave.statusCode, 403);
+
+    const saved = await ingressApp.inject({
+      method: 'PUT',
+      url: '/api/manage/config',
+      remoteAddress: '172.30.32.2',
+      headers: {
+        'x-forwarded-proto': 'https',
+        'x-forwarded-host': 'ben.sprytnydom.xyz',
+        origin: 'https://ben.sprytnydom.xyz',
+        'x-everdash-request': '1',
+      },
+      payload: {
+        baseRevision,
+        config: {
+          schemaVersion: 1,
+          views: [
+            {
+              id: 'home',
+              title: 'Home',
+              cards: [{ type: 'light', entity: 'light.living_room' }],
+              badges: [],
+            },
+          ],
+        },
+      },
+    });
+    assert.equal(saved.statusCode, 200);
+
+    // Direct LAN server still requires admin login for management routes...
+    assert.equal((await app.inject('/api/manage/auth/session')).json().authenticated, false);
+    assert.equal((await app.inject('/api/manage/config')).statusCode, 401);
+
+    // ...while registered tablets on the direct server talk to HA via SUPERVISOR_TOKEN 24/7.
+    const code = tabletAccess.overview().registrationCode;
+    const registered = await app.inject({
+      method: 'POST',
+      url: '/api/access/register',
+      headers: { origin: 'http://localhost', 'x-everdash-request': '1' },
+      payload: { code },
+    });
+    assert.equal(registered.statusCode, 200);
+    const tabletCookie = String(registered.headers['set-cookie']).split(';')[0]!;
+    const states = await app.inject({
+      method: 'GET',
+      url: '/api/ha/states',
+      headers: { cookie: tabletCookie },
+    });
+    assert.equal(states.statusCode, 200);
+    assert.equal(states.json()[0].entity_id, 'light.living_room');
+  } finally {
+    await Promise.all([app.close(), ingressApp?.close()]);
+    await new Promise<void>((resolve) => {
+      haMock.close(() => resolve());
     });
     await rm(directory, { recursive: true, force: true });
   }

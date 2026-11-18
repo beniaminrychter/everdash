@@ -13,8 +13,17 @@ function formatCode(code: string): string {
   return `${code.slice(0, 3)} ${code.slice(3)}`;
 }
 
-export function DevicesPage() {
-  const dashboardUrl = `${window.location.origin}/`;
+export function DevicesPage({
+  ingress,
+  tabletPort,
+}: {
+  ingress?: boolean;
+  tabletPort?: number;
+} = {}) {
+  const dashboardUrl =
+    ingress && tabletPort
+      ? `http://${window.location.hostname}:${tabletPort}/`
+      : `${window.location.origin}/`;
   const {
     registrationCode,
     devices,

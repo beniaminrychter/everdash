@@ -5,14 +5,14 @@ EverDash turns legacy tablets (including iPad running iOS 12 / Safari 12) into f
 ## Setup
 
 1. Install and start the **EverDash** app.
-2. Click **Open Web UI** (or open `http://YOUR-HA-HOST:8095/admin/`) in your browser.
-3. Select or enter your Home Assistant URL (for example `http://homeassistant.local:8123` or `http://YOUR-HA-LAN-IP:8123`) and sign in with a Home Assistant administrator account.
-4. Build your views, sections, and cards in the visual editor, then save.
-5. Open **Devices** in the admin sidebar to copy or scan the tablet URL (`http://YOUR-HA-HOST:8095/`), open it on your tablet, and enter the one-time 6-digit registration code.
+2. Click **Open Web UI** or open **EverDash** from your Home Assistant sidebar — no separate Home Assistant URL setup or sign-in is required.
+3. Build your views, sections, and cards in the visual editor, then save.
+4. Open **Devices** in the EverDash sidebar to copy or scan the tablet URL (`http://YOUR-HA-HOST:8095/`), open it on your tablet, and enter the one-time 6-digit registration code.
 
 ## Network
 
-- `8095/tcp` — Serves both the tablet dashboard (`/`) and the admin builder (`/admin/`). You can override this port in the app's **Network** configuration if `8095` is already in use; EverDash runs on the host network (IPv4 and IPv6) and reads your configured port on startup.
+- `8095/tcp` — Direct HTTP server for the tablet dashboard (`/`) and standalone admin builder (`/admin/`). You can override this port in the app's **Network** configuration if `8095` is already in use; EverDash runs on the host network (IPv4 and IPv6) and reads your configured port on startup.
+- Sidebar access uses Home Assistant Ingress automatically (`8099` internal proxy port) and requires no additional port forwarding.
 
 ## Backups and recovery
 

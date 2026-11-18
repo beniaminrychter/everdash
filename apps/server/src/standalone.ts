@@ -1,14 +1,21 @@
 import { resolve } from 'node:path';
 import { isIP } from 'node:net';
-import { buildApp } from './app';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
+import { buildApp, isAllowedIngressProxy } from './app';
 import { ConfigRepository } from './config/repository';
 import { ConnectorRepository } from './auth/connector-repository';
 import { HouseholdCredentialProvider } from './auth/credential-provider';
 import { OAuthCoordinator } from './auth/oauth-coordinator';
 import { actualOrigin } from './auth/oauth-http';
 import { ADMIN_COOKIE, TABLET_COOKIE, readCookie } from './auth/admin-cookies';
-import { createHomeAssistantClient } from './home-assistant/client';
+import { createHomeAssistantClient, createSupervisorHomeAssistant } from './home-assistant/client';
+import type { HomeAssistantTransport } from './home-assistant/client';
 import { TabletAccess } from './auth/tablet-access';
+
+export interface StandaloneIngressOptions {
+  allowedProxyIps?: readonly string[];
+  tabletPort?: number;
+}
 
 export interface StandaloneOptions {
   dataDirectory?: string;
@@ -16,6 +23,18 @@ export interface StandaloneOptions {
   adminStaticDirectory?: string;
   logger?: boolean;
   trustedProxyCidrs?: string[];
+  supervisorToken?: string;
+  supervisorApiRoot?: string;
+  supervisorRequest?: typeof fetch;
+  ingress?: StandaloneIngressOptions;
+}
+
+function expectedOrigin(request: FastifyRequest): string | null {
+  try {
+    return actualOrigin(request);
+  } catch {
+    return null;
+  }
 }
 
 export async function createStandaloneApp(options: StandaloneOptions = {}) {
@@ -38,6 +57,33 @@ export async function createStandaloneApp(options: StandaloneOptions = {}) {
   const provider = new HouseholdCredentialProvider({ repository: connector });
   const oauth = new OAuthCoordinator({ repository: connector, provider });
   const tabletAccess = await TabletAccess.open(directory);
+
+  const supervisorToken = (options.supervisorToken ?? process.env.SUPERVISOR_TOKEN)?.trim() || '';
+  const oauthClient = createHomeAssistantClient({ provider });
+  const supervisorClient = supervisorToken
+    ? createSupervisorHomeAssistant({
+        token: supervisorToken,
+        apiRoot: options.supervisorApiRoot,
+        request: options.supervisorRequest,
+      })
+    : null;
+  const activeClient = (): HomeAssistantTransport => {
+    if (provider.status().state === 'unconfigured' && supervisorClient) {
+      return supervisorClient;
+    }
+
+    return oauthClient;
+  };
+  const homeAssistant: HomeAssistantTransport = {
+    getStates: (signal) => activeClient().getStates(signal),
+    getState: (entityId, signal) => activeClient().getState(entityId, signal),
+    callService: (domain, service, data, signal) =>
+      activeClient().callService(domain, service, data, signal),
+  };
+
+  const staticDirectory = options.staticDirectory ?? resolve('dist');
+  const adminStaticDirectory = options.adminStaticDirectory ?? resolve('dist-admin');
+
   const app = await buildApp({
     config,
     oauth,
@@ -50,19 +96,39 @@ export async function createStandaloneApp(options: StandaloneOptions = {}) {
       isTablet: (request) =>
         tabletAccess.authorized(readCookie(request.headers.cookie, TABLET_COOKIE) ?? ''),
     },
-    homeAssistant: createHomeAssistantClient({ provider }),
-    staticDirectory: options.staticDirectory ?? resolve('dist'),
-    adminStaticDirectory: options.adminStaticDirectory ?? resolve('dist-admin'),
-
+    homeAssistant,
+    staticDirectory,
+    adminStaticDirectory,
     logger: options.logger ?? true,
     trustedProxyCidrs,
-    expectedOrigin: (request) => {
-      try {
-        return actualOrigin(request);
-      } catch {
-        return null;
-      }
-    },
+    supervisorConnected: Boolean(supervisorClient),
+    expectedOrigin,
   });
-  return { app, config, connector, provider, oauth, tabletAccess };
+
+  let ingressApp: FastifyInstance | null = null;
+  if (options.ingress) {
+    const allowedProxyIps = options.ingress.allowedProxyIps?.length
+      ? [...options.ingress.allowedProxyIps]
+      : ['172.30.32.2'];
+    ingressApp = await buildApp({
+      config,
+      oauth,
+      tabletAccess,
+      access: {
+        isAdmin: (request) => isAllowedIngressProxy(request.socket.remoteAddress, allowedProxyIps),
+        isTablet: () => false,
+      },
+      homeAssistant,
+      adminStaticDirectory,
+      logger: options.logger ?? true,
+      supervisorConnected: Boolean(supervisorClient),
+      ingress: {
+        allowedProxyIps,
+        tabletPort: options.ingress.tabletPort,
+      },
+      expectedOrigin,
+    });
+  }
+
+  return { app, ingressApp, config, connector, provider, oauth, tabletAccess };
 }
