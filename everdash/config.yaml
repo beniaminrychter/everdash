@@ -1,0 +1,18 @@
+name: EverDash
+version: '0.2.4'
+slug: everdash
+description: A Home Assistant dashboard that gives legacy tablets a new purpose.
+url: https://github.com/beniaminrychter/everdash
+image: ghcr.io/beniaminrychter/everdash
+arch:
+  - aarch64
+  - amd64
+startup: application
+boot: auto
+webui: http://[HOST]:[PORT:8095]/admin/
+ports:
+  8095/tcp: 8095
+ports_description:
+  8095/tcp: EverDash tablet dashboard (/) and admin builder (/admin/)
+watchdog: http://[HOST]:[PORT:8095]/health
+backup: cold

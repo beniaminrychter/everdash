@@ -15,3 +15,6 @@ tests
 !.env.example
 home.config.ts
 docs
+assets
+everdash
+

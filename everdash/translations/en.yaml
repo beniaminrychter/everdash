@@ -1,0 +1,2 @@
+network:
+  8095/tcp: EverDash web server (tablet dashboard at / and admin builder at /admin/)
