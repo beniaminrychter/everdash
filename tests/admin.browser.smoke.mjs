@@ -530,6 +530,11 @@ try {
   await page.getByRole('button', { name: 'View options' }).click();
   await page.getByRole('menuitem', { name: 'Rename' }).click();
   await expect(page.getByLabel('View name')).toBeFocused();
+  await page.getByLabel('View name').fill('');
+  await expect(page.getByText('Give the view a name.')).toBeVisible();
+  await expect(page.getByText('This dashboard has problems')).toHaveCount(0);
+  await expect(canvasRoot).toBeVisible();
+  await expect(saveButton).toBeDisabled();
   await page.getByLabel('View name').fill('Guest room');
   await expect(viewTab('Guest room')).toBeVisible();
 
@@ -689,7 +694,45 @@ try {
   await page.getByLabel('Home timezone').fill('Europe/Warsaw');
   await sidebar('JSON import / export').click();
   const dashboardJson = page.getByRole('textbox', { name: 'Dashboard JSON' });
+  const jsonEditor = page.locator('[data-json-editor]');
+  const jsonActions = page.locator('[data-json-actions]');
+  const appHeader = page.locator('header').first();
+  await expect(page.getByText(/Valid JSON · \d+ lines/)).toBeVisible();
   assert.equal(JSON.parse(await dashboardJson.inputValue()).timeZone, 'Europe/Warsaw');
+  await dashboardJson.fill('{\n  "schemaVersion": 1,\n  "views": [],\n}');
+  await expect(page.getByText('The JSON can not be applied')).toBeVisible();
+  await expect(page.getByText('1 issue')).toBeVisible();
+  const tallConfig = {
+    ...savedConfig,
+    timeZone: 'Europe/London',
+    views: [
+      {
+        id: 'home',
+        title: 'Home',
+        badges: [],
+        cards: Array.from({ length: 18 }, () => ({ type: 'clock', name: 'Clock' })),
+      },
+    ],
+  };
+  await page.setViewportSize({ width: 1440, height: 680 });
+  await dashboardJson.fill(JSON.stringify(tallConfig, null, 2));
+  await expect(page.getByText(/Valid JSON · \d+ lines/)).toBeVisible();
+  const headerBefore = await appHeader.boundingBox();
+  const actionsBefore = await jsonActions.boundingBox();
+  assert.ok(headerBefore && actionsBefore);
+  assert.ok(actionsBefore.y + actionsBefore.height <= 682);
+  assert.equal(
+    await jsonEditor.evaluate((element) => element.scrollHeight > element.clientHeight),
+    true,
+  );
+  await jsonEditor.evaluate((element) => {
+    element.scrollTop = 180;
+  });
+  const headerAfter = await appHeader.boundingBox();
+  const actionsAfter = await jsonActions.boundingBox();
+  assert.ok(headerAfter && Math.abs(headerAfter.y - headerBefore.y) <= 1);
+  assert.ok(actionsAfter && Math.abs(actionsAfter.y - actionsBefore.y) <= 1);
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await dashboardJson.fill(JSON.stringify({ ...savedConfig, timeZone: 'Europe/London' }, null, 2));
   await sidebar('Editor').click();
   const jsonDialog = page.getByRole('alertdialog', { name: 'Unapplied JSON changes' });
@@ -1150,6 +1193,15 @@ try {
   const sectionName = sectionPage.getByLabel('Section name');
   await expect(sectionName).toBeFocused();
   await expect(sectionName).toHaveValue('New section');
+  await sectionName.fill('');
+  await expect(sectionPage.getByText('Give the section a name.')).toBeVisible();
+  await expect(sectionPage.getByText('This dashboard has problems')).toHaveCount(0);
+  await expect(
+    sectionPage.getByRole('button', { name: 'Edit section Untitled section' }),
+  ).toBeVisible();
+  await expect(
+    sectionPage.getByRole('button', { name: 'Select Lounge', exact: true }),
+  ).toBeVisible();
   await sectionName.fill('Evening');
   await expect(sectionPage.getByRole('button', { name: 'Edit section Evening' })).toBeVisible();
   assert.deepEqual(await headings(), ['Kitchen', 'Garden', 'Evening']);

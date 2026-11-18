@@ -20,6 +20,7 @@ import type {
   DraftAction,
   DraftState,
 } from '../apps/admin/src/app/draft/draftReducer';
+import { withPreviewTitles } from '../apps/admin/src/features/editor/previewTitles';
 
 const fixture: DashboardDocument = {
   schemaVersion: 1,
@@ -1275,4 +1276,21 @@ test('sections survive the save and discard round trip as plain JSON', () => {
 
   assert.deepEqual(sectionIds(discarded), ['kitchen', 'garden']);
   assert.equal(view(discarded).sections![1]!.title, 'Garden');
+});
+
+test('withPreviewTitles fills blank view and section names so the canvas stays visible', () => {
+  const blankView = draftReducer(startSections(), { type: 'rename-view', title: '   ' });
+  const blankBoth = draftReducer(blankView, {
+    type: 'rename-section',
+    id: 'kitchen',
+    title: '',
+  });
+
+  assert.equal(draftIssues(blankBoth).length >= 2, true);
+
+  const previewDocument = withPreviewTitles(blankBoth.document);
+
+  assert.deepEqual(draftIssues(initialDraft(previewDocument)), []);
+  assert.equal(previewDocument.views[0]!.title, 'Untitled view');
+  assert.equal(previewDocument.views[0]!.sections![0]!.title, 'Untitled section');
 });

@@ -5,6 +5,7 @@ import { placeholderEntity } from '@/app/draft/builder';
 import type { Selection } from '@/app/draft/draftReducer';
 import { finishCard, hasIncomplete, isIncomplete } from '@/app/draft/incomplete';
 import { cardKindInfo } from './cardKinds';
+import { withPreviewTitles } from './previewTitles';
 
 type CanvasSelection = DashboardCanvasProps['selection'];
 type CardLocation = NonNullable<DashboardCanvasProps['incomplete']>[number];
@@ -105,15 +106,16 @@ function incompleteLocations(document: DashboardDocument, viewId: string): CardL
 
 /**
  * The document the preview shows. New cards are ordinary cards of the draft and keep their place;
- * they are drawn with a placeholder entity until one is picked. A badge that is still being added
- * is appended to the current view and shown selected.
+ * they are drawn with a placeholder entity until one is picked. Views or sections with blank names
+ * keep fallback preview titles so the canvas stays visible while typing. A badge that is still
+ * being added is appended to the current view and shown selected.
  */
 export function pendingPreview(
   document: DashboardDocument,
   viewId: string,
   selection: Selection,
 ): PendingPreview {
-  const preview = withPreviewCards(document);
+  const preview = withPreviewTitles(withPreviewCards(document));
   const incomplete = incompleteLocations(document, viewId);
 
   if (selection.kind === 'card') {
