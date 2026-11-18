@@ -70,6 +70,9 @@ export function ViewMenu({ onRename }: ViewMenuProps) {
           >
             Move later
           </DropdownMenuItem>
+          <DropdownMenuItem disabled={!view} onSelect={() => dispatch({ type: 'duplicate-view' })}>
+            Duplicate
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"

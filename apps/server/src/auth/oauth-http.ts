@@ -184,4 +184,22 @@ export function registerOAuthRoutes(app: FastifyInstance, coordinator: OAuthCoor
     const result = coordinator.logout(cookie, origin.startsWith('https:'));
     return reply.header('Set-Cookie', result.clearAdminCookie).send({ ok: true });
   });
+
+  app.post(`${prefix}/discover`, async (request, reply) => {
+    const origin = mutationOrigin(request);
+
+    if (!origin) {
+      return reply.code(403).send({ error: 'FORBIDDEN' });
+    }
+
+    const status = coordinator.status();
+
+    if (status.state !== 'unconfigured' && !requireAdmin(request, reply, coordinator)) {
+      return reply;
+    }
+
+    const instances = await coordinator.discover();
+
+    return reply.send({ instances });
+  });
 }

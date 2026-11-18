@@ -13,6 +13,8 @@ import { OAuthTransactions } from './admin-state';
 import { verifyAdmin } from './admin-identity';
 import type { ConnectorRepository, ConnectorStatus } from './connector-repository';
 import type { HouseholdCredentialProvider } from './credential-provider';
+import type { DiscoveredHomeAssistant } from '@everdash/contracts/auth/oauth';
+import { discoverHomeAssistantInstances } from './discover';
 import { authorizeUrl, exchangeCode, probeHomeAssistant, revokeGrant } from './oauth-protocol';
 import type { OAuthGrant } from './oauth-protocol';
 import { parseHomeAssistantOrigin } from './origin';
@@ -26,12 +28,14 @@ export interface OAuthCoordinatorOptions {
   verify?: typeof verifyAdmin;
   revoke?: typeof revokeGrant;
   probe?: typeof probeHomeAssistant;
+  discover?: (extraOrigins?: readonly string[]) => Promise<DiscoveredHomeAssistant[]>;
 }
 
 export class OAuthCoordinator {
   private readonly sessions: AdminSessions;
   private readonly transactions: OAuthTransactions;
   private queue: Promise<void> = Promise.resolve();
+  private discoverInFlight: Promise<DiscoveredHomeAssistant[]> | null = null;
   constructor(private readonly options: OAuthCoordinatorOptions) {
     this.sessions = options.sessions ?? new AdminSessions();
     this.transactions = options.transactions ?? new OAuthTransactions();
@@ -241,5 +245,26 @@ export class OAuthCoordinator {
   logout(session: string, secure: boolean): { clearAdminCookie: string } {
     this.sessions.logout(session);
     return { clearAdminCookie: clearAdminCookie(secure) };
+  }
+
+  /** Scans the local network for reachable Home Assistant instances, coalescing concurrent scans. */
+  async discover(): Promise<DiscoveredHomeAssistant[]> {
+    if (this.discoverInFlight) {
+      return this.discoverInFlight;
+    }
+
+    const status = this.options.repository.status();
+    const extraOrigins = status.state === 'connected' ? [status.origin] : undefined;
+    const run = this.options.discover
+      ? this.options.discover(extraOrigins)
+      : discoverHomeAssistantInstances({ extraOrigins });
+
+    this.discoverInFlight = run;
+
+    try {
+      return await run;
+    } finally {
+      this.discoverInFlight = null;
+    }
   }
 }

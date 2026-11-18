@@ -17,6 +17,8 @@ function fixture(trustProxy: boolean | string = false) {
   const provider = new HouseholdCredentialProvider({ repository });
   let admin = true;
   let reachable = true;
+  let discoverCalls = 0;
+  let discoverExtra: readonly string[] | undefined;
   const coordinator = new OAuthCoordinator({
     repository,
     provider,
@@ -37,6 +39,13 @@ function fixture(trustProxy: boolean | string = false) {
       return { id: 'admin' };
     },
     revoke: async () => {},
+    discover: async (extraOrigins) => {
+      discoverCalls += 1;
+      discoverExtra = extraOrigins;
+      await new Promise((resolve) => setTimeout(resolve, 15));
+
+      return [{ origin: 'http://192.168.1.50:8123', source: 'mdns', name: 'Home' }];
+    },
   });
   const app = Fastify({ trustProxy });
   registerOAuthRoutes(app, coordinator);
@@ -45,6 +54,8 @@ function fixture(trustProxy: boolean | string = false) {
     coordinator,
     repository,
     provider,
+    getDiscoverCalls: () => discoverCalls,
+    getDiscoverExtra: () => discoverExtra,
     setAdmin: (value: boolean) => {
       admin = value;
     },
@@ -350,4 +361,51 @@ test('administrator can disconnect and then connect a different instance', async
     headers: { host: headers.host, cookie: next.cookie },
   });
   assert.equal(f.repository.readCredentials()?.origin, 'http://other-ha:8123');
+});
+
+test('discover enforces origin/header, allows unconfigured setup, requires admin when connected, and coalesces scans', async (t) => {
+  const f = fixture();
+  t.after(f.close);
+
+  const forged = await f.app.inject({
+    method: 'POST',
+    url: '/api/manage/auth/discover',
+    headers: { host: headers.host },
+  });
+  assert.equal(forged.statusCode, 403);
+
+  const [firstScan, secondScan] = await Promise.all([
+    f.app.inject({ method: 'POST', url: '/api/manage/auth/discover', headers }),
+    f.app.inject({ method: 'POST', url: '/api/manage/auth/discover', headers }),
+  ]);
+  assert.equal(firstScan.statusCode, 200);
+  assert.equal(secondScan.statusCode, 200);
+  assert.equal(f.getDiscoverCalls(), 1);
+  assert.deepEqual(firstScan.json().instances, [
+    { origin: 'http://192.168.1.50:8123', source: 'mdns', name: 'Home' },
+  ]);
+
+  const tx = transaction(await start(f.app));
+  const callback = await f.app.inject({
+    url: `/api/manage/auth/callback?state=${tx.state}&code=one`,
+    headers: { host: headers.host, cookie: tx.cookie },
+  });
+  const adminCookie = (callback.headers['set-cookie'] as string[])
+    .find((item) => item.startsWith('everdash_admin='))!
+    .split(';')[0];
+
+  const anonymous = await f.app.inject({
+    method: 'POST',
+    url: '/api/manage/auth/discover',
+    headers,
+  });
+  assert.equal(anonymous.statusCode, 401);
+
+  const authorized = await f.app.inject({
+    method: 'POST',
+    url: '/api/manage/auth/discover',
+    headers: { ...headers, cookie: adminCookie },
+  });
+  assert.equal(authorized.statusCode, 200);
+  assert.deepEqual(f.getDiscoverExtra(), ['http://ha:8123']);
 });

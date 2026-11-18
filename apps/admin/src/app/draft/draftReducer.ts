@@ -61,6 +61,7 @@ export type DraftAction =
   | { type: 'replace'; document: DashboardDocument }
   | { type: 'select-view'; viewId: string }
   | { type: 'add-view' }
+  | { type: 'duplicate-view' }
   | { type: 'rename-view'; title: string }
   | { type: 'move-view'; offset: -1 | 1 }
   | { type: 'delete-view' }
@@ -822,6 +823,68 @@ function createViewId(document: DashboardDocument): string {
   return id;
 }
 
+function duplicateViewTitle(title: string, views: readonly ViewConfig[]): string {
+  const trimmed = title.trim();
+
+  if (!trimmed) {
+    return '';
+  }
+
+  const taken = new Set(views.map((view) => view.title.trim()));
+  const stem = trimmed.replace(/\s+copy(?:\s+\d+)?$/i, '');
+  const first = `${stem} copy`;
+
+  if (!taken.has(first)) {
+    return first;
+  }
+
+  let suffix = 2;
+
+  while (taken.has(`${first} ${suffix}`)) {
+    suffix += 1;
+  }
+
+  return `${first} ${suffix}`;
+}
+
+function duplicateView(state: DraftState): DraftState {
+  const { views } = state.document;
+  const index = views.findIndex((view) => view.id === state.viewId);
+  const original = views[index];
+
+  if (index === -1 || !original) {
+    return state;
+  }
+
+  const cloned = structuredClone(original);
+  const id = createViewId(state.document);
+  const title = duplicateViewTitle(original.title, views);
+  const copy: ViewConfig = {
+    ...cloned,
+    id,
+    title,
+    ...(cloned.cards ? { cards: cloned.cards.filter((card) => !isIncomplete(card)) } : {}),
+    ...(cloned.sections
+      ? {
+          sections: cloned.sections.map((section) =>
+            section.cards
+              ? { ...section, cards: section.cards.filter((card) => !isIncomplete(card)) }
+              : section,
+          ),
+        }
+      : {}),
+  };
+  const nextViews = [...views];
+
+  nextViews.splice(index + 1, 0, copy);
+
+  return changeDocument(
+    state,
+    { ...state.document, views: nextViews },
+    { viewId: id, selection: viewSelection },
+  );
+}
+
 export function draftReducer(state: DraftState, action: DraftAction): DraftState {
   switch (action.type) {
     case 'loaded': {
@@ -897,6 +960,10 @@ export function draftReducer(state: DraftState, action: DraftAction): DraftState
         { ...state.document, views },
         { viewId: id, selection: viewSelection },
       );
+    }
+
+    case 'duplicate-view': {
+      return duplicateView(state);
     }
 
     case 'rename-view': {

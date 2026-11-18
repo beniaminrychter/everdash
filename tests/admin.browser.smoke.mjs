@@ -14,6 +14,26 @@ let savedConfig = structuredClone(config);
 let saveCount = 0;
 let previewCount = 0;
 let deviceCommandCount = 0;
+let discoverCount = 0;
+let authSessionState = {
+  authenticated: true,
+  connection: 'connected',
+  homeAssistantOrigin: 'http://192.168.1.10:8123',
+};
+let discoveredInstances = [
+  {
+    origin: 'http://192.168.1.10:8123',
+    origins: [
+      'http://192.168.1.10:8123',
+      'http://homeassistant.local:8123',
+      'https://home.example.com',
+    ],
+    source: 'mdns',
+    name: 'Main Home',
+    version: '2026.1.0',
+  },
+  { origin: 'http://192.168.1.25:8123', source: 'network' },
+];
 let adminRegistrationCode = '123456';
 let adminDevices = [
   {
@@ -113,7 +133,12 @@ const server = createServer(async (request, response) => {
       return;
     }
     if (url.pathname === '/api/manage/auth/session') {
-      sendJson(200, { authenticated: true, connection: 'connected' });
+      sendJson(200, authSessionState);
+      return;
+    }
+    if (url.pathname === '/api/manage/auth/discover' && request.method === 'POST') {
+      discoverCount += 1;
+      sendJson(200, { instances: discoveredInstances });
       return;
     }
     if (url.pathname === '/api/manage/entities') {
@@ -422,6 +447,38 @@ try {
   await page.getByRole('button', { name: 'Remove', exact: true }).click();
   await expect(page.getByText('Wall iPad', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Hallway iPhone', { exact: true })).toBeVisible();
+
+  const discoversBeforeHaTab = discoverCount;
+  await sidebar('Home Assistant').click();
+  await expect(page.getByRole('heading', { name: 'Home Assistant' })).toBeVisible();
+  await expect(page.getByText('Network discovery', { exact: true })).toBeVisible();
+  await expect.poll(() => discoverCount).toBe(discoversBeforeHaTab + 1);
+  await expect(page.getByText('Main Home', { exact: true })).toBeVisible();
+  await expect(page.getByText('Current', { exact: true })).toBeVisible();
+  await expect(page.getByText('http://192.168.1.25:8123', { exact: true })).toBeVisible();
+  await page.getByRole('combobox', { name: 'URL for Main Home' }).click();
+  await page.getByRole('option', { name: 'https://home.example.com', exact: true }).click();
+  await expect(page.getByText('Current', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Connect…', exact: true }).first().click();
+  const urlSwitchDialog = page.getByRole('alertdialog', {
+    name: 'Switch Home Assistant instance?',
+  });
+  await expect(urlSwitchDialog).toContainText('https://home.example.com');
+  await urlSwitchDialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(urlSwitchDialog).toHaveCount(0);
+  await page.getByRole('combobox', { name: 'URL for Main Home' }).click();
+  await page.getByRole('option', { name: 'http://192.168.1.10:8123', exact: true }).click();
+  await expect(page.getByText('Current', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Rescan', exact: true }).click();
+  await expect.poll(() => discoverCount).toBe(discoversBeforeHaTab + 2);
+  await page.getByRole('button', { name: 'Connect…', exact: true }).click();
+  const switchDialog = page.getByRole('alertdialog', {
+    name: 'Switch Home Assistant instance?',
+  });
+  await expect(switchDialog).toBeVisible();
+  await switchDialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(switchDialog).toHaveCount(0);
+
   await sidebar('Editor').click();
 
   const viewportFrame = page.locator('[data-preview-viewport]');
@@ -673,6 +730,19 @@ try {
     entity: 'sensor.lounge_temperature',
     name: 'Lounge temp',
   });
+
+  await viewTab('Home').click();
+  await page.getByRole('button', { name: 'View options' }).click();
+  await page.getByRole('menuitem', { name: 'Duplicate' }).click();
+  await expect(viewTab('Home copy')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab')).toHaveText(['Home', 'Home copy', 'Guest room']);
+  await expect(page.getByLabel('View name')).toHaveValue('Home copy');
+  await page.getByRole('button', { name: 'View options' }).click();
+  await page.getByRole('menuitem', { name: 'Delete view' }).click();
+  await page
+    .getByRole('alertdialog', { name: /Delete “Home copy”/ })
+    .getByRole('button', { name: 'Delete view' })
+    .click();
 
   await viewTab('Home').click();
   await page.getByRole('button', { name: 'View options' }).click();
@@ -1377,6 +1447,39 @@ try {
   await expect(invalidPage.getByText('Open the dashboard builder')).toHaveCount(0);
   await invalidPage.close();
   serveInvalidConfig = false;
+
+  // First setup SignIn autoscans the home network, auto-fills a single result, and lets the user pick among multiple.
+  authSessionState = { authenticated: false, connection: 'unconfigured' };
+  discoveredInstances = [
+    { origin: 'http://192.168.1.50:8123', source: 'mdns', name: 'Cabin Home' },
+  ];
+  const setupPage = await openPage({ width: 1280, height: 800 });
+  await expect(setupPage.getByText('Discovered on your network', { exact: true })).toBeVisible();
+  await expect(setupPage.getByLabel('Home Assistant URL')).toHaveValue('http://192.168.1.50:8123');
+  discoveredInstances = [
+    {
+      origin: 'http://192.168.1.50:8123',
+      origins: ['http://192.168.1.50:8123', 'https://cabin.example.com'],
+      source: 'mdns',
+      name: 'Cabin Home',
+    },
+    { origin: 'http://192.168.1.80:8123', source: 'network' },
+  ];
+  await setupPage.getByRole('button', { name: 'Rescan', exact: true }).click();
+  await setupPage.getByRole('combobox', { name: 'URL for Cabin Home' }).click();
+  await setupPage.getByRole('option', { name: 'https://cabin.example.com', exact: true }).click();
+  await expect(setupPage.getByLabel('Home Assistant URL')).toHaveValue('https://cabin.example.com');
+  await expect(
+    setupPage.getByRole('button', { name: /http:\/\/192\.168\.1\.80:8123/ }),
+  ).toBeVisible();
+  await setupPage.getByRole('button', { name: /http:\/\/192\.168\.1\.80:8123/ }).click();
+  await expect(setupPage.getByLabel('Home Assistant URL')).toHaveValue('http://192.168.1.80:8123');
+  await setupPage.close();
+  authSessionState = {
+    authenticated: true,
+    connection: 'connected',
+    homeAssistantOrigin: 'http://192.168.1.10:8123',
+  };
 
   assert.deepEqual(pageErrors, []);
   // The browser logs the deliberate 409 as a failed resource load.

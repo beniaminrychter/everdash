@@ -472,6 +472,49 @@ test('add-view creates a unique view and selects it', () => {
   assert.equal(new Set(state.document.views.map((view) => view.id)).size, 3);
 });
 
+test('duplicate-view inserts a deep copy right after the active view, drops incomplete cards, and increments copy titles', () => {
+  const withSectionsAndPending = run(
+    startSections(),
+    { type: 'start-card', kind: 'light' },
+    { type: 'start-card', kind: 'climate', section: 'kitchen' },
+  );
+
+  // Only one incomplete card is allowed; startSections() had no incomplete card until the first start-card.
+  const firstCopy = draftReducer(withSectionsAndPending, { type: 'duplicate-view' });
+
+  assert.equal(firstCopy.document.views.length, 2);
+  assert.equal(firstCopy.viewId, firstCopy.document.views[1]!.id);
+  assert.notEqual(firstCopy.viewId, 'home');
+  assert.equal(firstCopy.document.views[1]!.title, 'Home copy');
+  assert.deepEqual(firstCopy.selection, { kind: 'view' });
+  // Unfinished card was stripped from the copy while remaining on the original.
+  assert.equal(firstCopy.document.views[0]!.cards!.length, 3);
+  assert.equal(firstCopy.document.views[1]!.cards!.length, 2);
+  assert.equal(isIncomplete(firstCopy.document.views[1]!.cards![0]!), false);
+  assert.equal(
+    hasIncomplete({ ...firstCopy.document, views: [firstCopy.document.views[1]!] }),
+    false,
+  );
+  assert.equal(firstCopy.document.views[1]!.sections!.length, 2);
+
+  // Editing the copy does not mutate the original view.
+  const editedCopy = draftReducer(firstCopy, {
+    type: 'update-card',
+    section: 'kitchen',
+    index: 0,
+    card: { type: 'light', entity: 'light.patio' },
+  });
+  assert.equal(editedCopy.document.views[0]!.sections![0]!.cards![0]!.entity, 'light.island');
+  assert.equal(editedCopy.document.views[1]!.sections![0]!.cards![0]!.entity, 'light.patio');
+
+  // Duplicating either the copy or the original picks the next free suffix.
+  const secondCopy = draftReducer(editedCopy, { type: 'duplicate-view' });
+  assert.equal(secondCopy.document.views.length, 3);
+  assert.equal(secondCopy.viewId, secondCopy.document.views[2]!.id);
+  assert.equal(secondCopy.document.views[2]!.title, 'Home copy 2');
+  assert.equal(new Set(secondCopy.document.views.map((item) => item.id)).size, 3);
+});
+
 test('discard restores baseline and clears changes', () => {
   const edited = run(start(), { type: 'rename-view', title: 'Renamed' });
   assert.equal(isDirty(edited), true);

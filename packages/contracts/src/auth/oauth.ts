@@ -15,6 +15,22 @@ export interface AuthSessionResponse {
   homeAssistantOrigin?: string;
 }
 
+export type DiscoverySource = 'mdns' | 'network' | 'local';
+
+export interface DiscoveredHomeAssistant {
+  /** Preferred reachable URL for this Home Assistant instance. */
+  origin: string;
+  /** All reachable URLs discovered for this Home Assistant instance, in preference order. */
+  origins?: string[];
+  name?: string;
+  version?: string;
+  source: DiscoverySource;
+}
+
+export interface AuthDiscoverResponse {
+  instances: DiscoveredHomeAssistant[];
+}
+
 export type AuthErrorCode =
   | 'INVALID_REQUEST'
   | 'AUTH_FAILED'
