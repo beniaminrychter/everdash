@@ -43,7 +43,7 @@ Run EverDash alongside an existing Home Assistant instance (`linux/amd64` and `l
 
 ```sh
 curl -O https://raw.githubusercontent.com/beniaminrychter/everdash/main/compose.published.yaml
-export EVERDASH_IMAGE=ghcr.io/beniaminrychter/everdash:0.2.4
+export EVERDASH_IMAGE=ghcr.io/beniaminrychter/everdash:0.2.5
 docker compose -f compose.published.yaml up -d
 ```
 
@@ -55,7 +55,7 @@ docker run -d \
   --restart unless-stopped \
   -p 8095:8095 \
   -v everdash-data:/data \
-  ghcr.io/beniaminrychter/everdash:0.2.4
+  ghcr.io/beniaminrychter/everdash:0.2.5
 ```
 
 To upgrade later, update the version tag and run:
