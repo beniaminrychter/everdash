@@ -128,11 +128,49 @@ test('device registration issues a persistent cookie, regenerates single-use cod
     });
     assert.equal(unregistered.statusCode, 200);
     assert.match(String(unregistered.headers['set-cookie']), /Max-Age=0/);
+    assert.match(String(unregistered.headers['set-cookie']), /SameSite=Lax/);
     assert.equal(tabletAccess.overview().devices.length, 0);
     assert.equal(
       (await app.inject({ method: 'GET', url: '/api/access', headers: { cookie } })).json().status,
       'registration_required',
     );
+
+    // iOS 12 PWAs omit SameSite so WebKit does not drop the cookie on Home Screen launches.
+    const ios12Code = tabletAccess.overview().registrationCode;
+    const ios12Headers = {
+      ...headers,
+      'user-agent':
+        'Mozilla/5.0 (iPad; CPU OS 12_5_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148',
+    };
+    const ios12Registered = await app.inject({
+      method: 'POST',
+      url: '/api/access/register',
+      headers: ios12Headers,
+      payload: { code: ios12Code, deviceType: 'iPad', screenSize: '768 × 1024' },
+    });
+    assert.equal(ios12Registered.statusCode, 200);
+    const ios12SetCookie = String(ios12Registered.headers['set-cookie']);
+    assert.doesNotMatch(ios12SetCookie, /SameSite=/i);
+    const ios12Session = /everdash_tablet=([^;]+)/.exec(ios12SetCookie)?.[1];
+    assert.ok(ios12Session);
+    const ios12Cookie = `everdash_tablet=${ios12Session}`;
+    assert.deepEqual(
+      (
+        await app.inject({
+          method: 'GET',
+          url: '/api/access',
+          headers: { cookie: ios12Cookie, 'user-agent': ios12Headers['user-agent'] },
+        })
+      ).json(),
+      { status: 'registered' },
+    );
+    const ios12Unregistered = await app.inject({
+      method: 'POST',
+      url: '/api/access/unregister',
+      headers: { ...ios12Headers, cookie: ios12Cookie },
+    });
+    assert.equal(ios12Unregistered.statusCode, 200);
+    assert.doesNotMatch(String(ios12Unregistered.headers['set-cookie']), /SameSite=/i);
   } finally {
     await app.close();
     await rm(directory, { recursive: true, force: true });

@@ -1,6 +1,12 @@
 import type { FastifyInstance } from 'fastify';
 import type { ServerDependencies } from '../app';
-import { clearTabletCookie, readCookie, TABLET_COOKIE, tabletCookie } from '../auth/admin-cookies';
+import {
+  clearTabletCookie,
+  readCookie,
+  TABLET_COOKIE,
+  tabletCookie,
+  tabletSameSite,
+} from '../auth/admin-cookies';
 import type { TabletAccess } from '../auth/tablet-access';
 import { expectedOriginFor, requireAdminAccess } from './access-policy';
 import { apiError } from './errors';
@@ -66,8 +72,13 @@ export function registerTabletAccessRoutes(
           .send(apiError('INVALID_REGISTRATION_CODE', 'Invalid registration code.'));
       }
 
+      const sameSite = tabletSameSite(request.headers['user-agent']);
+
       return reply
-        .header('Set-Cookie', tabletCookie(registered.session, request.protocol === 'https'))
+        .header(
+          'Set-Cookie',
+          tabletCookie(registered.session, request.protocol === 'https', sameSite),
+        )
         .send({ ok: true, deviceId: registered.device.id });
     },
   );
@@ -80,8 +91,10 @@ export function registerTabletAccessRoutes(
     if (session) {
       access.removeDeviceBySession(session);
     }
+    const sameSite = tabletSameSite(request.headers['user-agent']);
+
     return reply
-      .header('Set-Cookie', clearTabletCookie(request.protocol === 'https'))
+      .header('Set-Cookie', clearTabletCookie(request.protocol === 'https', sameSite))
       .send({ ok: true });
   });
 

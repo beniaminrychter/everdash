@@ -164,7 +164,9 @@ function offline() {
   render(<p>EverDash is offline. Reconnect and reload.</p>, root);
 }
 
-function loadDashboard() {
+let sessionRejectedAttempt = 0;
+
+function loadDashboard(afterRegistration = false) {
   const request = new XMLHttpRequest();
   request.open('GET', '/api/access');
   request.timeout = 10000;
@@ -172,9 +174,19 @@ function loadDashboard() {
     try {
       const access = JSON.parse(request.responseText) as { status: string };
       if (access.status === 'registered') {
+        sessionRejectedAttempt = 0;
         loadAuthorizedDashboard(true);
       } else {
-        render(<RegisterDeviceGate onRegistered={loadDashboard} />, root);
+        if (afterRegistration) {
+          sessionRejectedAttempt += 1;
+        }
+        render(
+          <RegisterDeviceGate
+            onRegistered={() => loadDashboard(true)}
+            sessionErrorAttempt={sessionRejectedAttempt}
+          />,
+          root,
+        );
       }
     } catch {
       render(<p>Cannot check dashboard access. Reload to retry.</p>, root);
@@ -195,7 +207,7 @@ window.addEventListener('everdash-lock', () => {
   request.open('POST', '/api/access/unregister');
   request.timeout = 10_000;
   request.setRequestHeader('X-EverDash-Request', '1');
-  request.addEventListener('loadend', loadDashboard);
+  request.addEventListener('loadend', () => loadDashboard());
   request.send();
 });
 loadDashboard();

@@ -7,6 +7,9 @@ import {
   clearTransactionCookie,
   adminCookie,
   clearAdminCookie,
+  tabletCookie,
+  clearTabletCookie,
+  tabletSameSite,
   readCookie,
 } from '../apps/server/src/auth/admin-cookies';
 
@@ -98,4 +101,41 @@ test('cookies have scoped security attributes and reject ambiguous or unsafe val
   assert.equal(readCookie('everdash_oauth=bad%20value', 'everdash_oauth'), null);
   assert.equal(readCookie('everdash_oauth=one=two', 'everdash_oauth'), null);
   assert.throws(() => adminCookie('bad;value', false));
+  assert.equal(
+    tabletCookie('dev.nonce.sig', true),
+    'everdash_tablet=dev.nonce.sig; Path=/api; HttpOnly; SameSite=Lax; Max-Age=315360000; Secure',
+  );
+  assert.equal(
+    tabletCookie('dev.nonce.sig', false, null),
+    'everdash_tablet=dev.nonce.sig; Path=/api; HttpOnly; Max-Age=315360000',
+  );
+  assert.equal(
+    clearTabletCookie(true, null),
+    'everdash_tablet=; Path=/api; HttpOnly; Max-Age=0; Secure',
+  );
+  assert.equal(
+    tabletSameSite(
+      'Mozilla/5.0 (iPad; CPU OS 12_5_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.1.2 Mobile/15E148 Safari/604.1',
+    ),
+    null,
+  );
+  assert.equal(
+    tabletSameSite(
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 12_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148',
+    ),
+    null,
+  );
+  assert.equal(
+    tabletSameSite(
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.1.2 Safari/605.1.15',
+    ),
+    null,
+  );
+  assert.equal(
+    tabletSameSite(
+      'Mozilla/5.0 (iPad; CPU OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1',
+    ),
+    'Lax',
+  );
+  assert.equal(tabletSameSite(undefined), 'Lax');
 });

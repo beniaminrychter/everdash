@@ -10,14 +10,17 @@ function cookie(
   name: string,
   value: string,
   path: string,
-  sameSite: string,
+  sameSite: 'Strict' | 'Lax' | null,
   secure: boolean,
   maxAge?: number,
 ): string {
   if (value && !OPAQUE.test(value)) {
     throw new Error('Invalid cookie value');
   }
-  let result = `${name}=${value}; Path=${path}; HttpOnly; SameSite=${sameSite}`;
+  let result = `${name}=${value}; Path=${path}; HttpOnly`;
+  if (sameSite) {
+    result += `; SameSite=${sameSite}`;
+  }
   if (maxAge !== undefined) {
     result += `; Max-Age=${maxAge}`;
   }
@@ -49,15 +52,36 @@ export function clearAdminCookie(secure: boolean): string {
   return cookie(ADMIN_COOKIE, '', '/api/manage', 'Strict', secure, 0);
 }
 
-export function tabletCookie(value: string, secure: boolean): string {
+/**
+ * iOS 12 and macOS 10.14 Safari 12 ship WebKit SameSite bugs that can drop SameSite
+ * cookies in standalone PWAs and XHR requests, so omit SameSite for those clients.
+ * Modern browsers use Lax so Home Screen PWA launches keep the cookie while
+ * cross-site mutations remain blocked by `requireMutationOrigin`.
+ */
+export function tabletSameSite(userAgent: string | undefined): 'Lax' | null {
+  if (
+    userAgent &&
+    (/\bCPU (?:iPhone )?OS 12(?:_|\b)/i.test(userAgent) ||
+      /\bMacintosh; Intel Mac OS X 10_14(?:_|\b).*\bVersion\/12\./i.test(userAgent))
+  ) {
+    return null;
+  }
+  return 'Lax';
+}
+
+export function tabletCookie(
+  value: string,
+  secure: boolean,
+  sameSite: 'Lax' | null = 'Lax',
+): string {
   if (!value) {
     throw new Error('Invalid cookie value');
   }
-  return cookie(TABLET_COOKIE, value, '/api', 'Strict', secure, TABLET_COOKIE_MAX_AGE);
+  return cookie(TABLET_COOKIE, value, '/api', sameSite, secure, TABLET_COOKIE_MAX_AGE);
 }
 
-export function clearTabletCookie(secure: boolean): string {
-  return cookie(TABLET_COOKIE, '', '/api', 'Strict', secure, 0);
+export function clearTabletCookie(secure: boolean, sameSite: 'Lax' | null = 'Lax'): string {
+  return cookie(TABLET_COOKIE, '', '/api', sameSite, secure, 0);
 }
 
 export function readCookie(header: string | undefined, name: string): string | null {

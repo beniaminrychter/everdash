@@ -1,13 +1,16 @@
 /* oxlint-disable jsx-a11y/prefer-tag-over-role -- Safari 12 does not support native dialog. */
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { LanguageProvider, useI18n } from '@everdash/ui/i18n/index';
+import { LanguageProvider, translateMessage, useI18n } from '@everdash/ui/i18n/index';
+import { Toast } from '@everdash/ui/ui/Toast/Toast';
 import {
   readPreferences,
   resolveTheme,
 } from '@everdash/dashboard/features/settings/data/preferences';
 import type { Preferences } from '@everdash/dashboard/features/settings/data/preferences';
 import { detectDeviceType, detectScreenSize } from './deviceInfo';
+import { hardReload } from './hardReload';
 import { usePreventZoom } from './hooks/usePreventZoom';
+import { useToast } from './hooks/useToast';
 import styles from './RegisterDeviceGate.module.css';
 
 const codeLength = 6;
@@ -45,16 +48,74 @@ function KeyIcon({ name }: { name: 'delete' | 'submit' | 'device' }) {
   );
 }
 
-function RegistrationPad({ onRegistered }: { onRegistered: () => void }) {
+function ReloadIcon() {
+  return (
+    <svg
+      class={styles.reloadIcon}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+      <path d="M21 3v5h-5" />
+    </svg>
+  );
+}
+
+function RegistrationPad({
+  onRegistered,
+  onHardReload,
+  sessionErrorAttempt,
+}: {
+  onRegistered: () => void;
+  onHardReload: () => Promise<void>;
+  sessionErrorAttempt: number;
+}) {
   const { t } = useI18n();
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [reloading, setReloading] = useState(false);
   // Bumped on every failure so the slots shake again even when the message is unchanged.
   const [attempt, setAttempt] = useState(0);
   const latestCode = useRef('');
+  const handledSessionError = useRef(0);
+  const { toast, notify } = useToast();
 
   latestCode.current = code;
+
+  useEffect(() => {
+    if (sessionErrorAttempt > handledSessionError.current) {
+      handledSessionError.current = sessionErrorAttempt;
+      setAttempt((current) => current + 1);
+      setError(
+        t(
+          'Device registered, but this browser did not keep the session. Check cookie settings and try again.',
+        ),
+      );
+    }
+  }, [sessionErrorAttempt, t]);
+
+  async function reload() {
+    if (reloading) {
+      return;
+    }
+
+    setReloading(true);
+
+    try {
+      await onHardReload();
+    } catch (reloadError) {
+      notify(
+        reloadError instanceof Error ? reloadError.message : 'Hard reload failed. Please retry.',
+      );
+      setReloading(false);
+    }
+  }
 
   function submit(value: string) {
     if (busy || value.length < codeLength) {
@@ -233,11 +294,31 @@ function RegistrationPad({ onRegistered }: { onRegistered: () => void }) {
           <KeyIcon name="submit" />
         </button>
       </div>
+      {toast.visible && <Toast message={translateMessage(toast.message, t)} visible />}
+      <button
+        type="button"
+        class={reloading ? `${styles.reloadButton} ${styles.reloading}` : styles.reloadButton}
+        aria-label={t('Hard reload app')}
+        title={reloading ? t('Reloading…') : t('Hard reload app')}
+        aria-busy={reloading || undefined}
+        disabled={reloading}
+        onClick={reload}
+      >
+        <ReloadIcon />
+      </button>
     </section>
   );
 }
 
-export function RegisterDeviceGate({ onRegistered }: { onRegistered: () => void }) {
+export function RegisterDeviceGate({
+  onRegistered,
+  onHardReload = hardReload,
+  sessionErrorAttempt = 0,
+}: {
+  onRegistered: () => void;
+  onHardReload?: () => Promise<void>;
+  sessionErrorAttempt?: number;
+}) {
   usePreventZoom();
   const [preferences, setPreferences] = useState(savedPreferences);
 
@@ -260,7 +341,11 @@ export function RegisterDeviceGate({ onRegistered }: { onRegistered: () => void 
   return (
     <LanguageProvider language={preferences.language}>
       <main class={styles.gate}>
-        <RegistrationPad onRegistered={onRegistered} />
+        <RegistrationPad
+          onRegistered={onRegistered}
+          onHardReload={onHardReload}
+          sessionErrorAttempt={sessionErrorAttempt}
+        />
       </main>
     </LanguageProvider>
   );

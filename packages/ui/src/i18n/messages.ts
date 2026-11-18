@@ -292,6 +292,8 @@ export const polish = {
   '{count} of 6 digits entered': 'Wpisano cyfr: {count} z 6',
   'Registering…': 'Rejestrowanie…',
   'Invalid registration code. Try again.': 'Nieprawidłowy kod rejestracji. Spróbuj ponownie.',
+  'Device registered, but this browser did not keep the session. Check cookie settings and try again.':
+    'Urządzenie zostało zarejestrowane, ale przeglądarka nie zachowała sesji. Sprawdź ustawienia plików cookie i spróbuj ponownie.',
   Register: 'Zarejestruj',
   'Unregister device': 'Wyrejestruj urządzenie',
 } as const;

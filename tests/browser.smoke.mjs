@@ -1389,6 +1389,7 @@ try {
   const registerContext = await browser.newContext();
   await routeHaApi(registerContext);
   let deviceRegistered = false;
+  let dropSessionOnce = true;
   await registerContext.route('**/api/access', (route) =>
     route.fulfill({ json: { status: deviceRegistered ? 'registered' : 'registration_required' } }),
   );
@@ -1397,13 +1398,35 @@ try {
     assert.equal(payload.code, '482910');
     assert.ok(typeof payload.deviceType === 'string' && payload.deviceType.length > 0);
     assert.ok(typeof payload.screenSize === 'string' && payload.screenSize.length > 0);
+    if (dropSessionOnce) {
+      dropSessionOnce = false;
+      return route.fulfill({ json: { ok: true, deviceId: 'dev1' } });
+    }
     deviceRegistered = true;
     return route.fulfill({ json: { ok: true, deviceId: 'dev1' } });
   });
   const registerPage = await registerContext.newPage();
+  registerPage.on('pageerror', (error) => errors.push(error.message));
   await registerPage.goto(appUrl);
   await expect(registerPage.getByRole('heading', { name: 'Register device' })).toBeVisible();
+  const gateReload = registerPage.getByRole('button', { name: 'Hard reload app', exact: true });
+  await expect(gateReload).toBeVisible();
+  const reloadBox = await gateReload.boundingBox();
+  const viewportSize = registerPage.viewportSize();
+  assert.ok(reloadBox.x > viewportSize.width / 2);
+  assert.ok(reloadBox.y > viewportSize.height / 2);
+  expect(
+    await gateReload.evaluate((element) => Number(getComputedStyle(element).opacity)),
+  ).toBeLessThan(0.7);
   await registerPage.screenshot({ path: join(output, 'register-gate.png') });
+  appUnavailable = true;
+  await gateReload.click();
+  await expect(registerPage.getByText('Cannot download the latest app')).toBeVisible();
+  appUnavailable = false;
+  await gateReload.click();
+  await expect(registerPage.locator('html')).toHaveAttribute('data-hard-reload-proof', 'fresh');
+  await expect(registerPage).toHaveURL(appUrl);
+  await expect(registerPage.getByRole('heading', { name: 'Register device' })).toBeVisible();
   await expect(registerPage.getByRole('button', { name: '4', exact: true })).toHaveCSS(
     'touch-action',
     'manipulation',
@@ -1416,6 +1439,13 @@ try {
   );
   // Typing the 6th digit must not auto-submit before pressing Register.
   assert.equal(deviceRegistered, false);
+  await registerPage.getByRole('button', { name: 'Register', exact: true }).click();
+  await expect(
+    registerPage.getByText('Device registered, but this browser did not keep the session.'),
+  ).toBeVisible();
+  for (const digit of ['4', '8', '2', '9', '1', '0']) {
+    await registerPage.getByRole('button', { name: digit, exact: true }).click();
+  }
   await registerPage.getByRole('button', { name: 'Register', exact: true }).click();
   await expect(registerPage.getByRole('heading', { level: 1 })).toHaveText('First floor');
   await registerPage.reload();
