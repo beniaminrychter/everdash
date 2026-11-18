@@ -1,9 +1,11 @@
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
+import { createServer } from 'node:http';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createStandaloneApp } from '../apps/server/src/standalone';
+import { listenWithHostFallback, resolveListenPort } from '../apps/server/src/entry';
 
 test('standalone starts without credentials and protects management', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'everdash-standalone-'));
@@ -173,6 +175,153 @@ test('device registration issues a persistent cookie, regenerates single-use cod
     assert.doesNotMatch(String(ios12Unregistered.headers['set-cookie']), /SameSite=/i);
   } finally {
     await app.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('listenWithHostFallback binds dual-stack by default and falls back to IPv4 when IPv6 is unavailable', async () => {
+  const attempts: { host?: string; port: number }[] = [];
+  await listenWithHostFallback(
+    {
+      async listen(options) {
+        attempts.push({ host: options?.host, port: Number(options?.port) });
+        if (options?.host === '::') {
+          const error = Object.assign(new Error('address family not supported'), {
+            code: 'EAFNOSUPPORT',
+          });
+          throw error;
+        }
+
+        return 'http://0.0.0.0:8095';
+      },
+    },
+    { port: 8095 },
+  );
+  assert.deepEqual(attempts, [
+    { host: '::', port: 8095 },
+    { host: '0.0.0.0', port: 8095 },
+  ]);
+
+  const eaddrAttempts: { host?: string; port: number }[] = [];
+  await listenWithHostFallback(
+    {
+      async listen(options) {
+        eaddrAttempts.push({ host: options?.host, port: Number(options?.port) });
+        if (options?.host === '::') {
+          const error = Object.assign(new Error('cannot assign requested address'), {
+            code: 'EADDRNOTAVAIL',
+          });
+          throw error;
+        }
+
+        return 'http://0.0.0.0:8095';
+      },
+    },
+    { host: '   ', port: 8095 },
+  );
+  assert.deepEqual(eaddrAttempts, [
+    { host: '::', port: 8095 },
+    { host: '0.0.0.0', port: 8095 },
+  ]);
+
+  await assert.rejects(
+    listenWithHostFallback(
+      {
+        async listen() {
+          throw Object.assign(new Error('port in use'), { code: 'EADDRINUSE' });
+        },
+      },
+      { port: 8095 },
+    ),
+    /port in use/,
+  );
+
+  const explicitAttempts: { host?: string; port: number }[] = [];
+  await assert.rejects(
+    listenWithHostFallback(
+      {
+        async listen(options) {
+          explicitAttempts.push({ host: options?.host, port: Number(options?.port) });
+          throw Object.assign(new Error('cannot assign requested address'), {
+            code: 'EADDRNOTAVAIL',
+          });
+        },
+      },
+      { host: '127.0.0.1', port: 8095 },
+    ),
+    /cannot assign requested address/,
+  );
+  assert.deepEqual(explicitAttempts, [{ host: '127.0.0.1', port: 8095 }]);
+});
+
+test('standalone server serves health over both IPv4 and IPv6 when dual-stack is active', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'everdash-dualstack-'));
+  const { app } = await createStandaloneApp({ dataDirectory: directory, logger: false });
+  try {
+    await listenWithHostFallback(app, { port: 0 });
+    const address = app.server.address();
+    assert.ok(address && typeof address !== 'string');
+    const ipv4Response = await fetch(`http://127.0.0.1:${address.port}/health`);
+    assert.equal(ipv4Response.status, 200);
+    if (address.family === 'IPv6') {
+      const ipv6Response = await fetch(`http://[::1]:${address.port}/health`);
+      assert.equal(ipv6Response.status, 200);
+    }
+  } finally {
+    await app.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('resolveListenPort honors EVERDASH_PORT and reads Supervisor Network port overrides via socket', async () => {
+  assert.equal(await resolveListenPort({ env: {} }), 8095);
+  assert.equal(
+    await resolveListenPort({
+      env: { EVERDASH_PORT: '9001', SUPERVISOR_SOCKET: '/nonexistent/supervisor.sock' },
+    }),
+    9001,
+  );
+  await assert.rejects(
+    resolveListenPort({ env: { EVERDASH_PORT: 'not-a-port' } }),
+    /Invalid EVERDASH_PORT/,
+  );
+
+  const socketRoot = tmpdir().length <= 60 ? tmpdir() : '/tmp';
+  const directory = await mkdtemp(join(socketRoot, 'ed-sock-'));
+  const socketPath = join(directory, 'sup.sock');
+  let networkPort: number | null = 8089;
+  const server = createServer((req, res) => {
+    if (req.url === '/addons/self/info') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ result: 'ok', data: { network: { '8095/tcp': networkPort } } }));
+      return;
+    }
+
+    res.writeHead(404);
+    res.end();
+  });
+
+  try {
+    await new Promise<void>((resolve) => {
+      server.listen(socketPath, resolve);
+    });
+
+    assert.equal(await resolveListenPort({ env: { SUPERVISOR_SOCKET: socketPath } }), 8089);
+
+    networkPort = null;
+    assert.equal(await resolveListenPort({ env: { SUPERVISOR_SOCKET: socketPath } }), 8095);
+
+    assert.equal(
+      await resolveListenPort({
+        env: { SUPERVISOR_SOCKET: join(directory, 'missing.sock') },
+        timeoutMs: 250,
+      }),
+      8095,
+    );
+  } finally {
+    await new Promise<void>((resolve) => {
+      server.close(() => resolve());
+    });
     await rm(directory, { recursive: true, force: true });
   }
 });

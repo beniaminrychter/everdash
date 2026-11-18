@@ -10,9 +10,9 @@ EverDash turns legacy tablets (including iPad running iOS 12 / Safari 12) into f
 4. Build your views, sections, and cards in the visual editor, then save.
 5. Open **Devices** in the admin sidebar to copy or scan the tablet URL (`http://YOUR-HA-HOST:8095/`), open it on your tablet, and enter the one-time 6-digit registration code.
 
-## Ports
+## Network
 
-- `8095/tcp` — Serves both the tablet dashboard (`/`) and the admin builder (`/admin/`). You can change the host port in the app's **Network** configuration if `8095` is already in use.
+- `8095/tcp` — Serves both the tablet dashboard (`/`) and the admin builder (`/admin/`). You can override this port in the app's **Network** configuration if `8095` is already in use; EverDash runs on the host network (IPv4 and IPv6) and reads your configured port on startup.
 
 ## Backups and recovery
 

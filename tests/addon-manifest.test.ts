@@ -20,7 +20,8 @@ test('Home Assistant repository and app manifests match the published EverDash i
   assert.equal(manifestValue(appManifest, 'version'), packageJson.version);
 });
 
-test('Home Assistant app exposes the standalone port, Web UI, and watchdog health check', () => {
+test('Home Assistant app uses host networking with configurable port, Web UI, and watchdog health check', () => {
+  assert.equal(manifestValue(appManifest, 'host_network'), 'true');
   assert.match(appManifest, /^\s+8095\/tcp:\s+8095$/m);
   assert.equal(manifestValue(appManifest, 'webui'), 'http://[HOST]:[PORT:8095]/admin/');
   assert.equal(manifestValue(appManifest, 'watchdog'), 'http://[HOST]:[PORT:8095]/health');
@@ -28,4 +29,5 @@ test('Home Assistant app exposes the standalone port, Web UI, and watchdog healt
   assert.match(appManifest, /^\s+-\s+amd64$/m);
   assert.equal(existsSync(new URL('../everdash/icon.png', import.meta.url)), true);
   assert.equal(existsSync(new URL('../everdash/logo.png', import.meta.url)), true);
+  assert.equal(existsSync(new URL('../everdash/translations/en.yaml', import.meta.url)), true);
 });
