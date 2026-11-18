@@ -29,6 +29,10 @@
   padding: 27px 30px;
   box-shadow: none;
 }
+.sheet:focus,
+.sheet:focus-visible {
+  outline: none;
+}
 .sheet .roundButton {
   color: var(--muted);
   background: var(--surface-strong);

@@ -88,12 +88,12 @@
   opacity: 0.6;
 }
 :global(:focus) {
+  outline: none;
+}
+/* Keep the ring for keyboard focus only. Safari 12 ignores :focus-visible without leaving a tap outline. */
+:global(:focus-visible) {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
-}
-/* Keep the ring for keyboard focus only. Safari 12 drops this rule and keeps the ring above. */
-:global(:focus:not(:focus-visible)) {
-  outline: none;
 }
 :global(h2),
 :global(h3),

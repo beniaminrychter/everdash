@@ -1486,7 +1486,31 @@ try {
     localStorage.getItem('my-home:preferences:v1'),
   );
   await openSettings(logoutPage);
-  await logoutPage.getByRole('button', { name: 'Unregister device', exact: true }).click();
+  const unregisterButton = logoutPage.getByRole('button', {
+    name: 'Unregister device',
+    exact: true,
+  });
+  const sourcesBottom = await logoutPage
+    .getByText('Connected data sources', { exact: true })
+    .evaluate((element) => element.getBoundingClientRect().bottom);
+  const unregisterTop = await unregisterButton.evaluate(
+    (element) => element.getBoundingClientRect().top,
+  );
+  assert.ok(unregisterTop >= sourcesBottom);
+  await unregisterButton.click();
+  await expect(logoutPage.getByRole('heading', { name: 'Unregister device?' })).toBeVisible();
+  assert.equal(logoutRequests, 0);
+  await logoutPage.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(logoutPage.getByRole('heading', { name: 'Unregister device?' })).toHaveCount(0);
+  await expect(logoutPage.getByRole('heading', { name: 'Settings' })).toBeVisible();
+  assert.equal(logoutRequests, 0);
+  await unregisterButton.click();
+  await logoutPage.keyboard.press('Escape');
+  await expect(logoutPage.getByRole('heading', { name: 'Unregister device?' })).toHaveCount(0);
+  await expect(logoutPage.getByRole('heading', { name: 'Settings' })).toBeVisible();
+  assert.equal(logoutRequests, 0);
+  await unregisterButton.click();
+  await logoutPage.getByRole('button', { name: 'Unregister', exact: true }).click();
   await expect(logoutPage.getByRole('heading', { name: 'Register device' })).toBeVisible();
   assert.equal(logoutRequests, 1);
   assert.equal(
@@ -1824,7 +1848,9 @@ try {
   ).toBeVisible();
   await legacyPage.getByRole('button', { exact: true, name: 'Close settings' }).focus();
   await legacyPage.keyboard.press('Shift+Tab');
-  await expect(legacyPage.getByText('Connected data sources', { exact: true })).toBeFocused();
+  await expect(
+    legacyPage.getByRole('button', { exact: true, name: 'Unregister device' }),
+  ).toBeFocused();
   await legacyPage.keyboard.press('Tab');
   await expect(
     legacyPage.getByRole('button', { exact: true, name: 'Close settings' }),

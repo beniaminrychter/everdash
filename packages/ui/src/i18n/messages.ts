@@ -296,5 +296,11 @@ export const polish = {
     'Urządzenie zostało zarejestrowane, ale przeglądarka nie zachowała sesji. Sprawdź ustawienia plików cookie i spróbuj ponownie.',
   Register: 'Zarejestruj',
   'Unregister device': 'Wyrejestruj urządzenie',
+  'Unregister device?': 'Wyrejestrować urządzenie?',
+  'This tablet will return to the registration screen and need a new code from administration.':
+    'Ten tablet wróci do ekranu rejestracji i będzie wymagał nowego kodu z panelu administracyjnego.',
+  Unregister: 'Wyrejestruj',
+  Cancel: 'Anuluj',
+  Close: 'Zamknij',
 } as const;
 export type TranslationKey = keyof typeof polish;

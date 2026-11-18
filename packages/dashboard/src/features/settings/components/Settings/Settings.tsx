@@ -1,3 +1,4 @@
+import type { ComponentChildren } from 'preact';
 import { useState } from 'preact/hooks';
 import { useI18n, translateMessage } from '@everdash/ui/i18n/index';
 import { Disclosure } from '@everdash/ui/ui/Disclosure/Disclosure';
@@ -25,6 +26,8 @@ interface Props {
   dashboardDocument: DashboardDocument;
   onConfigPublished: (snapshot: RuntimeSnapshot) => void;
   canLogout: boolean;
+  onRequestUnregister: () => void;
+  children?: ComponentChildren;
 }
 export function Settings({
   appearance,
@@ -42,6 +45,8 @@ export function Settings({
   dashboardDocument,
   onConfigPublished,
   canLogout,
+  onRequestUnregister,
+  children,
 }: Props) {
   const { t } = useI18n();
   const [reloading, setReloading] = useState(false);
@@ -119,14 +124,6 @@ export function Settings({
       <button type="button" class={styles.refresh} disabled={!online} onClick={onRefresh}>
         {t('Refresh')}
       </button>
-      {canLogout && (
-        <>
-          <h3>{t('Tablet access')}</h3>
-          <button type="button" onClick={() => window.dispatchEvent(new Event('everdash-lock'))}>
-            {t('Unregister device')}
-          </button>
-        </>
-      )}
       {accessMode === 'management' && (
         <>
           <h3>{t('Dashboard configuration')}</h3>
@@ -149,6 +146,14 @@ export function Settings({
       <Disclosure summary={t('Installation & about')}>
         <About />
       </Disclosure>
+      {children}
+      {canLogout && (
+        <div class={styles.unregisterSection}>
+          <button type="button" class={styles.unregisterButton} onClick={onRequestUnregister}>
+            {t('Unregister device')}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

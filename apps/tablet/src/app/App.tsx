@@ -22,13 +22,17 @@ import { Settings } from '@everdash/dashboard/features/settings/components/Setti
 import { Toast } from '@everdash/ui/ui/Toast/Toast';
 import { DashboardCards } from '@everdash/dashboard/features/dashboard/components/DashboardCards/DashboardCards';
 import { Modal } from '@everdash/ui/ui/Modal/Modal';
+import { ConfirmDialog } from '@everdash/ui/ui/ConfirmDialog/ConfirmDialog';
 import { LightControls } from '@everdash/dashboard/features/accessories/components/LightControls/LightControls';
 import { Icon } from '@everdash/ui/ui/Icon/Icon';
 import { IconButton } from '@everdash/ui/ui/IconButton/IconButton';
 import { ConnectedDataSources } from '@everdash/dashboard/features/settings/components/ConnectedDataSources/ConnectedDataSources';
 import styles from './App.module.css';
 
-type OpenModal = { kind: 'light'; deviceId: string } | { kind: 'settings' } | null;
+type OpenModal =
+  | { kind: 'light'; deviceId: string }
+  | { kind: 'settings'; confirmingUnregister?: boolean }
+  | null;
 interface Props {
   config: AppConfig;
   mode?: 'direct' | 'management';
@@ -213,15 +217,34 @@ export function App({
             dashboardDocument={dashboardDocument}
             onConfigPublished={onConfigPublished}
             canLogout={pinEnabled}
-          />
-          <ConnectedDataSources
-            view={page}
-            sunEntityId={config.sun}
-            devices={home.devices}
-            climates={climate.climates}
-            readings={dashboard.readings}
-          />
+            onRequestUnregister={() => setModal({ kind: 'settings', confirmingUnregister: true })}
+          >
+            <ConnectedDataSources
+              view={page}
+              sunEntityId={config.sun}
+              devices={home.devices}
+              climates={climate.climates}
+              readings={dashboard.readings}
+            />
+          </Settings>
         </Modal>
+      )}
+      {modal?.kind === 'settings' && modal.confirmingUnregister && (
+        <ConfirmDialog
+          title={t('Unregister device?')}
+          description={t(
+            'This tablet will return to the registration screen and need a new code from administration.',
+          )}
+          confirmLabel={t('Unregister')}
+          cancelLabel={t('Cancel')}
+          closeLabel={t('Close')}
+          tone="danger"
+          onCancel={() => setModal({ kind: 'settings' })}
+          onConfirm={() => {
+            setModal(null);
+            window.dispatchEvent(new Event('everdash-lock'));
+          }}
+        />
       )}
     </LanguageProvider>
   );

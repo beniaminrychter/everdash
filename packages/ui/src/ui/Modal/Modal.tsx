@@ -1,5 +1,5 @@
 import type { ComponentChildren } from 'preact';
-import { useLayoutEffect, useRef } from 'preact/hooks';
+import { useId, useLayoutEffect, useRef } from 'preact/hooks';
 import { Icon } from '../Icon/Icon';
 import { IconButton } from '../IconButton/IconButton';
 import styles from './Modal.module.css';
@@ -13,6 +13,7 @@ interface ModalProps {
 }
 
 export function Modal({ title, eyebrow, closeLabel, onClose, children }: ModalProps) {
+  const titleId = useId();
   const sheet = useRef<HTMLElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
   const close = useRef(onClose);
@@ -36,6 +37,10 @@ export function Modal({ title, eyebrow, closeLabel, onClose, children }: ModalPr
     (focusable?.[0] || sheet.current)?.focus();
 
     const handleKey = (event: KeyboardEvent) => {
+      const dialogs = document.querySelectorAll('[role="dialog"][aria-modal="true"]');
+      if (dialogs.length > 0 && dialogs[dialogs.length - 1] !== sheet.current) {
+        return;
+      }
       if (event.key === 'Escape') {
         event.preventDefault();
         close.current();
@@ -89,13 +94,13 @@ export function Modal({ title, eyebrow, closeLabel, onClose, children }: ModalPr
         ref={sheet}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="sheet-title"
+        aria-labelledby={titleId}
         tabIndex={-1}
       >
         <div class={styles.sheetHeader}>
           <div>
             {eyebrow && <span class={styles.sheetEyebrow}>{eyebrow}</span>}
-            <h2 id="sheet-title">{title}</h2>
+            <h2 id={titleId}>{title}</h2>
           </div>
           <IconButton label={closeLabel} onClick={onClose} className={styles.roundButton}>
             <Icon name="close" />
