@@ -1,5 +1,6 @@
 import { createHmac, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
+import { isIPv4 } from 'node:net';
 import { join } from 'node:path';
 import type { DevicesOverview, RegisteredDevice } from '@everdash/contracts/auth/devices';
 import {
@@ -7,6 +8,7 @@ import {
   ensurePrivateDirectory,
   writeAtomicJson,
 } from '../persistence/atomic-json';
+import { resolveIpv4FromNeighborTable } from './neighbor-ip';
 
 interface LegacyAccessState {
   key: string;
@@ -22,6 +24,10 @@ interface AccessState {
   registrationCode: string;
   codeCreatedAt: number;
   devices: RegisteredDevice[];
+}
+
+export interface TabletAccessOptions {
+  resolveIpv4?: (ip: string) => string | null;
 }
 
 const CODE_PATTERN = /^[0-9]{6}$/;
@@ -41,7 +47,10 @@ function generateRegistrationCode(excluding?: string): string {
   return randomInt(0, 1_000_000).toString().padStart(6, '0');
 }
 
-export function normalizeIpAddress(raw: string | undefined): string {
+export function normalizeIpAddress(
+  raw: string | undefined,
+  resolveIpv4: (ip: string) => string | null = resolveIpv4FromNeighborTable,
+): string {
   if (!raw) {
     return 'Unknown';
   }
@@ -50,12 +59,22 @@ export function normalizeIpAddress(raw: string | undefined): string {
     return 'Unknown';
   }
   if (trimmed.startsWith('::ffff:')) {
-    return trimmed.slice(7).slice(0, 64);
+    const mapped = trimmed.slice(7);
+    if (isIPv4(mapped)) {
+      return mapped;
+    }
   }
   if (trimmed === '::1') {
     return '127.0.0.1';
   }
-  return trimmed.slice(0, 64);
+  if (isIPv4(trimmed)) {
+    return trimmed;
+  }
+  const resolved = resolveIpv4(trimmed);
+  if (resolved && isIPv4(resolved)) {
+    return resolved;
+  }
+  return 'Unknown';
 }
 
 export function inferDeviceTypeFromUserAgent(ua = ''): string {
@@ -153,12 +172,23 @@ function isLegacyState(candidate: unknown): candidate is LegacyAccessState {
 }
 
 export class TabletAccess {
+  private readonly observedIpv6 = new Map<string, string>();
+  private readonly resolveIpv4: (ip: string) => string | null;
+
   private constructor(
     private readonly path: string,
     private state: AccessState,
-  ) {}
+    options: TabletAccessOptions = {},
+  ) {
+    this.resolveIpv4 = options.resolveIpv4 ?? resolveIpv4FromNeighborTable;
+    for (const device of state.devices) {
+      if (!isIPv4(device.ip) && device.ip !== 'Unknown') {
+        this.observedIpv6.set(device.id, device.ip);
+      }
+    }
+  }
 
-  static async open(directory: string): Promise<TabletAccess> {
+  static async open(directory: string, options: TabletAccessOptions = {}): Promise<TabletAccess> {
     ensurePrivateDirectory(directory);
     const path = join(directory, 'tablet-access.json');
     if (existsSync(path)) {
@@ -179,7 +209,7 @@ export class TabletAccess {
         ) {
           throw new Error('Invalid tablet access settings');
         }
-        return new TabletAccess(path, value as AccessState);
+        return new TabletAccess(path, value as AccessState, options);
       }
       if (isLegacyState(parsed)) {
         const migrated: AccessState = {
@@ -190,7 +220,7 @@ export class TabletAccess {
           devices: [],
         };
         writeAtomicJson(path, migrated);
-        return new TabletAccess(path, migrated);
+        return new TabletAccess(path, migrated, options);
       }
       throw new Error('Invalid tablet access settings');
     }
@@ -203,7 +233,7 @@ export class TabletAccess {
       devices: [],
     };
     writeAtomicJson(path, initial);
-    return new TabletAccess(path, initial);
+    return new TabletAccess(path, initial, options);
   }
 
   private persist(nextState: AccessState): void {
@@ -226,12 +256,37 @@ export class TabletAccess {
   }
 
   overview(): DevicesOverview {
+    let upgraded = false;
+    const nextDevices = this.state.devices.map((device) => {
+      if (isIPv4(device.ip)) {
+        return device;
+      }
+      const candidate =
+        this.observedIpv6.get(device.id) ?? (device.ip !== 'Unknown' ? device.ip : undefined);
+      const resolved = candidate ? normalizeIpAddress(candidate, this.resolveIpv4) : 'Unknown';
+      if (resolved !== 'Unknown') {
+        this.observedIpv6.delete(device.id);
+        upgraded = true;
+        return { ...device, ip: resolved };
+      }
+      return device;
+    });
+    if (upgraded) {
+      try {
+        this.persist({ ...this.state, devices: nextDevices });
+      } catch {
+        // Overview upgrades are best-effort.
+      }
+    }
     return {
       registrationCode: this.state.registrationCode,
       codeCreatedAt: this.state.codeCreatedAt,
       devices: [...this.state.devices]
         .sort((left, right) => right.registeredAt - left.registeredAt)
-        .map((device) => ({ ...device })),
+        .map((device) => ({
+          ...device,
+          ip: isIPv4(device.ip) ? device.ip : 'Unknown',
+        })),
     };
   }
 
@@ -265,10 +320,14 @@ export class TabletAccess {
     }
     const now = Date.now();
     const id = randomBytes(16).toString('hex');
+    const ip = normalizeIpAddress(metadata.ip, this.resolveIpv4);
+    if (ip === 'Unknown' && metadata.ip?.trim().includes(':')) {
+      this.observedIpv6.set(id, metadata.ip.trim());
+    }
     const device: RegisteredDevice = {
       id,
       name: '',
-      ip: normalizeIpAddress(metadata.ip),
+      ip,
       deviceType: sanitizeDeviceType(metadata.deviceType, metadata.userAgent),
       screenSize: sanitizeScreenSize(metadata.screenSize),
       registeredAt: now,
@@ -318,8 +377,19 @@ export class TabletAccess {
     if (!existing) {
       return;
     }
-    const normalizedIp = normalizeIpAddress(ip);
-    const nextIp = normalizedIp !== 'Unknown' ? normalizedIp : existing.ip;
+    const normalizedIp = normalizeIpAddress(ip, this.resolveIpv4);
+    let nextIp: string;
+    if (normalizedIp !== 'Unknown') {
+      nextIp = normalizedIp;
+      this.observedIpv6.delete(existing.id);
+    } else if (isIPv4(existing.ip)) {
+      nextIp = existing.ip;
+    } else {
+      nextIp = 'Unknown';
+      if (ip?.trim().includes(':')) {
+        this.observedIpv6.set(existing.id, ip.trim());
+      }
+    }
     const now = Date.now();
     const ipChanged = nextIp !== existing.ip;
     const staleLastSeen = now - existing.lastSeenAt >= LAST_SEEN_PERSIST_INTERVAL_MS;
@@ -363,6 +433,7 @@ export class TabletAccess {
     if (devices.length === this.state.devices.length) {
       return false;
     }
+    this.observedIpv6.delete(id);
     this.persist({ ...this.state, devices });
     return true;
   }

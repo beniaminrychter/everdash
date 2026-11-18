@@ -216,7 +216,13 @@ export function RegisteredDevicesTable({
                         <Badge variant="secondary">{device.deviceType}</Badge>
                       </TableCell>
                       <TableCell className="font-mono text-xs">{device.screenSize}</TableCell>
-                      <TableCell className="font-mono text-xs">{device.ip}</TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {device.ip === 'Unknown' ? (
+                          <span className="text-muted-foreground font-sans">Unknown</span>
+                        ) : (
+                          device.ip
+                        )}
+                      </TableCell>
                       <TableCell className="text-muted-foreground text-xs">
                         {formatTimestamp(device.lastSeenAt)}
                       </TableCell>

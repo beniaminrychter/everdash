@@ -3,6 +3,13 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import {
+  parseLinuxIpNeigh,
+  parseLinuxProcArp,
+  parseMacArp,
+  parseMacNdp,
+  resolveIpv4FromNeighbors,
+} from '../apps/server/src/auth/neighbor-ip';
 import { TabletAccess } from '../apps/server/src/auth/tablet-access';
 
 test('single-use registration codes register devices, regenerate immediately, and survive restart', async () => {
@@ -76,6 +83,71 @@ test('devices can be renamed, updated on reconnect, and removed to revoke access
     assert.equal(access.removeDevice(registered.device.id), false);
     assert.equal(access.authorized(registered.session), false);
     assert.equal(access.overview().devices.length, 0);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('resolves IPv6 link-local clients to their internal IPv4 address via neighbor tables', async () => {
+  const linuxEntries = [
+    ...parseLinuxIpNeigh(
+      [
+        'fe80::1c8d:6abf:ee1b:452 dev end0 lladdr d8:bb:2c:11:22:33 REACHABLE',
+        'fe80::dead:beef dev end0 FAILED',
+      ].join('\n'),
+    ),
+    ...parseLinuxProcArp(
+      [
+        'IP address       HW type     Flags       HW address            Mask     Device',
+        '192.168.1.8      0x1         0x2         d8:bb:2c:11:22:33     *        end0',
+        '169.254.10.2     0x1         0x2         d8:bb:2c:11:22:33     *        end0',
+      ].join('\n'),
+    ),
+  ];
+  assert.equal(
+    resolveIpv4FromNeighbors('fe80::1c8d:6abf:ee1b:0452%end0', linuxEntries),
+    '192.168.1.8',
+  );
+
+  const macEntries = [
+    ...parseMacNdp(
+      [
+        'Neighbor                                Linklayer Address  Netif Expire    St Flgs Prbs',
+        'fe80::860:db68:9f50:a236%en0            2:0:0:0:0:aa          en0 permanent R',
+        'fe80::1%lo0                             (incomplete)         lo0 permanent R',
+      ].join('\n'),
+    ),
+    ...parseMacArp('? (192.168.1.22) at 02:00:00:00:00:aa on en0 ifscope [ethernet]'),
+  ];
+  assert.equal(
+    resolveIpv4FromNeighbors('fe80::860:db68:9f50:a236%en0', macEntries),
+    '192.168.1.22',
+  );
+
+  const directory = await mkdtemp(join(tmpdir(), 'everdash-devices-ipv4-'));
+  try {
+    let resolvedMap: Record<string, string> = {};
+    const access = await TabletAccess.open(directory, {
+      resolveIpv4: (ip) => resolvedMap[ip] ?? null,
+    });
+    const code = access.overview().registrationCode;
+    const registered = access.registerDevice(code, {
+      ip: 'fe80::1c8d:6abf:ee1b:452%end0',
+      deviceType: 'iPad',
+      screenSize: '768x1024',
+    });
+    assert.ok(registered);
+    assert.equal(registered.device.ip, 'Unknown');
+    assert.equal(access.overview().devices[0]?.ip, 'Unknown');
+
+    // Once the host learns the IPv4 neighbor entry, overview upgrades the IP without exposing IPv6.
+    resolvedMap = { 'fe80::1c8d:6abf:ee1b:452%end0': '192.168.1.8' };
+    assert.equal(access.overview().devices[0]?.ip, '192.168.1.8');
+
+    // A later IPv6 request without a neighbor match must not clobber the known IPv4.
+    resolvedMap = {};
+    access.touchSession(registered.session, 'fe80::1c8d:6abf:ee1b:452%end0');
+    assert.equal(access.overview().devices[0]?.ip, '192.168.1.8');
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
