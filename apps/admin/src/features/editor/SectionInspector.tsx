@@ -28,6 +28,7 @@ export function SectionInspector({ id, onRequestDelete }: SectionInspectorProps)
     <InspectorPanel
       eyebrow="Section"
       title={section.title || 'Untitled section'}
+      preview
       footer={
         <>
           <Button

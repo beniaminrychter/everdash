@@ -3,13 +3,14 @@ import type { RegisteredDevice } from '@everdash/contracts/auth/devices';
 import { DraftAlerts } from '@/app/DraftAlerts';
 import { useDraft } from '@/app/DraftContext';
 import { PageHeader } from '@/app/PageHeader';
-import type { CardConfig } from '@everdash/contracts/config/types';
+import type { CardConfig, DashboardDocument } from '@everdash/contracts/config/types';
 import type { DraftState } from '@/app/draft/draftReducer';
 import { isIncomplete } from '@/app/draft/incomplete';
 import { readDevicesOverview } from '@/features/devices/useDevices';
 import { CanvasIsland } from './CanvasIsland';
 import { CanvasToolbar } from './CanvasToolbar';
 import { DeleteItemDialog } from './DeleteItemDialog';
+import { EditorDialog } from './EditorDialog';
 import type { DeleteTarget } from './DeleteItemDialog';
 import {
   resolveDeviceViewport,
@@ -18,7 +19,6 @@ import {
 } from './deviceViewport';
 import type { PreviewZoom, ViewportOrientation } from './deviceViewport';
 import { focusInspectorField } from './focusInspectorField';
-import { Inspector } from './Inspector';
 import { pendingPreview } from './pendingPreview';
 import { ViewTabs } from './ViewTabs';
 
@@ -74,10 +74,22 @@ function deleteRequest(message: unknown, state: DraftState): DeleteTarget | null
   return kind === 'card' ? { kind, section: sectionId, index } : { kind, index };
 }
 
+/** The canvas messages that ask to edit an item, which opens the editor dialog. */
+const editorOpeners = new Set([
+  'everdash.editor.card.add',
+  'everdash.editor.card.edit',
+  'everdash.editor.badge.edit',
+  'everdash.editor.section.edit',
+  'everdash.editor.section.rename',
+]);
+
 export function EditorPage() {
   const { state, dispatch } = useDraft();
   const [deleting, setDeleting] = useState<DeleteTarget | null>(null);
-  const [viewSheetOpen, setViewSheetOpen] = useState(false);
+  // Selecting an item (a move, a duplicate, a drag) does not open the editor; asking to edit does.
+  const [editing, setEditing] = useState(false);
+  // The dashboard when the editor opened: what its Cancel puts back.
+  const [baseline, setBaseline] = useState<DashboardDocument | null>(null);
   const [devices, setDevices] = useState<RegisteredDevice[]>([]);
   const [viewportSelection, setViewportSelection] = useState<{
     deviceId: string;
@@ -223,41 +235,56 @@ export function EditorPage() {
     });
   }, []);
 
+  // Called as an edit is asked for, before it reaches the draft, so the baseline is what the
+  // dialog opened on (a card or section that is about to be added is not part of it).
+  const openEditor = useCallback(() => {
+    setBaseline(latest.current.document);
+    setEditing(true);
+  }, []);
+
   const handleMessage = useCallback(
     (message: unknown) => {
-      // The reducer only selects on a canvas delete; the confirmation belongs to this page.
+      // The reducer only selects on a canvas delete; the confirmation belongs to this page, and
+      // selecting would open the editor dialog behind it, so the confirmation is all that opens.
       const request = deleteRequest(message, latest.current);
-
-      dispatch({ type: 'canvas-message', message });
 
       if (request) {
         setDeleting(request);
+      } else {
+        dispatch({ type: 'canvas-message', message });
       }
 
-      // "Rename" in a section's menu selects the section and puts the cursor in its name.
       if (
         typeof message === 'object' &&
         message !== null &&
-        (message as Record<string, unknown>).type === 'everdash.editor.section.rename' &&
         (message as Record<string, unknown>).generation === latest.current.generation
       ) {
-        focusInspectorField('section-name');
+        const { type } = message as Record<string, unknown>;
+
+        if (typeof type === 'string' && editorOpeners.has(type)) {
+          openEditor();
+        }
+
+        // "Rename" in a section's menu selects the section and puts the cursor in its name.
+        if (type === 'everdash.editor.section.rename') {
+          focusInspectorField('section-name');
+        }
       }
     },
-    [dispatch],
+    [dispatch, openEditor],
   );
 
   const renameView = useCallback(() => {
     dispatch({ type: 'select', selection: { kind: 'view' } });
-    setViewSheetOpen(true);
-    // Waits for the menu to close and the sheet (below lg) to mount before focusing.
+    openEditor();
+    // Waits for the menu to close and the dialog to mount before focusing.
     window.setTimeout(() => {
       const input = document.querySelector('#view-name') as HTMLInputElement | null;
 
       input?.focus();
       input?.select();
     }, 150);
-  }, [dispatch]);
+  }, [dispatch, openEditor]);
 
   // Shows a card or badge that is still being added, so its type is visible before it is saved.
   const preview = useMemo(
@@ -278,6 +305,7 @@ export function EditorPage() {
           <div className="border-border/60 bg-muted shrink-0 border-b px-4 py-2.5 xl:px-6">
             <div className="mx-auto max-w-4xl">
               <CanvasToolbar
+                onEdit={openEditor}
                 deviceOptions={deviceOptions}
                 selectedViewport={activeViewport}
                 zoom={zoom}
@@ -349,12 +377,13 @@ export function EditorPage() {
             </div>
           </div>
         </div>
-        <Inspector
-          viewSheetOpen={viewSheetOpen}
-          onViewSheetOpenChange={setViewSheetOpen}
-          onRequestDelete={setDeleting}
-        />
       </div>
+      <EditorDialog
+        open={editing}
+        onOpenChange={setEditing}
+        baseline={baseline}
+        onRequestDelete={setDeleting}
+      />
       <DeleteItemDialog target={deleting} onClose={() => setDeleting(null)} />
     </div>
   );

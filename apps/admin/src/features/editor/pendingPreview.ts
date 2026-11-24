@@ -1,9 +1,9 @@
 import type { CardConfig, DashboardDocument } from '@everdash/contracts/config/types';
 import type { DashboardCanvasProps } from '@everdash/dashboard/editor/mountDashboardCanvas';
 import { hasCardEntity, isCardEntity } from '@everdash/contracts/config/cardDomains';
-import { placeholderEntity } from '@/app/draft/builder';
-import type { Selection } from '@/app/draft/draftReducer';
-import { finishCard, hasIncomplete, isIncomplete } from '@/app/draft/incomplete';
+import { placeholderEntity } from '../../app/draft/builder';
+import type { Selection } from '../../app/draft/draftReducer';
+import { finishCard, hasIncomplete, isIncomplete } from '../../app/draft/incomplete';
 import { cardKindInfo } from './cardKinds';
 import { withPreviewTitles } from './previewTitles';
 
@@ -28,7 +28,7 @@ const previewCards = new WeakMap<object, CardConfig>();
  * Until an entity is picked a new card uses a placeholder entity and a "New …" name, so it draws
  * like a real card; the draft itself never contains them.
  */
-function previewCard(card: CardConfig): CardConfig {
+export function previewCard(card: CardConfig): CardConfig {
   const cached = previewCards.get(card);
 
   if (cached) {

@@ -8,6 +8,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { AppSidebar } from './AppSidebar';
 import { DraftAlerts } from './DraftAlerts';
 import { PageHeader } from './PageHeader';
+import { useAutoSidebar } from './useAutoSidebar';
 import { routeTitles, useHashRoute } from './useHashRoute';
 import type { Route } from './useHashRoute';
 
@@ -52,9 +53,10 @@ function RoutePage({
 
 export function AppShell({ origin, connectionMode, ingress, tabletPort }: AppShellProps) {
   const [route, navigate] = useHashRoute();
+  const sidebar = useAutoSidebar();
 
   return (
-    <SidebarProvider>
+    <SidebarProvider open={sidebar.open} onOpenChange={sidebar.onOpenChange}>
       <AppSidebar
         route={route}
         onNavigate={navigate}

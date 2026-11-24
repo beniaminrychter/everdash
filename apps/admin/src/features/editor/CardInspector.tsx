@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useDraft } from '@/app/DraftContext';
-import { compatibleCardKinds, convertCard } from '@/app/draft/builder';
+import { convertCard } from '@/app/draft/builder';
 import { isIncomplete } from '@/app/draft/incomplete';
 import type { CardKind } from '@/app/draft/builder';
 import { cardKindInfo, cardKinds, isEntityForDomain } from './cardKinds';
@@ -95,12 +95,11 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
     entity !== undefined && entity.length > 0 && !isEntityForDomain(entity, info.domains);
   const canAdd = entity === undefined || isEntityForDomain(entity, info.domains);
   const allKinds = cardKinds.map((item) => item.kind);
-  // A saved card may only switch to types that accept its entity, so the draft stays valid.
-  const typeChoices = pending
-    ? allKinds
-    : entity === undefined
-      ? [card.type]
-      : compatibleCardKinds(entity, allKinds);
+  // Any card can become any type: the entity is kept when the new type accepts it, and a new one
+  // is chosen when it does not. Cancel puts the old card back.
+  const typeChoices = allKinds;
+  // A card whose type needs an entity cannot be left without one.
+  const entityMissing = !pending && entity !== undefined && entity.length === 0;
 
   function change(next: CardConfig) {
     dispatch({ type: 'update-card', section, index: selection.index, card: next });
@@ -164,21 +163,17 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
       eyebrow={pending ? `New ${info.label.toLowerCase()} card` : `${info.label} card`}
       title={card.name || entity || (entity === undefined ? info.label : 'Choose an entity')}
       footer={footer}
+      preview
+      done={!pending}
+      doneDisabled={entityMissing}
     >
       <InspectorField
         label="Card type"
         htmlFor="card-type"
-        hint={
-          pending || entity === undefined
-            ? undefined
-            : typeChoices.length > 1
-              ? 'Only types that can show this entity are listed.'
-              : 'No other card type can show this entity.'
-        }
+        hint={pending ? undefined : 'The entity is kept if the new type can show it.'}
       >
         <Select
           value={card.type}
-          disabled={typeChoices.length < 2}
           onValueChange={(kind) => change(convertCard(card, kind as CardKind))}
         >
           <SelectTrigger id="card-type" className="w-full">

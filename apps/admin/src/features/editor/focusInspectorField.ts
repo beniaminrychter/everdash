@@ -1,6 +1,6 @@
 /**
- * Focuses a field in the inspector once it has rendered. Below lg the inspector is a sheet that
- * mounts after the selection changes, so the field is looked up after a short wait.
+ * Focuses a field in the editor dialog once it has rendered. The dialog mounts after the
+ * selection changes, so the field is looked up after a short wait.
  */
 export function focusInspectorField(id: string) {
   window.setTimeout(() => {
