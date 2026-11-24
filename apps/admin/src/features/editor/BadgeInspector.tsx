@@ -76,6 +76,8 @@ export function BadgeInspector({ selection, onRequestDelete }: BadgeInspectorPro
       eyebrow={pending ? 'New temperature badge' : 'Temperature badge'}
       title={badge.name || badge.entity || 'Choose an entity'}
       footer={footer}
+      preview
+      done={!pending}
     >
       <InspectorField
         label="Temperature sensor"

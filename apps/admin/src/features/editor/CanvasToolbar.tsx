@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { RotateCwIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,9 +13,12 @@ import { unfinishedCardIssue } from '@/app/draft/draftReducer';
 import { hasIncomplete } from '@/app/draft/incomplete';
 import { previewZoomOptions } from './deviceViewport';
 import type { DeviceViewportOption, PreviewZoom, ResolvedViewport } from './deviceViewport';
+import { AddCardDialog } from './AddCardDialog';
 import { focusInspectorField } from './focusInspectorField';
 
 interface CanvasToolbarProps {
+  /** A new item was started; its editor opens. */
+  onEdit: () => void;
   deviceOptions: readonly DeviceViewportOption[];
   selectedViewport: ResolvedViewport | null;
   zoom: PreviewZoom;
@@ -24,6 +28,7 @@ interface CanvasToolbarProps {
 }
 
 export function CanvasToolbar({
+  onEdit,
   deviceOptions,
   selectedViewport,
   zoom,
@@ -33,6 +38,7 @@ export function CanvasToolbar({
 }: CanvasToolbarProps) {
   const { state, dispatch } = useDraft();
   const pendingCard = hasIncomplete(state.document);
+  const [pickingCard, setPickingCard] = useState(false);
 
   const unfinished = unfinishedCardIssue(state);
 
@@ -115,34 +121,46 @@ export function CanvasToolbar({
             variant="outline"
             size="sm"
             className="px-2.5"
-            onClick={() => dispatch({ type: 'start-badge' })}
+            onClick={() => {
+              dispatch({ type: 'start-badge' });
+              onEdit();
+            }}
           >
             + Badge
           </Button>
-          {/* Sections are optional titled groups of cards; the new one is named in the inspector. */}
+          {/* Sections are optional titled groups of cards; the new one is named in the editor. */}
           <Button
             variant="outline"
             size="sm"
             className="px-2.5"
             onClick={() => {
               dispatch({ type: 'add-section' });
+              onEdit();
               focusInspectorField('section-name');
             }}
           >
             + Section
           </Button>
-          {/* The new card is added to the view at once; its type and entity are chosen in the inspector. */}
+          {/* Pick a type first; the new card is then added to the view and finished in the editor. */}
           <Button
             variant="outline"
             size="sm"
             className="px-2.5"
             disabled={pendingCard}
-            onClick={() => dispatch({ type: 'start-card', kind: 'light' })}
+            onClick={() => setPickingCard(true)}
           >
             + Add card
           </Button>
         </div>
       </div>
+      <AddCardDialog
+        open={pickingCard}
+        onOpenChange={setPickingCard}
+        onPick={(kind) => {
+          dispatch({ type: 'start-card', kind });
+          onEdit();
+        }}
+      />
       {unfinished && (
         <output className="mt-2 block text-sm text-amber-700 dark:text-amber-400">
           {unfinished}

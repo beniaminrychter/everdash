@@ -356,6 +356,15 @@ async function chooseMenuItem(target, name, item) {
   await target.getByRole('menuitem', { name: item, exact: true }).click();
 }
 
+/** Starts a new card of the given kind: + Add card, then the type in the picker. */
+async function addCard(target, kind) {
+  await target.getByRole('button', { name: '+ Add card' }).click();
+  await target
+    .getByRole('dialog', { name: 'Add card' })
+    .getByRole('button', { name: new RegExp(`^${kind}`) })
+    .click();
+}
+
 /**
  * Drags with the mouse the way a person does: press, several small moves so the drag starts and
  * the pointer crosses the cards in between, then release.
@@ -591,8 +600,14 @@ try {
   await expect(page.getByText('Give the view a name.')).toBeVisible();
   await expect(page.getByText('This dashboard has problems')).toHaveCount(0);
   await expect(canvasRoot).toBeVisible();
+  // The rename is a dialog: the page behind it is inert until Done.
+  await page.getByRole('dialog').getByRole('button', { name: 'Done', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(saveButton).toBeDisabled();
+  await page.getByRole('button', { name: 'View options' }).click();
+  await page.getByRole('menuitem', { name: 'Rename' }).click();
   await page.getByLabel('View name').fill('Guest room');
+  await page.getByRole('dialog').getByRole('button', { name: 'Done', exact: true }).click();
   await expect(viewTab('Guest room')).toBeVisible();
 
   await expect(saveButton).toBeEnabled();
@@ -602,11 +617,9 @@ try {
     'border-top-width',
     '1px',
   );
-  await page.getByRole('button', { name: '+ Add card' }).click();
-  await page.getByRole('combobox', { name: 'Card type' }).click();
-  await page.getByRole('option', { name: /^Climate/ }).click();
-  // The new card is in the preview before an entity is chosen.
-  await expect(page.getByRole('button', { name: 'Edit New climate' })).toBeVisible();
+  await addCard(page, 'Climate');
+  // The new card is in the dialog's preview before an entity is chosen.
+  await expect(page.locator('[data-canvas-preview]')).toContainText('New climate');
   const entityPicker = page.getByLabel('Home Assistant entity');
   await entityPicker.click();
   await page.getByPlaceholder('Search climate by name or ID').fill('Living Room');
@@ -646,9 +659,11 @@ try {
     .boundingBox();
   await page.mouse.click(center(increase).x, center(increase).y);
   assert.equal(deviceCommandCount, 0, 'editor card content must not send device commands');
-  await page.getByRole('button', { name: '+ Add card' }).click();
-  await page.getByRole('combobox', { name: 'Card type' }).click();
-  await page.getByRole('option', { name: /^Value/ }).click();
+  // Selecting the card opened its editor; leave it to carry on with the canvas.
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await addCard(page, 'Value');
   await page.getByLabel('Home Assistant entity').click();
   await page.getByPlaceholder('Search sensor or input_number by name or ID').fill('Lounge');
   await page.getByRole('option', { name: /Lounge Temperature/ }).click();
@@ -674,14 +689,10 @@ try {
   await page.getByRole('option', { name: '1', exact: true }).click();
   await page.getByRole('button', { name: 'Add card', exact: true }).click();
   await expect(preview.getByRole('button', { name: 'Edit Power meter' })).toBeVisible();
-  await page.getByRole('button', { name: '+ Add card' }).click();
-  await page.getByRole('combobox', { name: 'Card type' }).click();
-  await page.getByRole('option', { name: /^Switch/ }).click();
+  await addCard(page, 'Switch');
   await expect(page.getByLabel('Home Assistant entity')).toBeVisible();
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
-  await page.getByRole('button', { name: '+ Add card' }).click();
-  await page.getByRole('combobox', { name: 'Card type' }).click();
-  await page.getByRole('option', { name: /^Scene/ }).click();
+  await addCard(page, 'Scene');
   await expect(page.getByLabel('Home Assistant entity')).toBeVisible();
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await page.getByRole('button', { name: '+ Badge' }).click();
@@ -736,7 +747,12 @@ try {
   await page.getByRole('menuitem', { name: 'Duplicate' }).click();
   await expect(viewTab('Home copy')).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('tab')).toHaveText(['Home', 'Home copy', 'Guest room']);
+  // The view's name is edited in its dialog, opened by Rename.
+  await page.getByRole('button', { name: 'View options' }).click();
+  await page.getByRole('menuitem', { name: 'Rename' }).click();
   await expect(page.getByLabel('View name')).toHaveValue('Home copy');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.getByRole('button', { name: 'View options' }).click();
   await page.getByRole('menuitem', { name: 'Delete view' }).click();
   await page
@@ -812,12 +828,16 @@ try {
   await viewTab('Guest room').click();
   await expect(page.locator('iframe')).toHaveCount(0);
 
-  // Below lg the inspector is a sheet.
+  // Editing happens in a dialog at every width; on a narrow window it fills the screen.
   await page.setViewportSize({ width: 900, height: 768 });
   await hoverCard(preview, 'Living Room Climate');
   await preview.getByRole('button', { name: 'Edit Living Room Climate' }).click();
-  const inspector = page.getByRole('dialog', { name: 'Inspector' });
+  const inspector = page.getByRole('dialog');
   await expect(inspector).toBeVisible();
+  // The dialog shows the card as the tablet draws it, without the editor's hover chrome.
+  await expect(page.locator('aside[aria-label="Inspector"]')).toHaveCount(0);
+  await expect(inspector.locator('[data-canvas-preview]')).toContainText('Living Room Climate');
+  await expect(inspector.locator('[data-canvas-preview] [data-editor-card]')).toHaveCount(0);
   const displayName = inspector.getByLabel('Display name');
   const originalName = await displayName.inputValue();
   await displayName.fill('Cancelled rename');
@@ -854,17 +874,24 @@ try {
   const pendingPage = await openPage({ width: 1440, height: 1000 });
   await expect(pendingPage.getByRole('tab', { name: 'Guest room' })).toBeVisible();
   await pendingPage.getByRole('button', { name: '+ View' }).click();
-  await pendingPage.getByRole('button', { name: '+ Add card' }).click();
-  await pendingPage.getByRole('combobox', { name: 'Card type' }).click();
-  await pendingPage.getByRole('option', { name: /^Climate/ }).click();
+  await addCard(pendingPage, 'Climate');
   await expect(pendingPage.getByRole('button', { name: 'Add card', exact: true })).toBeDisabled();
-  await expect(pendingPage.getByRole('button', { name: 'Select New climate' })).toBeVisible();
+  await expect(pendingPage.locator('[data-canvas-preview]')).toContainText('New climate');
   await expect(
     pendingPage.locator('[data-canvas-island]').getByText('Choose an entity'),
   ).toBeVisible();
+  await expect(pendingPage.getByText('Finish or remove the new card before saving.')).toBeVisible();
+  // Closing the dialog leaves the new card in the draft, with saving blocked.
+  await pendingPage.keyboard.press('Escape');
+  await expect(pendingPage.getByRole('dialog')).toHaveCount(0);
+  await expect(pendingPage.getByRole('button', { name: 'Select New climate' })).toBeVisible();
+  // Clicking the card opens its editor again.
+  await pendingPage.getByRole('button', { name: 'Select New climate' }).click();
+  await expect(pendingPage.getByRole('dialog')).toBeVisible();
+  await pendingPage.keyboard.press('Escape');
+  await expect(pendingPage.getByRole('dialog')).toHaveCount(0);
   const pendingSave = pendingPage.getByRole('button', { name: 'Save', exact: true });
   await expect(pendingSave).toBeDisabled();
-  await expect(pendingPage.getByText('Finish or remove the new card before saving.')).toBeVisible();
   // The new card has the same hover chrome as any card; Duplicate is not offered for it.
   await openCardMenu(pendingPage, 'New climate');
   await expect(pendingPage.getByRole('menuitem', { name: 'Duplicate' })).toBeDisabled();
@@ -877,6 +904,23 @@ try {
   await expect(pendingSave).toBeEnabled();
   assert.equal(saveCount, savesBefore, 'nothing was saved');
   await pendingPage.close();
+
+  // The sidebar follows the window: open on wide windows, an icon rail on narrow ones, and a
+  // manual toggle holds until the width next crosses the breakpoint.
+  const sidebarPage = await openPage({ width: 1440, height: 900 });
+  const sidebarRoot = sidebarPage.locator('[data-slot="sidebar"]');
+  await expect(sidebarRoot).toHaveAttribute('data-state', 'expanded');
+  await sidebarPage.setViewportSize({ width: 1000, height: 900 });
+  await expect(sidebarRoot).toHaveAttribute('data-state', 'collapsed');
+  await sidebarPage.getByRole('button', { name: 'Expand sidebar' }).click();
+  await expect(sidebarRoot).toHaveAttribute('data-state', 'expanded');
+  await sidebarPage.setViewportSize({ width: 900, height: 900 });
+  await expect(sidebarRoot).toHaveAttribute('data-state', 'expanded');
+  await sidebarPage.setViewportSize({ width: 1440, height: 900 });
+  await expect(sidebarRoot).toHaveAttribute('data-state', 'expanded');
+  await sidebarPage.setViewportSize({ width: 1000, height: 900 });
+  await expect(sidebarRoot).toHaveAttribute('data-state', 'collapsed');
+  await sidebarPage.close();
 
   // A weather card is one or two rows high; two is the default and is not written to the config.
   savedConfig = {
@@ -898,9 +942,12 @@ try {
     'true',
   );
   await rowsField.getByRole('button', { name: '1 row', exact: true }).click();
+  await rowsPage.getByRole('dialog').getByRole('button', { name: 'Done', exact: true }).click();
   await rowsPage.getByRole('button', { name: 'Save', exact: true }).click();
   await expect.poll(() => savedConfig.views[0].cards[0].rows).toBe(1);
+  await rowsPage.getByRole('button', { name: 'Select Forecast', exact: true }).click();
   await rowsField.getByRole('button', { name: '2 rows' }).click();
+  await rowsPage.getByRole('dialog').getByRole('button', { name: 'Done', exact: true }).click();
   await rowsPage.getByRole('button', { name: 'Save', exact: true }).click();
   await expect.poll(() => 'rows' in savedConfig.views[0].cards[0]).toBe(false);
   await rowsPage.getByRole('combobox', { name: 'Preview viewport' }).click();
@@ -915,9 +962,13 @@ try {
     'weather details must stack under current conditions on phone-sized previews',
   );
   await rowsPage.getByRole('button', { name: 'Portrait', exact: true }).click();
-  await rowsPage.getByRole('button', { name: '+ Section' }).click();
-  await rowsPage.getByRole('button', { name: '+ Section' }).click();
-  await rowsPage.getByRole('button', { name: '+ Section' }).click();
+  // A new section opens its dialog to be named; each one is closed before the next.
+  for (let added = 0; added < 3; added += 1) {
+    await rowsPage.getByRole('button', { name: '+ Section' }).click();
+    await expect(rowsPage.getByRole('dialog')).toBeVisible();
+    await rowsPage.getByRole('dialog').getByRole('button', { name: 'Done', exact: true }).click();
+    await expect(rowsPage.getByRole('dialog')).toHaveCount(0);
+  }
   const rowsFrame = rowsPage.locator('[data-preview-viewport]');
   await expect
     .poll(() => rowsFrame.evaluate((element) => element.scrollHeight > element.clientHeight))
@@ -930,6 +981,96 @@ try {
     true,
   );
   await rowsPage.close();
+
+  // The editor dialog: any card type, a preview that follows size and state, and a Cancel that
+  // puts everything back.
+  savedConfig = {
+    schemaVersion: 1,
+    views: [
+      {
+        id: 'home',
+        title: 'Home',
+        cards: [
+          { type: 'weather', entity: 'weather.home', name: 'Forecast' },
+          { type: 'light', entity: 'light.kitchen', name: 'Kitchen' },
+          { type: 'clock' },
+        ],
+        badges: [],
+      },
+    ],
+  };
+  const dialogPage = await openPage({ width: 1440, height: 1000 });
+  const editor = dialogPage.getByRole('dialog');
+  const editorSave = dialogPage.getByRole('button', { name: 'Save', exact: true });
+  const editorButton = (name) => editor.getByRole('button', { name, exact: true });
+  const clockLayer = dialogPage.getByRole('button', { name: 'Select Time and date', exact: true });
+
+  // The preview shows the share of the row the card takes.
+  await dialogPage.getByRole('button', { name: 'Select Forecast', exact: true }).click();
+  const forecast = editor.locator('[data-canvas-preview] [data-card="weather"]');
+  const sizes = editor.getByRole('group', { name: 'Size', exact: true });
+  await sizes.getByRole('button', { name: '1/1', exact: true }).click();
+  await expect(forecast).toBeVisible();
+  // A card wider than the pane is scaled down to fit; one that fits is shown at its natural size.
+  const stageTransform = () =>
+    forecast.evaluate(
+      (element) => getComputedStyle(element.closest('[style*="transform"]')).transform,
+    );
+  await expect.poll(stageTransform).not.toBe('matrix(1, 0, 0, 1, 0, 0)');
+  const fullWidth = (await forecast.boundingBox()).width;
+  await sizes.getByRole('button', { name: '1/4', exact: true }).click();
+  await expect.poll(async () => (await forecast.boundingBox()).width).toBeLessThan(fullWidth / 2);
+  await expect.poll(stageTransform).toBe('matrix(1, 0, 0, 1, 0, 0)');
+  await editorButton('Cancel').click();
+  await expect(editor).toHaveCount(0);
+  await expect(editorSave).toBeDisabled();
+
+  // The preview can show the card on, off or unavailable; the page behind is untouched.
+  await dialogPage.getByRole('button', { name: 'Select Kitchen', exact: true }).click();
+  await expect(editor.getByText('Show as')).toBeVisible();
+  await editorButton('Unavailable').click();
+  await expect(editor.locator('[data-canvas-preview]')).toContainText(/unavailable/i);
+  await editorButton('On').click();
+  await expect(editor.locator('[data-canvas-preview]')).not.toContainText(/unavailable/i);
+  await editorButton('Live').click();
+  // Only the form scrolls, never the icon list inside it.
+  const iconList = editor
+    .locator('button[data-icon]')
+    .first()
+    .locator('xpath=ancestor::*[@role="presentation"]');
+  expect(await iconList.evaluate((element) => getComputedStyle(element).overflowY)).toBe('visible');
+
+  // Cancel puts back every change made since the dialog opened.
+  await editor.getByLabel('Display name').fill('Changed');
+  await expect(dialogPage.getByText('Changed').first()).toBeAttached();
+  await editorButton('Cancel').click();
+  await expect(editor).toHaveCount(0);
+  await expect(editorSave).toBeDisabled();
+  await dialogPage.getByRole('button', { name: 'Select Kitchen', exact: true }).click();
+  await expect(editor.getByLabel('Display name')).toHaveValue('Kitchen');
+
+  // Any card can change type; one that needs an entity cannot be left without one.
+  await editor.getByRole('combobox', { name: 'Card type' }).click();
+  await dialogPage.getByRole('option', { name: /^Climate/ }).click();
+  await expect(editorButton('Done')).toBeDisabled();
+  // The card keeps its name and is drawn as a new climate card until an entity is chosen.
+  await expect(editor.locator('[data-canvas-preview] [data-card="climate"]')).toBeVisible();
+  await editorButton('Cancel').click();
+  await expect(editorSave).toBeDisabled();
+  await expect(
+    dialogPage.getByRole('button', { name: 'Select Kitchen', exact: true }),
+  ).toBeVisible();
+
+  // A card without an entity, such as the clock, changes type too.
+  await clockLayer.click();
+  await expect(editor.getByRole('combobox', { name: 'Card type' })).toBeEnabled();
+  await editor.getByRole('combobox', { name: 'Card type' }).click();
+  await dialogPage.getByRole('option', { name: /^Light/ }).click();
+  await expect(editorButton('Done')).toBeDisabled();
+  await editorButton('Cancel').click();
+  await expect(editorSave).toBeDisabled();
+  await expect(clockLayer).toBeVisible();
+  await dialogPage.close();
 
   // Badges are edited like cards: click to edit, a ⋮ menu, and drag and drop to reorder.
   savedConfig = {
@@ -969,8 +1110,9 @@ try {
   };
   await expect.poll(badgeNames).toEqual(['Alpha', 'Bravo', 'Charlie']);
   await badgeLayer('Bravo').click();
-  await expect(badgeLayer('Bravo')).toHaveAttribute('aria-pressed', 'true');
   await expect(badgePage.getByLabel('Display name')).toHaveValue('Bravo');
+  await badgePage.keyboard.press('Escape');
+  await expect(badgePage.getByRole('dialog')).toHaveCount(0);
 
   await chooseBadgeItem('Alpha', 'Move later');
   await expect.poll(badgeNames).toEqual(['Bravo', 'Alpha', 'Charlie']);
@@ -1108,12 +1250,11 @@ try {
   assert.ok(topmost, 'the open menu must be the topmost layer where it is drawn');
   await sectionPage.keyboard.press('Escape');
 
-  // A click without movement selects the card and opens it in the inspector.
+  // A click without movement opens the card in its editor dialog.
   await selectLayer('Hall temp').click();
   await expect(sectionPage.getByLabel('Display name')).toHaveValue('Hall temp');
-  await expect(selectLayer('Hall temp')).toHaveAttribute('aria-pressed', 'true');
-  await sectionPage.getByRole('button', { name: 'Select Lounge', exact: true }).click();
-  await expect(sectionPage.getByLabel('Display name')).toHaveValue('Lounge');
+  await sectionPage.keyboard.press('Escape');
+  await expect(sectionPage.getByRole('dialog')).toHaveCount(0);
 
   // Dragging the whole card: a placeholder shows where it will land, the card follows the pointer.
   await dragTo(
@@ -1144,8 +1285,8 @@ try {
   assert.deepEqual(await areaNames(sectionPage, ''), ['Living Room Climate']);
   await expect(ghost).toHaveCount(0);
   await expect(lifted).toHaveCount(0);
-  // The drop does not select the card that moved; Lounge stays the selected one.
-  await expect(sectionPage.getByLabel('Display name')).toHaveValue('Lounge');
+  // The drop does not open the editor for the card that moved.
+  await expect(sectionPage.getByRole('dialog')).toHaveCount(0);
 
   // Dropping before a card in another section puts the card ahead of it.
   const lounge = await selectLayer('Lounge').boundingBox();
@@ -1156,8 +1297,7 @@ try {
   assert.deepEqual(await areaNames(sectionPage, 'kitchen'), ['Hall temp', 'Lounge']);
   assert.deepEqual(await areaNames(sectionPage, 'garden'), []);
   await expect(sectionArea('garden').getByText(/No cards in this section yet/)).toBeVisible();
-  // Lounge is still the selected card, and still has the right index after the card ahead of it.
-  await expect(sectionPage.getByLabel('Display name')).toHaveValue('Lounge');
+  await expect(sectionPage.getByRole('dialog')).toHaveCount(0);
 
   // Reordering inside a list: onto the far side of the neighbour.
   const neighbour = await selectLayer('Lounge').boundingBox();
@@ -1180,10 +1320,10 @@ try {
   await chooseMenuItem(sectionPage, 'Hall temp', 'Move later');
   assert.deepEqual(await areaNames(sectionPage, ''), ['Living Room Climate', 'Hall temp']);
 
-  // Duplicate puts a copy right after the card and selects it.
+  // Duplicate puts a copy right after the card and selects it, without opening the editor.
   await chooseMenuItem(sectionPage, 'Lounge', 'Duplicate');
   assert.deepEqual(await areaNames(sectionPage, 'kitchen'), ['Lounge', 'Lounge']);
-  await expect(sectionPage.getByLabel('Display name')).toHaveValue('Lounge');
+  await expect(sectionPage.getByRole('dialog')).toHaveCount(0);
   const lounges = sectionPage.getByRole('button', { name: 'Select Lounge', exact: true });
   await expect(lounges.nth(1)).toHaveAttribute('aria-pressed', 'true');
   // Delete goes through the existing confirmation, which can be cancelled.
@@ -1202,10 +1342,12 @@ try {
 
   // A card started in a section is a card of that section, with the same chrome and drag.
   await sectionPage.getByRole('button', { name: 'Add card to Garden' }).click();
+  await expect(sectionPage.getByRole('combobox', { name: 'Section' })).toContainText('Garden');
+  await sectionPage.keyboard.press('Escape');
+  await expect(sectionPage.getByRole('dialog')).toHaveCount(0);
   await expect(
     sectionArea('garden').getByRole('button', { name: 'Select New light' }),
   ).toBeVisible();
-  await expect(sectionPage.getByRole('combobox', { name: 'Section' })).toContainText('Garden');
   await expect(
     sectionPage.locator('[data-canvas-island]').getByText('Choose an entity'),
   ).toBeVisible();
@@ -1220,8 +1362,13 @@ try {
   });
   assert.deepEqual(await areaNames(sectionPage, 'kitchen'), ['New light', 'Lounge']);
   assert.deepEqual(await areaNames(sectionPage, 'garden'), []);
+  // A click right after a drop is ignored (a guard against the drag's own click), so wait it out.
+  await sectionPage.waitForTimeout(300);
+  await selectLayer('New light').click();
   await expect(sectionPage.getByRole('combobox', { name: 'Section' })).toContainText('Kitchen');
   await expect(sectionPage.getByRole('button', { name: 'Add card', exact: true })).toBeDisabled();
+  await sectionPage.keyboard.press('Escape');
+  await expect(sectionPage.getByRole('dialog')).toHaveCount(0);
   await expect(saveSections).toBeDisabled();
   // Acting on other cards never makes it disappear.
   await chooseMenuItem(sectionPage, 'Hall temp', 'Move earlier');
@@ -1240,9 +1387,7 @@ try {
   await expect(sectionPage.getByText('Finish or remove the new card')).toHaveCount(0);
   // The inspector's Cancel removes a new card too.
   await sectionPage.getByRole('button', { name: 'Add card to Garden' }).click();
-  await expect(
-    sectionArea('garden').getByRole('button', { name: 'Select New light' }),
-  ).toBeVisible();
+  await expect(sectionPage.locator('[aria-label="Select New light"]').first()).toBeAttached();
   await sectionPage.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(sectionPage.getByRole('button', { name: 'Select New light' })).toHaveCount(0);
   // And it can be finished: pick an entity, press Add card, and the gate lifts.
@@ -1267,14 +1412,14 @@ try {
   await expect(sectionPage.getByText('Give the section a name.')).toBeVisible();
   await expect(sectionPage.getByText('This dashboard has problems')).toHaveCount(0);
   await expect(
-    sectionPage.getByRole('button', { name: 'Edit section Untitled section' }),
+    sectionPage.locator('button[aria-label="Edit section Untitled section"]'),
   ).toBeVisible();
-  await expect(
-    sectionPage.getByRole('button', { name: 'Select Lounge', exact: true }),
-  ).toBeVisible();
+  await expect(sectionPage.locator('button[aria-label="Select Lounge"]').first()).toBeVisible();
   await sectionName.fill('Evening');
-  await expect(sectionPage.getByRole('button', { name: 'Edit section Evening' })).toBeVisible();
+  await expect(sectionPage.locator('button[aria-label="Edit section Evening"]')).toBeVisible();
   assert.deepEqual(await headings(), ['Kitchen', 'Garden', 'Evening']);
+  await sectionPage.getByRole('dialog').getByRole('button', { name: 'Done', exact: true }).click();
+  await expect(sectionPage.getByRole('dialog')).toHaveCount(0);
 
   // A section heading has a pencil, a drag handle and a ⋮ menu on hover.
   const sectionMenu = async (name, item) => {
@@ -1306,6 +1451,8 @@ try {
   await sectionMenu('Kitchen', 'Rename');
   await expect(sectionName).toBeFocused();
   await expect(sectionName).toHaveValue('Kitchen');
+  await sectionPage.keyboard.press('Escape');
+  await expect(sectionPage.getByRole('dialog')).toHaveCount(0);
 
   // Sections are reordered by dragging the handle in the heading.
   await sectionPage.getByRole('button', { name: 'Select section Kitchen', exact: true }).hover();

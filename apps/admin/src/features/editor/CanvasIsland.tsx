@@ -22,6 +22,10 @@ interface CanvasIslandProps {
   selection?: DashboardCanvasProps['selection'];
   /** New cards of the view that still need an entity. */
   incomplete?: DashboardCanvasProps['incomplete'];
+  /** Draws the cards without the editor chrome, for a preview beside a form. */
+  readOnly?: boolean;
+  /** Entity states to show instead of the real ones, by entity id. */
+  forcedStates?: Readonly<Record<string, string>>;
   onMessage: (message: unknown) => void;
 }
 
@@ -33,6 +37,7 @@ interface CanvasMountProps {
   selectionSection?: string | null;
   selectionIndex?: number;
   incomplete?: DashboardCanvasProps['incomplete'];
+  readOnly?: boolean;
   onMessage: (message: unknown) => void;
 }
 
@@ -64,6 +69,7 @@ function CanvasMountView({
   selectionSection,
   selectionIndex,
   incomplete,
+  readOnly,
   onMessage,
 }: CanvasMountProps) {
   const container = useRef<HTMLDivElement>(null);
@@ -104,7 +110,14 @@ function CanvasMountView({
     [],
   );
 
-  return <div ref={container} data-canvas-island className="contents" />;
+  // Only the editing canvas is "the island": the focus return and the tests look it up by this.
+  return (
+    <div
+      ref={container}
+      {...(readOnly ? { 'data-canvas-preview': '' } : { 'data-canvas-island': '' })}
+      className="contents"
+    />
+  );
 }
 
 const CanvasMount = memo(CanvasMountView);
@@ -138,12 +151,41 @@ function placeholderStates(document: DashboardDocument): unknown[] {
   });
 }
 
+/** The states with the forced ones swapped in; a forced entity the server did not report is added. */
+function withForcedStates(
+  states: unknown[],
+  forced: Readonly<Record<string, string>> | undefined,
+): unknown[] {
+  if (!forced) {
+    return states;
+  }
+
+  const seen = new Set<string>();
+  const result: unknown[] = states.map((item) => {
+    const entry = item as { entity_id: string; state: string };
+
+    seen.add(entry.entity_id);
+
+    return entry.entity_id in forced ? { ...entry, state: forced[entry.entity_id] } : entry;
+  });
+
+  for (const [entityId, state] of Object.entries(forced)) {
+    if (!seen.has(entityId)) {
+      result.push({ entity_id: entityId, state, attributes: {} });
+    }
+  }
+
+  return result;
+}
+
 export function CanvasIsland({
   document,
   viewId,
   generation,
   selection,
   incomplete,
+  readOnly,
+  forcedStates,
   onMessage,
 }: CanvasIslandProps) {
   const latestRequest = useRef(0);
@@ -195,13 +237,22 @@ export function CanvasIsland({
 
     return {
       ...preview.result,
-      states: [...preview.result.states, ...placeholderStates(document)],
+      states: withForcedStates(
+        [...preview.result.states, ...placeholderStates(document)],
+        forcedStates,
+      ),
       config: document,
       now: preview.now,
       generation,
-      editor: true,
+      editor: !readOnly,
     };
-  }, [document, generation, preview]);
+  }, [document, forcedStates, generation, preview, readOnly]);
+
+  if (invalid && readOnly) {
+    return (
+      <p className="text-muted-foreground text-sm">Fix the highlighted fields to see a preview.</p>
+    );
+  }
 
   if (invalid) {
     return (
@@ -245,6 +296,7 @@ export function CanvasIsland({
           selectionSection={selection && 'section' in selection ? selection.section : undefined}
           selectionIndex={selection && 'index' in selection ? selection.index : undefined}
           incomplete={incomplete}
+          readOnly={readOnly}
           onMessage={onMessage}
         />
       )}

@@ -134,12 +134,7 @@ export function IconGrid({ value, label, onChange, auto = false }: IconGridProps
           className="pl-8"
         />
       </div>
-      <div
-        ref={list}
-        role="presentation"
-        onKeyDown={move}
-        className="grid max-h-72 gap-3 overflow-y-auto overscroll-contain pr-1"
-      >
+      <div ref={list} role="presentation" onKeyDown={move} className="grid gap-3">
         {groups.map((group) => (
           <fieldset key={group.label} className="grid gap-1.5">
             <legend className="text-muted-foreground mb-1.5 text-xs font-medium">
