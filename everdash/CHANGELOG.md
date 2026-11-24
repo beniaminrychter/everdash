@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.8
+
+- Resolve IPv6 tablet clients to internal IPv4 addresses for device access and admin display.
+- Remove Safari 12 tap focus outlines and confirm device unregister actions.
+
 ## 0.2.7
 
 - Add Home Assistant sidebar **Ingress** (`ingress: true` on internal port `8099`, admin-only) so the EverDash builder opens directly from Home Assistant with no separate sign-in.
