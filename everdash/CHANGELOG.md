@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0
+
+- Use the admin in English or Polish, with an automatic language option.
+- Review draft changes against the saved dashboard in a JSON diff.
+- Use the admin on smaller screens and add temperature badges directly from the dashboard preview.
+- Check local and external dashboard address reachability when pairing tablets.
+- Use consistent on and off colors across tablet switches and accessories.
+
 ## 0.2.8
 
 - Resolve IPv6 tablet clients to internal IPv4 addresses for device access and admin display.
