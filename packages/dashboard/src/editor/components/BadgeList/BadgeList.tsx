@@ -1,4 +1,6 @@
 import { useRef } from 'preact/hooks';
+import { useI18n } from '@everdash/ui/i18n/index';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import type { BadgeListProps } from '../../../features/dashboard/data/editorKit';
 import { badgeGroup, baseOptions, restoreDrop, useSortable } from '../../sortable/useSortable';
 import styles from './BadgeList.module.css';
@@ -9,6 +11,7 @@ import styles from './BadgeList.module.css';
  * its new place. Badges sort only among themselves.
  */
 export function BadgeList({ class: className, onEvent, children }: BadgeListProps) {
+  const { language } = useI18n();
   const list = useRef<HTMLDivElement>(null);
   const report = useRef(onEvent);
 
@@ -40,6 +43,9 @@ export function BadgeList({ class: className, onEvent, children }: BadgeListProp
   return (
     <div ref={list} class={className}>
       {children}
+      <button type="button" class={styles.addBadge} onClick={() => onEvent({ type: 'badge.add' })}>
+        {m.admin_editor_add_badge_plus({}, { locale: language })}
+      </button>
     </div>
   );
 }

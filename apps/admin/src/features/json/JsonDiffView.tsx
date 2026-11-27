@@ -32,8 +32,7 @@ export function JsonDiffView({ previous, current }: JsonDiffViewProps) {
       aria-label={m.admin_json_diff_aria()}
       className="border-input bg-muted/30 flex min-h-40 flex-1 flex-col overflow-hidden rounded-md border"
     >
-      <div className="border-border/70 bg-muted/70 flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2 text-xs">
-        <span className="text-muted-foreground">{m.admin_json_diff_summary()}</span>
+      <div className="border-border/70 bg-muted/70 flex flex-wrap items-center justify-end border-b px-3 py-2 text-xs">
         <div className="flex items-center gap-2 font-mono font-medium tabular-nums">
           <span className="text-emerald-700 dark:text-emerald-400">
             {m.admin_json_diff_added({ count: diff.added })}

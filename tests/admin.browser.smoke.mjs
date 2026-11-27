@@ -439,6 +439,46 @@ async function contrastOf(locator) {
 }
 
 try {
+  const phone = await openPage({ width: 320, height: 568 });
+  const phoneSave = phone.getByRole('button', { name: 'Save', exact: true });
+  const phoneView = phone.getByRole('tab', { name: 'Home', exact: true });
+  const phoneTabBox = await phoneView.boundingBox();
+  const phoneSaveBox = await phoneSave.boundingBox();
+  assert.ok(
+    phoneTabBox && phoneSaveBox && phoneTabBox.y + phoneTabBox.height <= phoneSaveBox.y,
+    'Phone view tabs sit above the save controls',
+  );
+  const phoneAddBadge = phone
+    .locator('[data-canvas-island]')
+    .getByRole('button', { name: '+ Badge', exact: true });
+  await expect(phoneAddBadge).toBeInViewport();
+  await phoneAddBadge.click();
+  await expect(phone.getByLabel('Temperature sensor')).toBeVisible();
+  await phone.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await phone.getByRole('button', { name: 'Open sidebar' }).click();
+  await phone.getByRole('button', { name: 'JSON import / export', exact: true }).click();
+  await expect(phone.getByRole('dialog', { name: 'Sidebar' })).toHaveCount(0);
+  const jsonTitle = phone.getByRole('heading', { name: 'Dashboard JSON', level: 2 });
+  const phoneDiff = phone.getByRole('tab', { name: 'Diff', exact: true });
+  const [titleBox, diffTabBox] = await Promise.all([
+    jsonTitle.boundingBox(),
+    phoneDiff.boundingBox(),
+  ]);
+  assert.ok(
+    titleBox && diffTabBox && titleBox.y + titleBox.height <= diffTabBox.y,
+    'Editor and Diff sit below the JSON card title',
+  );
+  await phoneDiff.click();
+  await expect(phone.getByRole('tabpanel')).toContainText('No unsaved changes');
+  await phone.getByRole('button', { name: 'Validate & apply' }).scrollIntoViewIfNeeded();
+  await expect(phone.getByRole('button', { name: 'Validate & apply' })).toBeInViewport();
+  await phone.getByRole('button', { name: 'Open sidebar' }).click();
+  await phone.getByRole('button', { name: 'Dashboard settings', exact: true }).click();
+  await expect(phone.getByRole('heading', { name: 'Tablet settings', level: 2 })).toBeVisible();
+  await expect(phone.getByLabel('Home timezone')).toBeInViewport();
+  assert.equal(await phone.evaluate(() => document.documentElement.scrollWidth), 320);
+  await phone.close();
+
   const page = await openPage({ width: 1440, height: 1000 });
   const sidebar = (name) => page.getByRole('button', { name, exact: true });
   const saveButton = page.getByRole('button', { name: 'Save', exact: true });
@@ -713,11 +753,15 @@ try {
   await addCard(page, 'Scene');
   await expect(page.getByLabel('Home Assistant entity')).toBeVisible();
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
-  await page.getByRole('button', { name: '+ Badge' }).click();
+  await canvasRoot.getByRole('button', { name: '+ Badge', exact: true }).click();
   await page.getByLabel('Temperature sensor').click();
   await page.getByPlaceholder('Search sensor by name or ID').fill('Lounge');
   await page.getByRole('option', { name: /Lounge Temperature/ }).click();
   await page.getByLabel('Display name').fill('Lounge temp');
+  await expect(page.locator('[data-canvas-preview]')).toContainText('Lounge temp');
+  await expect(
+    page.locator('[data-canvas-preview]').getByRole('button', { name: '+ Badge', exact: true }),
+  ).toHaveCount(0);
   await page.getByRole('button', { name: 'Add badge', exact: true }).click();
   await expect(preview.getByRole('button', { name: 'Edit Lounge temp' })).toBeVisible();
   // A badge has no delete button of its own: hovering it shows a ⋮ on its top right corner.
@@ -808,7 +852,7 @@ try {
   const jsonEditor = page.locator('[data-json-editor]');
   const jsonActions = page.locator('[data-json-actions]');
   const appHeader = page.locator('header').first();
-  await expect(page.getByText(/Valid JSON · \d+ lines/)).toBeVisible();
+  await expect(page.getByText('Valid JSON', { exact: true })).toBeVisible();
   assert.equal(JSON.parse(await dashboardJson.inputValue()).timeZone, 'Europe/Warsaw');
   await dashboardJson.fill('{\n  "schemaVersion": 1,\n  "views": [],\n}');
   await expect(page.getByText('The JSON can not be applied')).toBeVisible();
@@ -827,7 +871,7 @@ try {
   };
   await page.setViewportSize({ width: 1440, height: 680 });
   await dashboardJson.fill(JSON.stringify(tallConfig, null, 2));
-  await expect(page.getByText(/Valid JSON · \d+ lines/)).toBeVisible();
+  await expect(page.getByText('Valid JSON', { exact: true })).toBeVisible();
   const headerBefore = await appHeader.boundingBox();
   const actionsBefore = await jsonActions.boundingBox();
   assert.ok(headerBefore && actionsBefore);
@@ -1693,6 +1737,7 @@ try {
       {
         result: 'PASS',
         checks: [
+          'phone header, navigation drawer, JSON tabs and actions, and Settings card',
           'registration code, device metadata, rename, and removal on the Devices page',
           'editor preview device viewport simulation and portrait/landscape toggle',
           'view creation and rename through the inspector',

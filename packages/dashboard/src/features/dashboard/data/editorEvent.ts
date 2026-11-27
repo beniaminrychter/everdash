@@ -20,6 +20,7 @@ export type EditorEvent =
       toEnd?: boolean;
     }
   | { type: 'card.add'; section: string | null }
+  | { type: 'badge.add' }
   | { type: 'badge.edit' | 'badge.delete' | 'badge.duplicate'; index: number }
   | {
       type: 'badge.move';

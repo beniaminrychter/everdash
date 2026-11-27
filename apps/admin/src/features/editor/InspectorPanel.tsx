@@ -1,13 +1,12 @@
 import type { ReactNode } from 'react';
 import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import { Button } from '@/components/ui/button';
-import { DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { useEditorDialog } from './editorDialogContext';
 import { ItemPreview } from './ItemPreview';
 
 interface InspectorPanelProps {
-  eyebrow: string;
   title: string;
   children: ReactNode;
   footer?: ReactNode;
@@ -21,7 +20,6 @@ interface InspectorPanelProps {
 
 /** Shared frame for every editor: a header, the form, an optional preview and an action footer. */
 export function InspectorPanel({
-  eyebrow,
   title,
   children,
   footer,
@@ -34,7 +32,6 @@ export function InspectorPanel({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="border-b px-5 py-4 pr-12">
-        <DialogDescription className="text-xs">{eyebrow}</DialogDescription>
         <DialogTitle className="truncate text-base">{title}</DialogTitle>
       </div>
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">

@@ -306,7 +306,6 @@ export function DevicesPage({
                     {regenerating ? m.admin_devices_regenerating() : m.admin_devices_regenerate()}
                   </Button>
                 </div>
-                <p className="text-muted-foreground text-xs">{m.admin_devices_single_use_hint()}</p>
               </div>
             </div>
           </div>

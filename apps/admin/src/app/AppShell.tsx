@@ -74,7 +74,7 @@ export function AppShell({ origin, connectionMode, ingress, tabletPort }: AppShe
             <PageHeader>
               <h1 className="text-base font-medium">{routeTitle(route)}</h1>
             </PageHeader>
-            <main className="flex min-h-0 flex-1 flex-col overflow-hidden p-4">
+            <main className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4 md:flex md:flex-col md:overflow-hidden">
               <div className="mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col gap-4">
                 <DraftAlerts />
                 <JsonPage />

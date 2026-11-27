@@ -1,10 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import {
-  CheckCircle2Icon,
   CircleAlertIcon,
-  Code2Icon,
   DownloadIcon,
-  GitCompareArrowsIcon,
   RotateCcwIcon,
   UploadIcon,
   WandSparklesIcon,
@@ -19,14 +16,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { pluralize } from '@/lib/i18n';
 import { JsonCodeEditor } from './JsonCodeEditor';
 import { JsonDiffView } from './JsonDiffView';
@@ -35,6 +31,9 @@ import { UnappliedJsonDialog } from './UnappliedJsonDialog';
 import { useJsonGuard } from './useJsonGuard';
 
 type JsonViewMode = 'editor' | 'diff';
+
+const jsonPanelClass =
+  'flex min-h-0 min-w-0 flex-col data-[state=inactive]:hidden max-md:h-[clamp(12rem,45svh,28rem)] max-md:flex-none';
 
 export function JsonPage() {
   const { state, dispatch } = useDraft();
@@ -51,7 +50,6 @@ export function JsonPage() {
 
   const validation = useMemo(() => validateJsonText(text), [text]);
   const issues = readError ? [readError, ...validation.issues] : validation.issues;
-  const lineCount = useMemo(() => text.split('\n').length, [text]);
 
   function apply(): boolean {
     if (!validation.ok || !validation.document) {
@@ -124,68 +122,60 @@ export function JsonPage() {
   }
 
   return (
-    <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden py-0">
-      <CardHeader className="shrink-0 border-b px-6 py-4">
-        <CardTitle>{m.admin_json_title()}</CardTitle>
-        <CardDescription>{m.admin_json_description()}</CardDescription>
-        <CardAction className="flex flex-wrap items-center gap-2">
-          <Tabs value={mode} onValueChange={(next) => setMode(next as JsonViewMode)}>
-            <TabsList className="h-8">
-              <TabsTrigger value="editor" className="gap-1.5 px-2.5 text-xs">
-                <Code2Icon className="size-3.5" aria-hidden="true" />
+    <Card className="min-h-0 min-w-0 shrink-0 gap-0 overflow-hidden py-0 md:flex-1">
+      <CardContent className="flex min-h-0 flex-1 flex-col gap-3 px-4 py-3 sm:px-6">
+        <Tabs
+          value={mode}
+          onValueChange={(next) => setMode(next as JsonViewMode)}
+          className="min-h-0 flex-1 gap-3"
+        >
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
+            <TabsList>
+              <TabsTrigger value="editor" className="px-3">
                 {m.admin_json_tab_editor()}
               </TabsTrigger>
-              <TabsTrigger value="diff" className="gap-1.5 px-2.5 text-xs">
-                <GitCompareArrowsIcon className="size-3.5" aria-hidden="true" />
+              <TabsTrigger value="diff" className="px-3">
                 {m.admin_json_tab_diff()}
                 {hasSavedDiff && (
                   <span className="bg-primary size-1.5 rounded-full" aria-hidden="true" />
                 )}
               </TabsTrigger>
             </TabsList>
-          </Tabs>
-          {validation.ok ? (
-            <Badge
-              variant="secondary"
-              className="gap-1.5 bg-emerald-500/12 text-emerald-700 dark:text-emerald-400"
-            >
-              <CheckCircle2Icon className="size-3.5" aria-hidden="true" />
-              <span>
-                {pluralize(lineCount, {
-                  one: m.admin_json_valid_lines_one,
-                  few: m.admin_json_valid_lines_few,
-                  many: m.admin_json_valid_lines_many,
-                })}
-              </span>
-            </Badge>
-          ) : (
-            <Badge variant="destructive" className="gap-1.5">
-              <CircleAlertIcon className="size-3.5" aria-hidden="true" />
-              <span>
-                {pluralize(issues.length, {
-                  one: m.admin_json_issues_one,
-                  few: m.admin_json_issues_few,
-                  many: m.admin_json_issues_many,
-                })}
-              </span>
-            </Badge>
-          )}
-        </CardAction>
-      </CardHeader>
-      <CardContent className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden px-6 py-4">
-        {mode === 'diff' ? (
-          <JsonDiffView previous={state.baseline} current={text} />
-        ) : (
-          <JsonCodeEditor
-            aria-label={m.admin_json_editor_aria()}
-            value={text}
-            errorLine={validation.errorLine}
-            onChange={(nextText) => {
-              setEdited(nextText);
-              setReadError(null);
-            }}
-          />
-        )}
+            {validation.ok ? (
+              <Badge
+                variant="secondary"
+                className="bg-emerald-500/12 text-emerald-700 dark:text-emerald-400"
+              >
+                {m.admin_json_valid()}
+              </Badge>
+            ) : (
+              <Badge variant="destructive" className="gap-1.5">
+                <CircleAlertIcon className="size-3.5" aria-hidden="true" />
+                <span>
+                  {pluralize(issues.length, {
+                    one: m.admin_json_issues_one,
+                    few: m.admin_json_issues_few,
+                    many: m.admin_json_issues_many,
+                  })}
+                </span>
+              </Badge>
+            )}
+          </div>
+          <TabsContent value="editor" className={jsonPanelClass}>
+            <JsonCodeEditor
+              aria-label={m.admin_json_editor_aria()}
+              value={text}
+              errorLine={validation.errorLine}
+              onChange={(nextText) => {
+                setEdited(nextText);
+                setReadError(null);
+              }}
+            />
+          </TabsContent>
+          <TabsContent value="diff" className={jsonPanelClass}>
+            <JsonDiffView previous={state.baseline} current={text} />
+          </TabsContent>
+        </Tabs>
         {issues.length > 0 && (
           <Alert variant="destructive" className="max-h-32 shrink-0 overflow-y-auto">
             <CircleAlertIcon />
@@ -200,7 +190,10 @@ export function JsonPage() {
           </Alert>
         )}
       </CardContent>
-      <CardFooter data-json-actions className="bg-card shrink-0 flex-wrap gap-2 border-t px-6 py-3">
+      <CardFooter
+        data-json-actions
+        className="bg-card shrink-0 flex-wrap gap-2 border-t px-4 pt-3 pb-3 sm:px-6 [.border-t]:pt-3"
+      >
         <Button onClick={apply}>{m.admin_json_validate_and_apply_amp()}</Button>
         <Button variant="outline" onClick={() => fileInput.current?.click()}>
           <UploadIcon /> {m.admin_json_import_file()}

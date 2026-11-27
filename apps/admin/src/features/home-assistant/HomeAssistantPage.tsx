@@ -15,14 +15,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -94,9 +87,8 @@ export function HomeAssistantPage({
   if (isSupervisor) {
     return (
       <Card>
-        <CardHeader>
+        <CardHeader className="grid-rows-1">
           <CardTitle>{m.admin_ha_connection_title()}</CardTitle>
-          <CardDescription>{m.admin_ha_supervisor_description()}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between gap-4 rounded-md border p-3">
@@ -112,15 +104,12 @@ export function HomeAssistantPage({
   return (
     <>
       <Card>
-        <CardHeader>
+        <CardHeader className="grid-rows-1">
           <CardTitle>{m.admin_ha_connection_title()}</CardTitle>
-          <CardDescription>{m.admin_ha_connection_description()}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center justify-between gap-4 rounded-md border p-3">
-            <code className="min-w-0 truncate font-mono text-sm">
-              {origin || m.admin_ha_not_connected()}
-            </code>
+            {origin && <code className="min-w-0 truncate font-mono text-sm">{origin}</code>}
             {origin ? (
               <Badge variant="secondary">{m.admin_ha_connected()}</Badge>
             ) : (
@@ -139,10 +128,9 @@ export function HomeAssistantPage({
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="grid-rows-1">
           <CardTitle>{m.admin_ha_discovery_title()}</CardTitle>
-          <CardDescription>{m.admin_ha_discovery_description()}</CardDescription>
-          <CardAction>
+          <CardAction className="row-span-1">
             <Button
               variant="outline"
               size="sm"

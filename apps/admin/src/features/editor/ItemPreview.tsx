@@ -143,10 +143,7 @@ export function ItemPreview() {
 
   return (
     <div className="flex min-h-0 flex-col gap-4 p-5">
-      <div className="flex items-center gap-2 text-xs font-medium text-slate-600">
-        <span className="size-1.5 rounded-full bg-emerald-600" aria-hidden="true" />
-        {m.admin_editor_preview_as_tablet()}
-      </div>
+      <div className="text-xs font-medium text-slate-600">{m.admin_editor_preview()}</div>
       <ScaledStage>
         <CanvasIsland
           document={document}

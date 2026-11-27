@@ -19,7 +19,7 @@ export interface CardKindInfo {
   /** Name shown on tiles and in the inspector. */
   label: string;
   /** Short line shown under the name in the Add card dialog. */
-  description: string;
+  description?: string;
   /** Home Assistant domains the main entity may belong to; the first is the primary one. Empty when the card has no entity. */
   domains: readonly string[];
   icon: LucideIcon;
@@ -28,7 +28,7 @@ export interface CardKindInfo {
 const cardKindDefs: readonly {
   kind: CardKind;
   label: () => string;
-  description: () => string;
+  description?: () => string;
   domains: readonly string[];
   icon: LucideIcon;
 }[] = [
@@ -56,7 +56,6 @@ const cardKindDefs: readonly {
   {
     kind: 'weather',
     label: () => m.admin_card_kind_weather_label(),
-    description: () => m.admin_card_kind_weather_desc(),
     domains: cardEntityDomains('weather'),
     icon: CloudSunIcon,
   },
@@ -101,7 +100,7 @@ export function getCardKinds(): CardKindInfo[] {
   return cardKindDefs.map((item) => ({
     kind: item.kind,
     label: item.label(),
-    description: item.description(),
+    description: item.description?.(),
     domains: item.domains,
     icon: item.icon,
   }));
@@ -113,7 +112,7 @@ export function cardKindInfo(kind: CardKind): CardKindInfo {
   return {
     kind: item.kind,
     label: item.label(),
-    description: item.description(),
+    description: item.description?.(),
     domains: item.domains,
     icon: item.icon,
   };

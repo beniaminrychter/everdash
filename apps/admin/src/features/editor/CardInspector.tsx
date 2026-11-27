@@ -158,16 +158,7 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
 
   return (
     <InspectorPanel
-      eyebrow={
-        pending
-          ? m.admin_inspector_new_card_eyebrow({ kind: info.label.toLowerCase() })
-          : m.admin_inspector_card_eyebrow({ kind: info.label })
-      }
-      title={
-        card.name ||
-        entity ||
-        (entity === undefined ? info.label : m.admin_inspector_choose_entity())
-      }
+      title={card.name || entity || info.label}
       footer={footer}
       preview
       done={!pending}
@@ -193,10 +184,14 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
             {allKinds.map(({ kind, label, description, icon: Icon }) => (
               <SelectItem key={kind} value={kind} textValue={label}>
                 <Icon aria-hidden="true" />
-                <span className="flex flex-col">
-                  <span>{label}</span>
-                  <span className="text-muted-foreground text-xs">{description}</span>
-                </span>
+                {description ? (
+                  <span className="flex flex-col">
+                    <span>{label}</span>
+                    <span className="text-muted-foreground text-xs">{description}</span>
+                  </span>
+                ) : (
+                  label
+                )}
               </SelectItem>
             ))}
           </SelectContent>
@@ -298,10 +293,7 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
         </InspectorField>
       )}
       {card.type === 'weather' && (
-        <InspectorField
-          label={m.admin_inspector_forecast()}
-          hint={m.admin_inspector_forecast_hint()}
-        >
+        <InspectorField label={m.admin_inspector_forecast()}>
           <fieldset className="grid grid-cols-2 gap-1.5">
             <legend className="sr-only">{m.admin_inspector_forecast()}</legend>
             {forecastOptions.map(({ value, label }) => {

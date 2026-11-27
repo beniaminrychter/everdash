@@ -74,8 +74,7 @@ export function BadgeInspector({ selection, onRequestDelete }: BadgeInspectorPro
 
   return (
     <InspectorPanel
-      eyebrow={pending ? m.admin_inspector_new_badge_eyebrow() : m.admin_inspector_badge_eyebrow()}
-      title={badge.name || badge.entity || m.admin_inspector_choose_entity()}
+      title={badge.name || badge.entity || m.admin_inspector_temperature_badge()}
       footer={footer}
       preview
       done={!pending}

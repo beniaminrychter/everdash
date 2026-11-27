@@ -24,12 +24,12 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { toast } from 'sonner';
 import { adminHomeUrl, apiUrl } from '@/lib/api';
@@ -48,12 +48,10 @@ interface AppSidebarProps {
 
 const groups: {
   id: 'dashboard' | 'setup';
-  label: () => string;
   items: { route: Route; icon: LucideIcon }[];
 }[] = [
   {
     id: 'dashboard',
-    label: () => m.admin_sidebar_group_dashboard(),
     items: [
       { route: 'editor', icon: LayoutDashboardIcon },
       { route: 'settings', icon: SettingsIcon },
@@ -62,7 +60,6 @@ const groups: {
   },
   {
     id: 'setup',
-    label: () => m.admin_sidebar_group_setup(),
     items: [
       { route: 'devices', icon: TabletIcon },
       { route: 'home-assistant', icon: HouseIcon },
@@ -101,6 +98,7 @@ export function AppSidebar({
   ingress,
 }: AppSidebarProps) {
   const { locale, preference, setPreference } = useAdminLocale();
+  const { isMobile, setOpenMobile } = useSidebar();
   const subtitle = origin
     ? hostOf(origin)
     : connectionMode === 'supervisor'
@@ -114,6 +112,14 @@ export function AppSidebar({
     { value: 'pl', label: m.admin_language_polish() },
   ];
 
+  function navigateTo(route: Route) {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+
+    onNavigate(route);
+  }
+
   return (
     <Sidebar collapsible="icon">
       {/* Same height as the page's top bar, so the two line up across the window. */}
@@ -124,7 +130,7 @@ export function AppSidebar({
               size="lg"
               tooltip={routeTitle('editor')}
               className="h-10"
-              onClick={() => onNavigate('editor')}
+              onClick={() => navigateTo('editor')}
             >
               <div className="bg-primary text-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-md text-sm font-semibold">
                 E
@@ -142,7 +148,6 @@ export function AppSidebar({
       <SidebarContent>
         {groups.map((group) => (
           <SidebarGroup key={group.id}>
-            <SidebarGroupLabel>{group.label()}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {group.items.map(({ route: item, icon: Icon }) => {
@@ -153,7 +158,7 @@ export function AppSidebar({
                       <SidebarMenuButton
                         isActive={route === item}
                         tooltip={title}
-                        onClick={() => onNavigate(item)}
+                        onClick={() => navigateTo(item)}
                       >
                         <Icon />
                         <span>{title}</span>

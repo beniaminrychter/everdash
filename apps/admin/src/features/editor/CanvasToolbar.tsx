@@ -49,13 +49,11 @@ export function CanvasToolbar({
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
         <div className="flex min-w-0 flex-wrap items-center gap-1.5">
           <span
-            className="text-muted-foreground flex items-center gap-2"
-            title={m.admin_editor_live_preview()}
+            className={
+              selectedViewport ? 'text-muted-foreground hidden 2xl:inline' : 'text-muted-foreground'
+            }
           >
-            <span className="size-1.5 shrink-0 rounded-full bg-emerald-500" aria-hidden="true" />
-            <span className={selectedViewport ? 'hidden 2xl:inline' : undefined}>
-              {m.admin_editor_live_preview()}
-            </span>
+            {m.admin_editor_preview()}
           </span>
           {deviceOptions.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5">

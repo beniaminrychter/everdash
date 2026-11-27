@@ -500,6 +500,12 @@ function startCard(state: DraftState, kind: CardKind, section: string | null): D
   });
 }
 
+function startBadge(state: DraftState): DraftState {
+  const badge = { type: 'temperature', entity: '' } as unknown as BadgeConfig;
+
+  return { ...state, selection: { kind: 'pending-badge', badge } };
+}
+
 /** Removes a card from its list. */
 function removeCard(state: DraftState, location: CardLocation): DraftState {
   const section = sectionOf(location);
@@ -771,6 +777,10 @@ function reduceCanvasMessage(state: DraftState, value: unknown): DraftState {
     }
 
     return keepingPending(state, (current) => moveSection(current, id, message.offset as -1 | 1));
+  }
+
+  if (message.type === 'everdash.editor.badge.add') {
+    return startBadge(state);
   }
 
   if (message.type === 'everdash.editor.badge.duplicate') {
@@ -1051,9 +1061,7 @@ export function draftReducer(state: DraftState, action: DraftAction): DraftState
     }
 
     case 'start-badge': {
-      const badge = { type: 'temperature', entity: '' } as unknown as BadgeConfig;
-
-      return { ...state, selection: { kind: 'pending-badge', badge } };
+      return startBadge(state);
     }
 
     case 'update-pending': {

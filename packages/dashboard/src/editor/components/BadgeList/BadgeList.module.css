@@ -1,3 +1,9 @@
+.addBadge {
+  composes: addCard from '../AddCardButton/AddCardButton.module.css';
+  align-self: center;
+  margin: 5px;
+}
+
 /* Where the badge will land: a pill-sized dashed outline with a faint tint, its content hidden. */
 .ghost {
   border-radius: 24px;

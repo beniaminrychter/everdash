@@ -28,7 +28,6 @@ export function SectionInspector({ id, onRequestDelete }: SectionInspectorProps)
 
   return (
     <InspectorPanel
-      eyebrow={m.admin_inspector_section()}
       title={section.title || m.editor_untitled_section()}
       preview
       footer={

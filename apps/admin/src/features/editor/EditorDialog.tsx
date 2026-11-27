@@ -161,6 +161,7 @@ export function EditorDialog({ open, onOpenChange, baseline, onRequestDelete }: 
     >
       <DialogContent
         showCloseButton
+        aria-describedby={undefined}
         className={`flex h-dvh max-h-dvh w-full max-w-full flex-col gap-0 rounded-none border-0 p-0 sm:max-w-full md:h-[min(40rem,calc(100dvh-4rem))] md:rounded-xl md:border ${
           selection.kind === 'view' ? 'md:max-w-md' : 'md:max-w-4xl'
         }`}

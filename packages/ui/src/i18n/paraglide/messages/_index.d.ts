@@ -163,13 +163,6 @@ export const admin_card_kind_value_label: ((inputs?: Admin_Card_Kind_Value_Label
 /**
 * | output |
 * | --- |
-* | "Current conditions and forecast" |
-*
-*/
-export const admin_card_kind_weather_desc: ((inputs?: Admin_Card_Kind_Weather_DescInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Card_Kind_Weather_DescInputs, { locale?: "en" | "pl" }, {}>;
-/**
-* | output |
-* | --- |
 * | "Weather" |
 *
 */
@@ -181,27 +174,6 @@ export const admin_card_kind_weather_label: ((inputs?: Admin_Card_Kind_Weather_L
 *
 */
 export const admin_checking_session: ((inputs?: Admin_Checking_SessionInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Checking_SessionInputs, { locale?: "en" | "pl" }, {}>;
-/**
-* | output |
-* | --- |
-* | "{count} badges" |
-*
-*/
-export const admin_count_badges_few: ((inputs: Admin_Count_Badges_FewInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Count_Badges_FewInputs, { locale?: "en" | "pl" }, {}>;
-/**
-* | output |
-* | --- |
-* | "{count} badges" |
-*
-*/
-export const admin_count_badges_many: ((inputs: Admin_Count_Badges_ManyInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Count_Badges_ManyInputs, { locale?: "en" | "pl" }, {}>;
-/**
-* | output |
-* | --- |
-* | "{count} badge" |
-*
-*/
-export const admin_count_badges_one: ((inputs: Admin_Count_Badges_OneInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Count_Badges_OneInputs, { locale?: "en" | "pl" }, {}>;
 /**
 * | output |
 * | --- |
@@ -223,27 +195,6 @@ export const admin_count_cards_many: ((inputs: Admin_Count_Cards_ManyInputs, opt
 *
 */
 export const admin_count_cards_one: ((inputs: Admin_Count_Cards_OneInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Count_Cards_OneInputs, { locale?: "en" | "pl" }, {}>;
-/**
-* | output |
-* | --- |
-* | "{count} sections" |
-*
-*/
-export const admin_count_sections_few: ((inputs: Admin_Count_Sections_FewInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Count_Sections_FewInputs, { locale?: "en" | "pl" }, {}>;
-/**
-* | output |
-* | --- |
-* | "{count} sections" |
-*
-*/
-export const admin_count_sections_many: ((inputs: Admin_Count_Sections_ManyInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Count_Sections_ManyInputs, { locale?: "en" | "pl" }, {}>;
-/**
-* | output |
-* | --- |
-* | "{count} section" |
-*
-*/
-export const admin_count_sections_one: ((inputs: Admin_Count_Sections_OneInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Count_Sections_OneInputs, { locale?: "en" | "pl" }, {}>;
 /**
 * | output |
 * | --- |
@@ -751,13 +702,6 @@ export const admin_devices_save_name: ((inputs?: Admin_Devices_Save_NameInputs, 
 /**
 * | output |
 * | --- |
-* | "Single-use code. Automatically regenerates once a device registers." |
-*
-*/
-export const admin_devices_single_use_hint: ((inputs?: Admin_Devices_Single_Use_HintInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Devices_Single_Use_HintInputs, { locale?: "en" | "pl" }, {}>;
-/**
-* | output |
-* | --- |
 * | "This device" |
 *
 */
@@ -877,13 +821,6 @@ export const admin_editor_landscape: ((inputs?: Admin_Editor_LandscapeInputs, op
 /**
 * | output |
 * | --- |
-* | "Live preview" |
-*
-*/
-export const admin_editor_live_preview: ((inputs?: Admin_Editor_Live_PreviewInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Editor_Live_PreviewInputs, { locale?: "en" | "pl" }, {}>;
-/**
-* | output |
-* | --- |
 * | "Loading preview" |
 *
 */
@@ -898,10 +835,10 @@ export const admin_editor_portrait: ((inputs?: Admin_Editor_PortraitInputs, opti
 /**
 * | output |
 * | --- |
-* | "Preview · as on the tablet" |
+* | "Preview" |
 *
 */
-export const admin_editor_preview_as_tablet: ((inputs?: Admin_Editor_Preview_As_TabletInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Editor_Preview_As_TabletInputs, { locale?: "en" | "pl" }, {}>;
+export const admin_editor_preview: ((inputs?: Admin_Editor_PreviewInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Editor_PreviewInputs, { locale?: "en" | "pl" }, {}>;
 /**
 * | output |
 * | --- |
@@ -1080,13 +1017,6 @@ export const admin_ha_connected: ((inputs?: Admin_Ha_ConnectedInputs, options?: 
 /**
 * | output |
 * | --- |
-* | "EverDash talks to this Home Assistant on behalf of every tablet." |
-*
-*/
-export const admin_ha_connection_description: ((inputs?: Admin_Ha_Connection_DescriptionInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Ha_Connection_DescriptionInputs, { locale?: "en" | "pl" }, {}>;
-/**
-* | output |
-* | --- |
 * | "Connection" |
 *
 */
@@ -1150,13 +1080,6 @@ export const admin_ha_disconnecting: ((inputs?: Admin_Ha_DisconnectingInputs, op
 /**
 * | output |
 * | --- |
-* | "Automatically scans your home network for Home Assistant instances." |
-*
-*/
-export const admin_ha_discovery_description: ((inputs?: Admin_Ha_Discovery_DescriptionInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Ha_Discovery_DescriptionInputs, { locale?: "en" | "pl" }, {}>;
-/**
-* | output |
-* | --- |
 * | "Network discovery" |
 *
 */
@@ -1217,13 +1140,6 @@ export const admin_ha_source_mdns: ((inputs?: Admin_Ha_Source_MdnsInputs, option
 *
 */
 export const admin_ha_source_network: ((inputs?: Admin_Ha_Source_NetworkInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Ha_Source_NetworkInputs, { locale?: "en" | "pl" }, {}>;
-/**
-* | output |
-* | --- |
-* | "EverDash talks to Home Assistant through the built-in app connection on behalf of every tablet." |
-*
-*/
-export const admin_ha_supervisor_description: ((inputs?: Admin_Ha_Supervisor_DescriptionInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Ha_Supervisor_DescriptionInputs, { locale?: "en" | "pl" }, {}>;
 /**
 * | output |
 * | --- |
@@ -1416,24 +1332,10 @@ export const admin_inspector_auto: ((inputs?: Admin_Inspector_AutoInputs, option
 /**
 * | output |
 * | --- |
-* | "Temperature badge" |
-*
-*/
-export const admin_inspector_badge_eyebrow: ((inputs?: Admin_Inspector_Badge_EyebrowInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Inspector_Badge_EyebrowInputs, { locale?: "en" | "pl" }, {}>;
-/**
-* | output |
-* | --- |
 * | "Badge icon" |
 *
 */
 export const admin_inspector_badge_icon: ((inputs?: Admin_Inspector_Badge_IconInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Inspector_Badge_IconInputs, { locale?: "en" | "pl" }, {}>;
-/**
-* | output |
-* | --- |
-* | "{kind} card" |
-*
-*/
-export const admin_inspector_card_eyebrow: ((inputs: Admin_Inspector_Card_EyebrowInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Inspector_Card_EyebrowInputs, { locale?: "en" | "pl" }, {}>;
 /**
 * | output |
 * | --- |
@@ -1462,13 +1364,6 @@ export const admin_inspector_card_type_hint: ((inputs?: Admin_Inspector_Card_Typ
 *
 */
 export const admin_inspector_choose_domain_entity: ((inputs: Admin_Inspector_Choose_Domain_EntityInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Inspector_Choose_Domain_EntityInputs, { locale?: "en" | "pl" }, {}>;
-/**
-* | output |
-* | --- |
-* | "Choose an entity" |
-*
-*/
-export const admin_inspector_choose_entity: ((inputs?: Admin_Inspector_Choose_EntityInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Inspector_Choose_EntityInputs, { locale?: "en" | "pl" }, {}>;
 /**
 * | output |
 * | --- |
@@ -1549,13 +1444,6 @@ export const admin_inspector_forecast_daily: ((inputs?: Admin_Inspector_Forecast
 /**
 * | output |
 * | --- |
-* | "One entry per hour, or one per day." |
-*
-*/
-export const admin_inspector_forecast_hint: ((inputs?: Admin_Inspector_Forecast_HintInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Inspector_Forecast_HintInputs, { locale?: "en" | "pl" }, {}>;
-/**
-* | output |
-* | --- |
 * | "Every hour" |
 *
 */
@@ -1609,20 +1497,6 @@ export const admin_inspector_move_section_down: ((inputs?: Admin_Inspector_Move_
 *
 */
 export const admin_inspector_move_section_up: ((inputs?: Admin_Inspector_Move_Section_UpInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Inspector_Move_Section_UpInputs, { locale?: "en" | "pl" }, {}>;
-/**
-* | output |
-* | --- |
-* | "New temperature badge" |
-*
-*/
-export const admin_inspector_new_badge_eyebrow: ((inputs?: Admin_Inspector_New_Badge_EyebrowInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Inspector_New_Badge_EyebrowInputs, { locale?: "en" | "pl" }, {}>;
-/**
-* | output |
-* | --- |
-* | "New {kind} card" |
-*
-*/
-export const admin_inspector_new_card_eyebrow: ((inputs: Admin_Inspector_New_Card_EyebrowInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Inspector_New_Card_EyebrowInputs, { locale?: "en" | "pl" }, {}>;
 /**
 * | output |
 * | --- |
@@ -1780,6 +1654,13 @@ export const admin_inspector_temp_sensor: ((inputs?: Admin_Inspector_Temp_Sensor
 /**
 * | output |
 * | --- |
+* | "Temperature badge" |
+*
+*/
+export const admin_inspector_temperature_badge: ((inputs?: Admin_Inspector_Temperature_BadgeInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Inspector_Temperature_BadgeInputs, { locale?: "en" | "pl" }, {}>;
+/**
+* | output |
+* | --- |
 * | "Temperature unit" |
 *
 */
@@ -1829,13 +1710,6 @@ export const admin_inspector_unit_placeholder: ((inputs?: Admin_Inspector_Unit_P
 /**
 * | output |
 * | --- |
-* | "Click a card, badge or section title in the preview to edit it. Sections are optional: add one with + Section to group cards under a heading." |
-*
-*/
-export const admin_inspector_view_hint: ((inputs?: Admin_Inspector_View_HintInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Inspector_View_HintInputs, { locale?: "en" | "pl" }, {}>;
-/**
-* | output |
-* | --- |
 * | "View name" |
 *
 */
@@ -1847,13 +1721,6 @@ export const admin_inspector_view_name: ((inputs?: Admin_Inspector_View_NameInpu
 *
 */
 export const admin_inspector_view_name_required: ((inputs?: Admin_Inspector_View_Name_RequiredInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Inspector_View_Name_RequiredInputs, { locale?: "en" | "pl" }, {}>;
-/**
-* | output |
-* | --- |
-* | "View settings" |
-*
-*/
-export const admin_inspector_view_settings: ((inputs?: Admin_Inspector_View_SettingsInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Inspector_View_SettingsInputs, { locale?: "en" | "pl" }, {}>;
 /**
 * | output |
 * | --- |
@@ -1878,7 +1745,7 @@ export const admin_json_cannot_apply: ((inputs?: Admin_Json_Cannot_ApplyInputs, 
 /**
 * | output |
 * | --- |
-* | "Raw JSON stays isolated until you validate and apply it to the draft." |
+* | "Apply JSON to update the draft." |
 *
 */
 export const admin_json_description: ((inputs?: Admin_Json_DescriptionInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Json_DescriptionInputs, { locale?: "en" | "pl" }, {}>;
@@ -1910,13 +1777,6 @@ export const admin_json_diff_no_changes: ((inputs?: Admin_Json_Diff_No_ChangesIn
 *
 */
 export const admin_json_diff_removed: ((inputs: Admin_Json_Diff_RemovedInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Json_Diff_RemovedInputs, { locale?: "en" | "pl" }, {}>;
-/**
-* | output |
-* | --- |
-* | "Comparing saved JSON with current unsaved changes" |
-*
-*/
-export const admin_json_diff_summary: ((inputs?: Admin_Json_Diff_SummaryInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Json_Diff_SummaryInputs, { locale?: "en" | "pl" }, {}>;
 /**
 * | output |
 * | --- |
@@ -2039,13 +1899,6 @@ export const admin_json_tab_editor: ((inputs?: Admin_Json_Tab_EditorInputs, opti
 /**
 * | output |
 * | --- |
-* | "Advanced JSON editor" |
-*
-*/
-export const admin_json_title: ((inputs?: Admin_Json_TitleInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Json_TitleInputs, { locale?: "en" | "pl" }, {}>;
-/**
-* | output |
-* | --- |
 * | "Apply the JSON to the editor draft, or discard the raw edits before leaving this page." |
 *
 */
@@ -2060,24 +1913,10 @@ export const admin_json_unapplied_title: ((inputs?: Admin_Json_Unapplied_TitleIn
 /**
 * | output |
 * | --- |
-* | "Valid JSON · {count} lines" |
+* | "Valid JSON" |
 *
 */
-export const admin_json_valid_lines_few: ((inputs: Admin_Json_Valid_Lines_FewInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Json_Valid_Lines_FewInputs, { locale?: "en" | "pl" }, {}>;
-/**
-* | output |
-* | --- |
-* | "Valid JSON · {count} lines" |
-*
-*/
-export const admin_json_valid_lines_many: ((inputs: Admin_Json_Valid_Lines_ManyInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Json_Valid_Lines_ManyInputs, { locale?: "en" | "pl" }, {}>;
-/**
-* | output |
-* | --- |
-* | "Valid JSON · {count} line" |
-*
-*/
-export const admin_json_valid_lines_one: ((inputs: Admin_Json_Valid_Lines_OneInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Json_Valid_Lines_OneInputs, { locale?: "en" | "pl" }, {}>;
+export const admin_json_valid: ((inputs?: Admin_Json_ValidInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Json_ValidInputs, { locale?: "en" | "pl" }, {}>;
 /**
 * | output |
 * | --- |
@@ -2277,7 +2116,7 @@ export const admin_session_expired: ((inputs?: Admin_Session_ExpiredInputs, opti
 /**
 * | output |
 * | --- |
-* | "These settings apply to every tablet. Changes join the draft and go live when you save." |
+* | "Settings apply to all tablets when saved." |
 *
 */
 export const admin_settings_description: ((inputs?: Admin_Settings_DescriptionInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Settings_DescriptionInputs, { locale?: "en" | "pl" }, {}>;
@@ -2354,6 +2193,13 @@ export const admin_settings_timezone_label: ((inputs?: Admin_Settings_Timezone_L
 /**
 * | output |
 * | --- |
+* | "Tablet settings" |
+*
+*/
+export const admin_settings_title: ((inputs?: Admin_Settings_TitleInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Settings_TitleInputs, { locale?: "en" | "pl" }, {}>;
+/**
+* | output |
+* | --- |
 * | "Account" |
 *
 */
@@ -2379,20 +2225,6 @@ export const admin_sidebar_collapse: ((inputs?: Admin_Sidebar_CollapseInputs, op
 *
 */
 export const admin_sidebar_expand: ((inputs?: Admin_Sidebar_ExpandInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Sidebar_ExpandInputs, { locale?: "en" | "pl" }, {}>;
-/**
-* | output |
-* | --- |
-* | "Dashboard" |
-*
-*/
-export const admin_sidebar_group_dashboard: ((inputs?: Admin_Sidebar_Group_DashboardInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Sidebar_Group_DashboardInputs, { locale?: "en" | "pl" }, {}>;
-/**
-* | output |
-* | --- |
-* | "Setup" |
-*
-*/
-export const admin_sidebar_group_setup: ((inputs?: Admin_Sidebar_Group_SetupInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & __ParaglideMessageMetadata<Admin_Sidebar_Group_SetupInputs, { locale?: "en" | "pl" }, {}>;
 /**
 * | output |
 * | --- |
@@ -4734,18 +4566,11 @@ export type Admin_Card_Kind_Toggle_DescInputs = {};
 export type Admin_Card_Kind_Toggle_LabelInputs = {};
 export type Admin_Card_Kind_Value_DescInputs = {};
 export type Admin_Card_Kind_Value_LabelInputs = {};
-export type Admin_Card_Kind_Weather_DescInputs = {};
 export type Admin_Card_Kind_Weather_LabelInputs = {};
 export type Admin_Checking_SessionInputs = {};
-export type Admin_Count_Badges_FewInputs = { count: NonNullable<unknown> };
-export type Admin_Count_Badges_ManyInputs = { count: NonNullable<unknown> };
-export type Admin_Count_Badges_OneInputs = { count: NonNullable<unknown> };
 export type Admin_Count_Cards_FewInputs = { count: NonNullable<unknown> };
 export type Admin_Count_Cards_ManyInputs = { count: NonNullable<unknown> };
 export type Admin_Count_Cards_OneInputs = { count: NonNullable<unknown> };
-export type Admin_Count_Sections_FewInputs = { count: NonNullable<unknown> };
-export type Admin_Count_Sections_ManyInputs = { count: NonNullable<unknown> };
-export type Admin_Count_Sections_OneInputs = { count: NonNullable<unknown> };
 export type Admin_Dashboard_LabelInputs = {};
 export type Admin_Dashboard_SavedInputs = {};
 export type Admin_Default_New_SectionInputs = {};
@@ -4818,7 +4643,6 @@ export type Admin_Devices_RemovedInputs = {};
 export type Admin_Devices_RemovingInputs = {};
 export type Admin_Devices_Rename_AriaInputs = { name: NonNullable<unknown> };
 export type Admin_Devices_Save_NameInputs = {};
-export type Admin_Devices_Single_Use_HintInputs = {};
 export type Admin_Devices_This_DeviceInputs = {};
 export type Admin_Devices_UnknownInputs = {};
 export type Admin_Devices_UnnamedInputs = {};
@@ -4836,10 +4660,9 @@ export type Admin_Editor_Dashboard_ProblemsInputs = {};
 export type Admin_Editor_Data_Load_ErrorInputs = {};
 export type Admin_Editor_Fix_Fields_PreviewInputs = {};
 export type Admin_Editor_LandscapeInputs = {};
-export type Admin_Editor_Live_PreviewInputs = {};
 export type Admin_Editor_Loading_PreviewInputs = {};
 export type Admin_Editor_PortraitInputs = {};
-export type Admin_Editor_Preview_As_TabletInputs = {};
+export type Admin_Editor_PreviewInputs = {};
 export type Admin_Editor_Preview_StateInputs = {};
 export type Admin_Editor_Preview_ViewportInputs = {};
 export type Admin_Editor_Preview_ZoomInputs = {};
@@ -4865,7 +4688,6 @@ export type Admin_Entity_SearchingInputs = {};
 export type Admin_Entity_UnavailableInputs = {};
 export type Admin_Ha_Connect_EllipsisInputs = {};
 export type Admin_Ha_ConnectedInputs = {};
-export type Admin_Ha_Connection_DescriptionInputs = {};
 export type Admin_Ha_Connection_TitleInputs = {};
 export type Admin_Ha_CurrentInputs = {};
 export type Admin_Ha_DisconnectInputs = {};
@@ -4875,7 +4697,6 @@ export type Admin_Ha_Disconnect_Dialog_TitleInputs = {};
 export type Admin_Ha_Disconnect_EllipsisInputs = {};
 export type Admin_Ha_Disconnect_ErrorInputs = {};
 export type Admin_Ha_DisconnectingInputs = {};
-export type Admin_Ha_Discovery_DescriptionInputs = {};
 export type Admin_Ha_Discovery_TitleInputs = {};
 export type Admin_Ha_None_FoundInputs = {};
 export type Admin_Ha_Not_ConnectedInputs = {};
@@ -4885,7 +4706,6 @@ export type Admin_Ha_Scan_ErrorInputs = {};
 export type Admin_Ha_Source_LocalInputs = {};
 export type Admin_Ha_Source_MdnsInputs = {};
 export type Admin_Ha_Source_NetworkInputs = {};
-export type Admin_Ha_Supervisor_DescriptionInputs = {};
 export type Admin_Ha_Supervisor_HintInputs = {};
 export type Admin_Ha_Supervisor_NameInputs = {};
 export type Admin_Ha_Switch_Current_FallbackInputs = {};
@@ -4913,14 +4733,11 @@ export type Admin_Icon_Search_PlaceholderInputs = {};
 export type Admin_Inspector_Add_BadgeInputs = {};
 export type Admin_Inspector_Add_Card_To_SectionInputs = {};
 export type Admin_Inspector_AutoInputs = {};
-export type Admin_Inspector_Badge_EyebrowInputs = {};
 export type Admin_Inspector_Badge_IconInputs = {};
-export type Admin_Inspector_Card_EyebrowInputs = { kind: NonNullable<unknown> };
 export type Admin_Inspector_Card_IconInputs = {};
 export type Admin_Inspector_Card_TypeInputs = {};
 export type Admin_Inspector_Card_Type_HintInputs = {};
 export type Admin_Inspector_Choose_Domain_EntityInputs = { domains: NonNullable<unknown> };
-export type Admin_Inspector_Choose_EntityInputs = {};
 export type Admin_Inspector_Choose_SensorInputs = {};
 export type Admin_Inspector_Clock_BothInputs = {};
 export type Admin_Inspector_Clock_DateInputs = {};
@@ -4932,7 +4749,6 @@ export type Admin_Inspector_Delete_SectionInputs = {};
 export type Admin_Inspector_Display_NameInputs = {};
 export type Admin_Inspector_ForecastInputs = {};
 export type Admin_Inspector_Forecast_DailyInputs = {};
-export type Admin_Inspector_Forecast_HintInputs = {};
 export type Admin_Inspector_Forecast_HourlyInputs = {};
 export type Admin_Inspector_Ha_EntityInputs = {};
 export type Admin_Inspector_Hide_UnitInputs = {};
@@ -4941,8 +4757,6 @@ export type Admin_Inspector_Move_Card_DownInputs = {};
 export type Admin_Inspector_Move_Card_UpInputs = {};
 export type Admin_Inspector_Move_Section_DownInputs = {};
 export type Admin_Inspector_Move_Section_UpInputs = {};
-export type Admin_Inspector_New_Badge_EyebrowInputs = {};
-export type Admin_Inspector_New_Card_EyebrowInputs = { kind: NonNullable<unknown> };
 export type Admin_Inspector_No_Section_TopInputs = {};
 export type Admin_Inspector_OrInputs = {};
 export type Admin_Inspector_Placeholder_Ha_NameInputs = {};
@@ -4965,6 +4779,7 @@ export type Admin_Inspector_Size_HintInputs = {};
 export type Admin_Inspector_Temp_CelsiusInputs = {};
 export type Admin_Inspector_Temp_FahrenheitInputs = {};
 export type Admin_Inspector_Temp_SensorInputs = {};
+export type Admin_Inspector_Temperature_BadgeInputs = {};
 export type Admin_Inspector_Temperature_UnitInputs = {};
 export type Admin_Inspector_TemplateInputs = {};
 export type Admin_Inspector_Template_CompactInputs = {};
@@ -4972,10 +4787,8 @@ export type Admin_Inspector_Template_HeroInputs = {};
 export type Admin_Inspector_Template_TileInputs = {};
 export type Admin_Inspector_UnitInputs = {};
 export type Admin_Inspector_Unit_PlaceholderInputs = {};
-export type Admin_Inspector_View_HintInputs = {};
 export type Admin_Inspector_View_NameInputs = {};
 export type Admin_Inspector_View_Name_RequiredInputs = {};
-export type Admin_Inspector_View_SettingsInputs = {};
 export type Admin_Json_Applied_DescriptionInputs = {};
 export type Admin_Json_Applied_ToastInputs = {};
 export type Admin_Json_Cannot_ApplyInputs = {};
@@ -4984,7 +4797,6 @@ export type Admin_Json_Diff_AddedInputs = { count: NonNullable<unknown> };
 export type Admin_Json_Diff_AriaInputs = {};
 export type Admin_Json_Diff_No_ChangesInputs = {};
 export type Admin_Json_Diff_RemovedInputs = { count: NonNullable<unknown> };
-export type Admin_Json_Diff_SummaryInputs = {};
 export type Admin_Json_DiscardInputs = {};
 export type Admin_Json_DownloadInputs = {};
 export type Admin_Json_Editor_AriaInputs = {};
@@ -5002,12 +4814,9 @@ export type Admin_Json_Line_ErrorInputs = { line: NonNullable<unknown>, message:
 export type Admin_Json_ResetInputs = {};
 export type Admin_Json_Tab_DiffInputs = {};
 export type Admin_Json_Tab_EditorInputs = {};
-export type Admin_Json_TitleInputs = {};
 export type Admin_Json_Unapplied_DescriptionInputs = {};
 export type Admin_Json_Unapplied_TitleInputs = {};
-export type Admin_Json_Valid_Lines_FewInputs = { count: NonNullable<unknown> };
-export type Admin_Json_Valid_Lines_ManyInputs = { count: NonNullable<unknown> };
-export type Admin_Json_Valid_Lines_OneInputs = { count: NonNullable<unknown> };
+export type Admin_Json_ValidInputs = {};
 export type Admin_Json_Validate_And_ApplyInputs = {};
 export type Admin_Json_Validate_And_Apply_AmpInputs = {};
 export type Admin_Language_AutoInputs = {};
@@ -5047,12 +4856,11 @@ export type Admin_Settings_Sun_HintInputs = {};
 export type Admin_Settings_Sun_LabelInputs = {};
 export type Admin_Settings_Timezone_HintInputs = {};
 export type Admin_Settings_Timezone_LabelInputs = {};
+export type Admin_Settings_TitleInputs = {};
 export type Admin_Sidebar_AccountInputs = {};
 export type Admin_Sidebar_AdministratorInputs = {};
 export type Admin_Sidebar_CollapseInputs = {};
 export type Admin_Sidebar_ExpandInputs = {};
-export type Admin_Sidebar_Group_DashboardInputs = {};
-export type Admin_Sidebar_Group_SetupInputs = {};
 export type Admin_Sidebar_LanguageInputs = {};
 export type Admin_Sidebar_LogoutInputs = {};
 export type Admin_Sidebar_Logout_ErrorInputs = {};

@@ -1,7 +1,7 @@
 /**
 * | output |
 * | --- |
-* | "These settings apply to every tablet. Changes join the draft and go live when you save." |
+* | "Settings apply to all tablets when saved." |
 *
 */
 export const admin_settings_description: ((inputs?: Admin_Settings_DescriptionInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & import("../runtime.js").MessageMetadata<Admin_Settings_DescriptionInputs, { locale?: "en" | "pl" }, {}>;

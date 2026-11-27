@@ -78,6 +78,7 @@ function deleteRequest(message: unknown, state: DraftState): DeleteTarget | null
 const editorOpeners = new Set([
   'everdash.editor.card.add',
   'everdash.editor.card.edit',
+  'everdash.editor.badge.add',
   'everdash.editor.badge.edit',
   'everdash.editor.section.edit',
   'everdash.editor.section.rename',
@@ -257,7 +258,8 @@ export function EditorPage() {
       if (
         typeof message === 'object' &&
         message !== null &&
-        (message as Record<string, unknown>).generation === latest.current.generation
+        (message as Record<string, unknown>).generation === latest.current.generation &&
+        (message as Record<string, unknown>).viewId === latest.current.viewId
       ) {
         const { type } = message as Record<string, unknown>;
 

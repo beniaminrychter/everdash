@@ -30,7 +30,7 @@ export function AddCardDialog({ open, onOpenChange, onPick }: AddCardDialogProps
           <DialogTitle>{m.admin_editor_add_card()}</DialogTitle>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {cardKinds.map(({ kind, label, description, icon: Icon }) => (
+          {cardKinds.map(({ kind, label, description }) => (
             <button
               key={kind}
               type="button"
@@ -40,11 +40,8 @@ export function AddCardDialog({ open, onOpenChange, onPick }: AddCardDialogProps
                 onPick(kind);
               }}
             >
-              <span className="bg-muted flex size-8 items-center justify-center rounded-md">
-                <Icon className="size-4" aria-hidden="true" />
-              </span>
               <span className="text-sm font-medium">{label}</span>
-              <span className="text-muted-foreground text-xs">{description}</span>
+              {description && <span className="text-muted-foreground text-xs">{description}</span>}
             </button>
           ))}
         </div>

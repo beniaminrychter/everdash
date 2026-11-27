@@ -39,10 +39,6 @@ export function SettingsPage() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>{m.admin_route_settings()}</CardTitle>
-        <CardDescription>{m.admin_settings_description()}</CardDescription>
-      </CardHeader>
       <CardContent className="space-y-5">
         <InspectorField
           label={m.admin_settings_timezone_label()}

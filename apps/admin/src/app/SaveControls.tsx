@@ -34,51 +34,55 @@ export function SaveControls() {
   const canSave = dirty && issues.length === 0 && !saving;
 
   return (
-    <div className="flex items-center gap-2">
-      {dirty ? (
-        <Badge variant="secondary">
-          {pluralize(state.changes, {
-            one: m.admin_unsaved_change_one,
-            few: m.admin_unsaved_change_few,
-            many: m.admin_unsaved_change_many,
-          })}
-        </Badge>
-      ) : (
-        <span className="text-muted-foreground text-sm">{m.admin_all_changes_saved()}</span>
-      )}
-      {/* A save in flight must finish first, or its result would be applied over the discard. */}
-      <Button
-        variant="outline"
-        disabled={!dirty || saving}
-        onClick={() => setConfirmation('discard')}
-      >
-        {m.admin_discard()}
-      </Button>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span>
-            <Button disabled={!canSave} onClick={() => save()}>
-              {saving ? m.admin_saving() : m.admin_save()}
+    <div className="flex items-center justify-between gap-2">
+      <div className="min-w-0 leading-tight">
+        {dirty ? (
+          <Badge variant="secondary" className="h-auto whitespace-normal">
+            {pluralize(state.changes, {
+              one: m.admin_unsaved_change_one,
+              few: m.admin_unsaved_change_few,
+              many: m.admin_unsaved_change_many,
+            })}
+          </Badge>
+        ) : (
+          <span className="text-muted-foreground text-sm">{m.admin_all_changes_saved()}</span>
+        )}
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        {/* A save in flight must finish first, or its result would be applied over the discard. */}
+        <Button
+          variant="outline"
+          disabled={!dirty || saving}
+          onClick={() => setConfirmation('discard')}
+        >
+          {m.admin_discard()}
+        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span>
+              <Button disabled={!canSave} onClick={() => save()}>
+                {saving ? m.admin_saving() : m.admin_save()}
+              </Button>
+            </span>
+          </TooltipTrigger>
+          {issues.length > 0 && <TooltipContent>{issues[0]}</TooltipContent>}
+        </Tooltip>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon" aria-label={m.admin_more_save_options()}>
+              <EllipsisVerticalIcon />
             </Button>
-          </span>
-        </TooltipTrigger>
-        {issues.length > 0 && <TooltipContent>{issues[0]}</TooltipContent>}
-      </Tooltip>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="icon" aria-label={m.admin_more_save_options()}>
-            <EllipsisVerticalIcon />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem
-            disabled={!previousAvailable || saving}
-            onSelect={() => setConfirmation('restore')}
-          >
-            {m.admin_restore_previous_version()}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              disabled={!previousAvailable || saving}
+              onSelect={() => setConfirmation('restore')}
+            >
+              {m.admin_restore_previous_version()}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
       <AlertDialog
         open={confirmation !== null}
         onOpenChange={(open) => !open && setConfirmation(null)}

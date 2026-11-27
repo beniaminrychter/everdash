@@ -24,7 +24,7 @@ const tokenClasses: Record<JsonTokenKind, string> = {
 };
 
 const sharedTypography =
-  'font-mono text-[13px] leading-5 tracking-normal [font-variant-ligatures:none] [tab-size:2]';
+  'font-mono text-base leading-6 tracking-normal [font-variant-ligatures:none] [tab-size:2] sm:text-[13px] sm:leading-5';
 
 export function JsonCodeEditor({
   value,
@@ -156,7 +156,7 @@ export function JsonCodeEditor({
                 key={lineNumber}
                 className={cn(
                   sharedTypography,
-                  'h-5 tabular-nums',
+                  'h-6 tabular-nums sm:h-5',
                   isError && 'text-destructive font-semibold',
                 )}
               >
@@ -178,7 +178,7 @@ export function JsonCodeEditor({
               const isError = lineNumber === errorLine;
 
               return (
-                <div key={lineNumber} className={cn('h-5', isError && 'bg-destructive/12')}>
+                <div key={lineNumber} className={cn('h-6 sm:h-5', isError && 'bg-destructive/12')}>
                   {tokens.length === 0
                     ? ' '
                     : tokens.map((token, tokenIndex) => (

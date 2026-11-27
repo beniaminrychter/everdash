@@ -10,7 +10,7 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 /**
 * | output |
 * | --- |
-* | "Raw JSON stays isolated until you validate and apply it to the draft." |
+* | "Apply JSON to update the draft." |
 *
 * @param {Admin_Json_DescriptionInputs} inputs
 * @param {{ locale?: "en" | "pl" }} options
@@ -19,6 +19,6 @@ import { getLocale, experimentalStaticLocale } from '../runtime.js';
 export const admin_json_description = /** @type {((inputs?: Admin_Json_DescriptionInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Admin_Json_DescriptionInputs, { locale?: "en" | "pl" }, {}>} */ ((inputs = {}, options = {}) => {
 	void inputs;
 	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
-	if (locale === "pl") return /** @type {LocalizedString} */ ("Surowy JSON pozostaje odizolowany, dopóki nie zweryfikujesz go i nie zastosujesz do wersji roboczej.")
-	return /** @type {LocalizedString} */ ("Raw JSON stays isolated until you validate and apply it to the draft.")
+	if (locale === "pl") return /** @type {LocalizedString} */ ("Zastosuj JSON, aby zaktualizować wersję roboczą.")
+	return /** @type {LocalizedString} */ ("Apply JSON to update the draft.")
 });
