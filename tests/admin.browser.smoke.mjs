@@ -1697,7 +1697,12 @@ try {
   };
   const polishPage = await openPage({ width: 1280, height: 800 });
   await expect(polishPage.getByRole('button', { name: '+ Karta', exact: true })).toBeVisible();
-  await expect(polishPage.getByRole('button', { name: '+ Plakietka', exact: true })).toBeVisible();
+  await expect(
+    polishPage.locator('[data-canvas-island]').getByRole('button', {
+      name: '+ Plakietka',
+      exact: true,
+    }),
+  ).toBeVisible();
   await expect(polishPage.getByRole('button', { name: 'Urządzenia', exact: true })).toBeVisible();
   await polishPage.getByRole('button', { name: 'Urządzenia', exact: true }).click();
   await expect(polishPage.getByText('Zarejestruj urządzenie', { exact: true })).toBeVisible();
