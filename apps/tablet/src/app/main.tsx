@@ -9,12 +9,15 @@ import { removeReloadMarker } from './hardReload';
 import { StatusPage } from './StatusPage';
 import { validateDashboard } from '@everdash/contracts/config/validate';
 import type { RuntimeSnapshot } from '@everdash/dashboard/features/configuration/data/api';
+import { resolveLanguage } from '@everdash/ui/i18n/index';
+import type { Language } from '@everdash/ui/i18n/index';
 
 interface BootstrapResponse {
   mode?: 'direct' | 'management';
   configured?: boolean;
   revision?: string;
   config?: unknown;
+  language?: string;
 }
 
 removeReloadMarker();
@@ -28,11 +31,13 @@ function RuntimeApp({
   mode,
   initiallyAuthorized = true,
   pinEnabled = false,
+  defaultLanguage = 'en',
 }: {
   initial: RuntimeSnapshot;
   mode: 'direct' | 'management';
   initiallyAuthorized?: boolean;
   pinEnabled?: boolean;
+  defaultLanguage?: Language;
 }) {
   const [accessLost, setAccessLost] = useState(false);
   const handleUnauthorized = useCallback(() => {
@@ -79,6 +84,7 @@ function RuntimeApp({
       onConfigPublished={publish}
       sessionAuthorized={authorized}
       pinEnabled={pinEnabled}
+      defaultLanguage={defaultLanguage}
     />
   );
 }
@@ -132,11 +138,13 @@ function loadAuthorizedDashboard(pinEnabled = false) {
       return;
     }
     const mode = response.mode === 'management' ? 'management' : 'direct';
+    const defaultLanguage = resolveLanguage(response.language);
     render(
       <RuntimeApp
         initial={{ revision: response.revision ?? 'unrevisioned', config: parsed.document }}
         mode={mode}
         pinEnabled={pinEnabled}
+        defaultLanguage={defaultLanguage}
       />,
       root,
     );

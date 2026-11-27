@@ -17,3 +17,24 @@ export interface DevicesOverview {
 export interface TabletAccessResponse {
   status: 'registered' | 'registration_required';
 }
+
+export type DashboardAddressReasonCode =
+  | 'connection_refused'
+  | 'timeout'
+  | 'dns_failed'
+  | 'tls_error'
+  | 'wrong_service'
+  | 'network_unreachable'
+  | 'unknown';
+
+export interface DashboardAddressInfo {
+  url: string;
+  reachable: boolean;
+  reasonCode?: DashboardAddressReasonCode;
+  httpStatus?: number;
+}
+
+export interface DashboardAddressesResponse {
+  local: DashboardAddressInfo | null;
+  external: DashboardAddressInfo | null;
+}

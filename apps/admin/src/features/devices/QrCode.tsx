@@ -1,6 +1,7 @@
 /* oxlint-disable jsx-a11y/prefer-tag-over-role -- SVG needs an image role. */
 import { useMemo } from 'react';
 import createQRCode from 'qrcode-generator';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 
 interface QrCodeProps {
   value: string;
@@ -11,7 +12,8 @@ interface QrCodeProps {
 const quietZone = 4;
 
 /** Draws the QR code as one SVG path. It stays white on black in both themes so it scans. */
-export function QrCode({ value, size = 160, label = 'Dashboard QR code' }: QrCodeProps) {
+export function QrCode({ value, size = 160, label }: QrCodeProps) {
+  const resolvedLabel = label ?? m.admin_devices_qr_label();
   const code = useMemo(() => {
     try {
       const qr = createQRCode(0, 'M');
@@ -46,11 +48,11 @@ export function QrCode({ value, size = 160, label = 'Dashboard QR code' }: QrCod
       height={size}
       viewBox={`0 0 ${code.dimension} ${code.dimension}`}
       role="img"
-      aria-label={label}
+      aria-label={resolvedLabel}
       shapeRendering="crispEdges"
       className="rounded-md border"
     >
-      <title>{label}</title>
+      <title>{resolvedLabel}</title>
       <rect width={code.dimension} height={code.dimension} fill="#fff" />
       <path d={code.path} fill="#000" />
     </svg>

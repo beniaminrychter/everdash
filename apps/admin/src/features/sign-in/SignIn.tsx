@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { CheckIcon, CircleAlertIcon, RefreshCwIcon } from 'lucide-react';
 import type { DiscoveredHomeAssistant } from '@everdash/contracts/auth/oauth';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -72,7 +73,7 @@ export function SignIn({ connected, savedOrigin, initialError }: SignInProps) {
 
       window.location.assign(result.authorizationUrl);
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Could not start login.');
+      setError(error instanceof Error ? error.message : m.admin_signin_start_error());
       setBusy(false);
     }
   }
@@ -82,19 +83,19 @@ export function SignIn({ connected, savedOrigin, initialError }: SignInProps) {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-xl">EverDash</CardTitle>
-          <CardDescription>Sign in with a Home Assistant administrator account.</CardDescription>
+          <CardDescription>{m.admin_signin_description()}</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="flex flex-col gap-4" onSubmit={signIn}>
             {connected && savedOrigin && (
               <p className="text-muted-foreground text-sm">
-                Home Assistant: <code className="text-foreground">{savedOrigin}</code>
+                {m.admin_signin_ha_label()} <code className="text-foreground">{savedOrigin}</code>
               </p>
             )}
             {!connected && (
               <>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="home-assistant-url">Home Assistant URL</Label>
+                  <Label htmlFor="home-assistant-url">{m.admin_signin_ha_url()}</Label>
                   <Input
                     id="home-assistant-url"
                     type="url"
@@ -109,7 +110,7 @@ export function SignIn({ connected, savedOrigin, initialError }: SignInProps) {
                 </div>
                 <div className="space-y-2 rounded-md border p-3">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-medium">Discovered on your network</span>
+                    <span className="text-xs font-medium">{m.admin_signin_discovered()}</span>
                     <Button
                       type="button"
                       variant="ghost"
@@ -121,16 +122,16 @@ export function SignIn({ connected, savedOrigin, initialError }: SignInProps) {
                       <RefreshCwIcon
                         className={cn('size-3.5', discovery.scanning && 'animate-spin')}
                       />
-                      {discovery.scanning ? 'Scanning…' : 'Rescan'}
+                      {discovery.scanning ? m.admin_signin_scanning() : m.admin_signin_rescan()}
                     </Button>
                   </div>
                   {discovery.scanning && discovery.instances.length === 0 && (
                     <p className="text-muted-foreground text-xs">
-                      Scanning your home network for Home Assistant…
+                      {m.admin_signin_scanning_network()}
                     </p>
                   )}
                   {discovery.instances.length > 0 && (
-                    <ul className="space-y-1.5" aria-label="Discovered Home Assistant instances">
+                    <ul className="space-y-1.5" aria-label={m.admin_signin_discovered_aria()}>
                       {discovery.instances.map((instance) => {
                         const urls = instanceOrigins(instance);
                         const key = instance.origin;
@@ -217,7 +218,9 @@ export function SignIn({ connected, savedOrigin, initialError }: SignInProps) {
                             >
                               <SelectTrigger
                                 size="sm"
-                                aria-label={`URL for ${instance.name ?? instance.origin}`}
+                                aria-label={m.admin_signin_url_for({
+                                  name: instance.name ?? instance.origin,
+                                })}
                                 className="bg-background h-8 w-full font-mono text-xs"
                               >
                                 <SelectValue />
@@ -240,8 +243,8 @@ export function SignIn({ connected, savedOrigin, initialError }: SignInProps) {
                     discovery.instances.length === 0 && (
                       <p className="text-muted-foreground text-xs">
                         {discovery.error
-                          ? 'Automatic network scan was unavailable. Enter your Home Assistant URL above.'
-                          : 'No Home Assistant instances found automatically. Enter your URL above or rescan.'}
+                          ? m.admin_signin_scan_unavailable()
+                          : m.admin_signin_none_found()}
                       </p>
                     )}
                 </div>
@@ -254,14 +257,13 @@ export function SignIn({ connected, savedOrigin, initialError }: SignInProps) {
               </Alert>
             )}
             <Button type="submit" className="w-full" disabled={busy}>
-              {busy ? 'Connecting…' : 'Continue with Home Assistant'}
+              {busy ? m.admin_signin_connecting() : m.admin_signin_continue()}
             </Button>
             {connected && (
               <p className="text-muted-foreground text-xs">
-                To use a different Home Assistant, sign in and choose Disconnect under Home
-                Assistant. If you cannot sign in, reset the saved connection with{' '}
-                <code>pnpm reset-connection</code> (or <code>--reset-connection</code> on the
-                server).
+                {m.admin_signin_switch_hint_prefix()} <code>pnpm reset-connection</code>{' '}
+                {m.admin_signin_switch_hint_middle()} <code>--reset-connection</code>{' '}
+                {m.admin_signin_switch_hint_suffix()}
               </p>
             )}
           </form>

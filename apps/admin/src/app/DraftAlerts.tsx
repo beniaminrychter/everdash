@@ -1,4 +1,5 @@
 import { CircleAlertIcon, RotateCcwIcon } from 'lucide-react';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useDraft } from './DraftContext';
 
@@ -10,10 +11,7 @@ export function DraftAlerts() {
       {loadError && (
         <Alert variant="destructive">
           <CircleAlertIcon />
-          <AlertDescription>
-            {loadError} The editor is using a starter dashboard. It can still create a new
-            dashboard, or use JSON import / export to import a valid configuration.
-          </AlertDescription>
+          <AlertDescription>{m.admin_load_error_fallback({ error: loadError })}</AlertDescription>
         </Alert>
       )}
       {recovery && (

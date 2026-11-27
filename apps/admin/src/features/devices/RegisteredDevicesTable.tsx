@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { CheckIcon, PencilIcon, Trash2Icon, XIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import type { RegisteredDevice } from '@everdash/contracts/auth/devices';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -23,9 +24,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useAdminLocale } from '@/lib/i18n';
 
-function formatTimestamp(timestamp: number): string {
-  return new Date(timestamp).toLocaleString(undefined, {
+function formatTimestamp(timestamp: number, locale: string): string {
+  return new Date(timestamp).toLocaleString(locale, {
     dateStyle: 'medium',
     timeStyle: 'short',
   });
@@ -48,6 +50,7 @@ export function RegisteredDevicesTable({
   onRename,
   onRemove,
 }: RegisteredDevicesTableProps) {
+  const { bcp47 } = useAdminLocale();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftName, setDraftName] = useState('');
   const [savingName, setSavingName] = useState(false);
@@ -78,9 +81,9 @@ export function RegisteredDevicesTable({
     if (ok) {
       setEditingId(null);
       setDraftName('');
-      toast.success('Device name updated.');
+      toast.success(m.admin_devices_name_updated());
     } else {
-      toast.error('Unable to update device name.');
+      toast.error(m.admin_devices_name_update_error());
     }
   }
 
@@ -97,9 +100,9 @@ export function RegisteredDevicesTable({
 
     if (ok) {
       setRemovingDevice(null);
-      toast.success('Device removed.');
+      toast.success(m.admin_devices_removed());
     } else {
-      toast.error('Unable to remove device.');
+      toast.error(m.admin_devices_remove_error());
     }
   }
 
@@ -107,37 +110,31 @@ export function RegisteredDevicesTable({
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Registered devices</CardTitle>
-          <CardDescription>
-            Devices allowed to open this dashboard. Reloading a registered device keeps it signed in
-            until removed.
-          </CardDescription>
+          <CardTitle>{m.admin_devices_registered_title()}</CardTitle>
+          <CardDescription>{m.admin_devices_registered_description()}</CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <p className="text-muted-foreground text-sm">Loading registered devices…</p>
+            <p className="text-muted-foreground text-sm">{m.admin_devices_loading()}</p>
           ) : error && devices.length === 0 ? (
             <div className="flex items-center justify-between gap-4 rounded-md border p-4">
-              <p className="text-muted-foreground text-sm">Unable to load registered devices.</p>
+              <p className="text-muted-foreground text-sm">{m.admin_devices_load_error()}</p>
               <Button variant="outline" size="sm" onClick={onRetry}>
-                Retry
+                {m.admin_retry()}
               </Button>
             </div>
           ) : devices.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              No devices registered yet. Open the dashboard address on your tablet or phone and
-              enter the registration code above.
-            </p>
+            <p className="text-muted-foreground text-sm">{m.admin_devices_empty()}</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Device</TableHead>
-                  <TableHead>Screen</TableHead>
-                  <TableHead>Local IP</TableHead>
-                  <TableHead>Last seen</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{m.admin_devices_col_name()}</TableHead>
+                  <TableHead>{m.admin_devices_col_device()}</TableHead>
+                  <TableHead>{m.admin_devices_col_screen()}</TableHead>
+                  <TableHead>{m.admin_devices_col_ip()}</TableHead>
+                  <TableHead>{m.admin_devices_col_last_seen()}</TableHead>
+                  <TableHead className="text-right">{m.admin_devices_col_actions()}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -156,10 +153,10 @@ export function RegisteredDevicesTable({
                             }}
                           >
                             <Input
-                              aria-label="Device name"
+                              aria-label={m.admin_devices_name_label()}
                               value={draftName}
                               maxLength={80}
-                              placeholder="Living room iPad"
+                              placeholder={m.admin_devices_name_placeholder()}
                               disabled={savingName}
                               autoFocus
                               className="h-8 w-44"
@@ -176,7 +173,7 @@ export function RegisteredDevicesTable({
                               size="icon"
                               className="size-8"
                               disabled={savingName}
-                              aria-label="Save name"
+                              aria-label={m.admin_devices_save_name()}
                             >
                               <CheckIcon className="size-4" />
                             </Button>
@@ -186,7 +183,7 @@ export function RegisteredDevicesTable({
                               size="icon"
                               className="size-8"
                               disabled={savingName}
-                              aria-label="Cancel"
+                              aria-label={m.admin_cancel()}
                               onClick={cancelEditing}
                             >
                               <XIcon className="size-4" />
@@ -197,14 +194,18 @@ export function RegisteredDevicesTable({
                             {device.name ? (
                               <span>{device.name}</span>
                             ) : (
-                              <span className="text-muted-foreground">Unnamed device</span>
+                              <span className="text-muted-foreground">
+                                {m.admin_devices_unnamed()}
+                              </span>
                             )}
                             <Button
                               type="button"
                               variant="ghost"
                               size="icon"
                               className="size-7"
-                              aria-label={`Rename ${device.name || device.deviceType}`}
+                              aria-label={m.admin_devices_rename_aria({
+                                name: device.name || device.deviceType,
+                              })}
                               onClick={() => startEditing(device)}
                             >
                               <PencilIcon className="size-3.5" />
@@ -218,13 +219,15 @@ export function RegisteredDevicesTable({
                       <TableCell className="font-mono text-xs">{device.screenSize}</TableCell>
                       <TableCell className="font-mono text-xs">
                         {device.ip === 'Unknown' ? (
-                          <span className="text-muted-foreground font-sans">Unknown</span>
+                          <span className="text-muted-foreground font-sans">
+                            {m.admin_devices_unknown()}
+                          </span>
                         ) : (
                           device.ip
                         )}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-xs">
-                        {formatTimestamp(device.lastSeenAt)}
+                        {formatTimestamp(device.lastSeenAt, bcp47)}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
@@ -232,11 +235,13 @@ export function RegisteredDevicesTable({
                           variant="ghost"
                           size="sm"
                           className="text-destructive hover:text-destructive"
-                          aria-label={`Remove ${device.name || device.deviceType}`}
+                          aria-label={m.admin_devices_remove_aria({
+                            name: device.name || device.deviceType,
+                          })}
                           onClick={() => setRemovingDevice(device)}
                         >
                           <Trash2Icon className="size-4" />
-                          Remove
+                          {m.admin_devices_remove()}
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -254,16 +259,20 @@ export function RegisteredDevicesTable({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove device?</AlertDialogTitle>
+            <AlertDialogTitle>{m.admin_devices_remove_title()}</AlertDialogTitle>
             <AlertDialogDescription>
-              {removingDevice?.name || removingDevice?.deviceType || 'This device'} will lose access
-              to the dashboard and will need a new registration code to sign in again.
+              {m.admin_devices_remove_description({
+                name:
+                  removingDevice?.name ||
+                  removingDevice?.deviceType ||
+                  m.admin_devices_this_device(),
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={removingBusy}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={removingBusy}>{m.admin_cancel()}</AlertDialogCancel>
             <Button variant="destructive" disabled={removingBusy} onClick={confirmRemove}>
-              {removingBusy ? 'Removing…' : 'Remove'}
+              {removingBusy ? m.admin_devices_removing() : m.admin_devices_remove()}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

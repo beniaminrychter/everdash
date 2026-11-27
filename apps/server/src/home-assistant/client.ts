@@ -9,6 +9,7 @@ const REQUEST_TIMEOUT_MS = 10_000;
 export interface HomeAssistantTransport {
   getStates: (signal?: AbortSignal) => Promise<unknown>;
   getState: (entityId: string, signal?: AbortSignal) => Promise<unknown>;
+  getConfig?: (signal?: AbortSignal) => Promise<unknown>;
   callService: (
     domain: string,
     service: string,
@@ -210,6 +211,7 @@ export function createHomeAssistantClient(
     getStates: (signal) => call('GET', 'states', undefined, signal),
     getState: (entityId, signal) =>
       call('GET', `states/${encodeURIComponent(entityId)}`, undefined, signal),
+    getConfig: (signal) => call('GET', 'config', undefined, signal),
     callService: (domain, service, data, signal) => {
       const returnResponse =
         domain === 'weather' && service === 'get_forecasts' ? '?return_response' : '';

@@ -1,6 +1,8 @@
 import {
   BracesIcon,
+  CheckIcon,
   ChevronsUpDownIcon,
+  GlobeIcon,
   HouseIcon,
   LayoutDashboardIcon,
   LogOutIcon,
@@ -9,6 +11,7 @@ import {
   UserIcon,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,7 +33,9 @@ import {
 } from '@/components/ui/sidebar';
 import { toast } from 'sonner';
 import { adminHomeUrl, apiUrl } from '@/lib/api';
-import { routeTitles } from './useHashRoute';
+import { useAdminLocale } from '@/lib/i18n';
+import type { AdminLanguagePreference } from '@/lib/i18n';
+import { routeTitle } from './useHashRoute';
 import type { Route } from './useHashRoute';
 
 interface AppSidebarProps {
@@ -41,9 +46,14 @@ interface AppSidebarProps {
   ingress?: boolean;
 }
 
-const groups: { label: string; items: { route: Route; icon: LucideIcon }[] }[] = [
+const groups: {
+  id: 'dashboard' | 'setup';
+  label: () => string;
+  items: { route: Route; icon: LucideIcon }[];
+}[] = [
   {
-    label: 'Dashboard',
+    id: 'dashboard',
+    label: () => m.admin_sidebar_group_dashboard(),
     items: [
       { route: 'editor', icon: LayoutDashboardIcon },
       { route: 'settings', icon: SettingsIcon },
@@ -51,7 +61,8 @@ const groups: { label: string; items: { route: Route; icon: LucideIcon }[] }[] =
     ],
   },
   {
-    label: 'Setup',
+    id: 'setup',
+    label: () => m.admin_sidebar_group_setup(),
     items: [
       { route: 'devices', icon: TabletIcon },
       { route: 'home-assistant', icon: HouseIcon },
@@ -66,7 +77,7 @@ async function logout() {
       headers: { 'X-EverDash-Request': '1' },
     });
   } catch {
-    toast.error('Unable to sign out. Check the connection and try again.');
+    toast.error(m.admin_sidebar_logout_error());
 
     return;
   }
@@ -89,11 +100,19 @@ export function AppSidebar({
   connectionMode,
   ingress,
 }: AppSidebarProps) {
+  const { locale, preference, setPreference } = useAdminLocale();
   const subtitle = origin
     ? hostOf(origin)
     : connectionMode === 'supervisor'
       ? 'Home Assistant'
       : '';
+  const activeLanguageLabel =
+    locale === 'pl' ? m.admin_language_polish() : m.admin_language_english();
+  const languageOptions: { value: AdminLanguagePreference; label: string }[] = [
+    { value: 'auto', label: m.admin_language_auto() },
+    { value: 'en', label: m.admin_language_english() },
+    { value: 'pl', label: m.admin_language_polish() },
+  ];
 
   return (
     <Sidebar collapsible="icon">
@@ -103,7 +122,7 @@ export function AppSidebar({
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
-              tooltip="Editor"
+              tooltip={routeTitle('editor')}
               className="h-10"
               onClick={() => onNavigate('editor')}
             >
@@ -122,50 +141,76 @@ export function AppSidebar({
       </SidebarHeader>
       <SidebarContent>
         {groups.map((group) => (
-          <SidebarGroup key={group.label}>
-            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+          <SidebarGroup key={group.id}>
+            <SidebarGroupLabel>{group.label()}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {group.items.map(({ route: item, icon: Icon }) => (
-                  <SidebarMenuItem key={item}>
-                    <SidebarMenuButton
-                      isActive={route === item}
-                      tooltip={routeTitles[item]}
-                      onClick={() => onNavigate(item)}
-                    >
-                      <Icon />
-                      <span>{routeTitles[item]}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                {group.items.map(({ route: item, icon: Icon }) => {
+                  const title = routeTitle(item);
+
+                  return (
+                    <SidebarMenuItem key={item}>
+                      <SidebarMenuButton
+                        isActive={route === item}
+                        tooltip={title}
+                        onClick={() => onNavigate(item)}
+                      >
+                        <Icon />
+                        <span>{title}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
         ))}
       </SidebarContent>
-      {!ingress && (
-        <SidebarFooter>
-          <SidebarMenu>
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuButton
+                  tooltip={m.admin_sidebar_language()}
+                  aria-label={m.admin_sidebar_language()}
+                >
+                  <GlobeIcon />
+                  <span>{activeLanguageLabel}</span>
+                  <ChevronsUpDownIcon className="ml-auto" />
+                </SidebarMenuButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="start" className="min-w-48">
+                {languageOptions.map((option) => (
+                  <DropdownMenuItem key={option.value} onSelect={() => setPreference(option.value)}>
+                    <span className="flex-1">{option.label}</span>
+                    {preference === option.value && <CheckIcon className="ml-2 size-4" />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarMenuItem>
+          {!ingress && (
             <SidebarMenuItem>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <SidebarMenuButton tooltip="Account">
+                  <SidebarMenuButton tooltip={m.admin_sidebar_account()}>
                     <UserIcon />
-                    <span>Administrator</span>
+                    <span>{m.admin_sidebar_administrator()}</span>
                     <ChevronsUpDownIcon className="ml-auto" />
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent side="top" align="start" className="min-w-48">
                   <DropdownMenuItem onSelect={() => logout()}>
                     <LogOutIcon />
-                    Log out
+                    {m.admin_sidebar_logout()}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarFooter>
-      )}
+          )}
+        </SidebarMenu>
+      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );

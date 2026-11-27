@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { EllipsisVerticalIcon } from 'lucide-react';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { pluralize } from '@/lib/i18n';
 import { useDraft } from './DraftContext';
 import { draftIssues, isDirty } from './draft/draftReducer';
 
@@ -35,10 +37,14 @@ export function SaveControls() {
     <div className="flex items-center gap-2">
       {dirty ? (
         <Badge variant="secondary">
-          {state.changes} unsaved {state.changes === 1 ? 'change' : 'changes'}
+          {pluralize(state.changes, {
+            one: m.admin_unsaved_change_one,
+            few: m.admin_unsaved_change_few,
+            many: m.admin_unsaved_change_many,
+          })}
         </Badge>
       ) : (
-        <span className="text-muted-foreground text-sm">All changes saved</span>
+        <span className="text-muted-foreground text-sm">{m.admin_all_changes_saved()}</span>
       )}
       {/* A save in flight must finish first, or its result would be applied over the discard. */}
       <Button
@@ -46,13 +52,13 @@ export function SaveControls() {
         disabled={!dirty || saving}
         onClick={() => setConfirmation('discard')}
       >
-        Discard
+        {m.admin_discard()}
       </Button>
       <Tooltip>
         <TooltipTrigger asChild>
           <span>
             <Button disabled={!canSave} onClick={() => save()}>
-              {saving ? 'Saving…' : 'Save'}
+              {saving ? m.admin_saving() : m.admin_save()}
             </Button>
           </span>
         </TooltipTrigger>
@@ -60,7 +66,7 @@ export function SaveControls() {
       </Tooltip>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="icon" aria-label="More save options">
+          <Button variant="outline" size="icon" aria-label={m.admin_more_save_options()}>
             <EllipsisVerticalIcon />
           </Button>
         </DropdownMenuTrigger>
@@ -69,7 +75,7 @@ export function SaveControls() {
             disabled={!previousAvailable || saving}
             onSelect={() => setConfirmation('restore')}
           >
-            Restore previous version
+            {m.admin_restore_previous_version()}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -81,17 +87,17 @@ export function SaveControls() {
           <AlertDialogHeader>
             <AlertDialogTitle>
               {confirmation === 'restore'
-                ? 'Restore the previous version?'
-                : 'Discard dashboard changes?'}
+                ? m.admin_restore_previous_title()
+                : m.admin_discard_title()}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirmation === 'restore'
-                ? 'This loads the previously saved dashboard into the editor and replaces your current draft. Save to make it live.'
-                : 'This restores the last saved dashboard and removes every unsaved edit.'}
+                ? m.admin_restore_previous_description()
+                : m.admin_discard_description()}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{m.admin_cancel()}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (confirmation === 'restore') {
@@ -101,7 +107,9 @@ export function SaveControls() {
                 }
               }}
             >
-              {confirmation === 'restore' ? 'Restore previous version' : 'Discard changes'}
+              {confirmation === 'restore'
+                ? m.admin_restore_previous_version()
+                : m.admin_discard_changes()}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -3,6 +3,8 @@ import { useMemo, useRef } from 'preact/hooks';
 import type { AppConfig, DashboardDocument } from '@everdash/contracts/config/types';
 import { validateDashboard } from '@everdash/contracts/config/validate';
 import { LanguageProvider } from '@everdash/ui/i18n/index';
+import type { Language } from '@everdash/ui/i18n/index';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import { createDevice, mapState } from '../features/accessories/data/model';
 import { mapClimate, createClimate } from '../features/climate/data/model';
 import { DashboardCards } from '../features/dashboard/components/DashboardCards/DashboardCards';
@@ -29,6 +31,8 @@ export interface CanvasSnapshot {
 export interface DashboardCanvasProps {
   snapshot: CanvasSnapshot;
   selectedView: string;
+  /** Editor only: UI language for the canvas and its chrome. Defaults to `'en'`. */
+  language?: Language;
   /** Editor only: the card, badge or section to outline. The tablet never passes it. */
   selection?: EditorSelection;
   /** Editor only: new cards that still need an entity, outlined as such. */
@@ -44,6 +48,7 @@ export interface DashboardCanvasInnerProps extends DashboardCanvasProps {
 export function DashboardCanvas({
   snapshot,
   selectedView,
+  language = 'en',
   selection,
   incomplete,
   editorKit,
@@ -87,7 +92,7 @@ export function DashboardCanvas({
   if (!model || !currentSnapshot) {
     return (
       <main ref={canvasRef} class={styles.mainContent} {...breakpoints}>
-        <p>Open the dashboard builder to load its current view.</p>
+        <p>{m.editor_canvas_open_builder({}, { locale: language })}</p>
       </main>
     );
   }
@@ -96,7 +101,7 @@ export function DashboardCanvas({
   if (!view) {
     return (
       <main ref={canvasRef} class={styles.mainContent} {...breakpoints}>
-        <p>This dashboard has no view to display.</p>
+        <p>{m.editor_canvas_no_view({}, { locale: language })}</p>
       </main>
     );
   }
@@ -122,7 +127,7 @@ export function DashboardCanvas({
   };
 
   return (
-    <LanguageProvider language="en">
+    <LanguageProvider language={language}>
       <main ref={canvasRef} class={styles.mainContent} data-theme="light" {...breakpoints}>
         <SensorBadges
           badges={view.badges}

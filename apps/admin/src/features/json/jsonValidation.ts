@@ -1,5 +1,6 @@
 import type { DashboardDocument } from '@everdash/contracts/config/types';
 import { validateDashboard } from '@everdash/contracts/config/validate';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 
 export interface JsonValidationResult {
   ok: boolean;
@@ -270,7 +271,7 @@ function locateSchemaIssueLine(text: string, path: string): number | null {
 /** Validates raw dashboard JSON text live, returning schema issues and the offending line number. */
 export function validateJsonText(text: string): JsonValidationResult {
   if (!text.trim()) {
-    return { ok: false, issues: ['Enter dashboard JSON.'], errorLine: 1 };
+    return { ok: false, issues: [m.admin_json_enter_json()], errorLine: 1 };
   }
 
   try {
@@ -278,7 +279,9 @@ export function validateJsonText(text: string): JsonValidationResult {
     const result = validateDashboard(parsed);
 
     if (!result.ok) {
-      const issues = result.issues.map((issue) => `${issue.path || 'Dashboard'}: ${issue.message}`);
+      const issues = result.issues.map(
+        (issue) => `${issue.path || m.admin_dashboard_label()}: ${issue.message}`,
+      );
       const firstPath = result.issues[0]?.path ?? '';
 
       return {
@@ -290,12 +293,12 @@ export function validateJsonText(text: string): JsonValidationResult {
 
     return { ok: true, issues: [], errorLine: null, document: result.document };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Enter valid JSON.';
+    const message = error instanceof Error ? error.message : m.admin_json_enter_valid();
     const errorLine = extractLineFromError(text, message) ?? locateSyntaxErrorLine(text);
 
     return {
       ok: false,
-      issues: [errorLine ? `Line ${errorLine}: ${message}` : message],
+      issues: [errorLine ? m.admin_json_line_error({ line: errorLine, message }) : message],
       errorLine,
     };
   }

@@ -1,11 +1,11 @@
 import { useI18n } from '@everdash/ui/i18n/index';
 import { Icon } from '@everdash/ui/ui/Icon/Icon';
 import type { IconName } from '@everdash/ui/ui/Icon/Icon';
-import { deviceTint } from '../../../../shared/color/tint';
+import { defaultAccent, deviceTint } from '../../../../shared/color/tint';
 import styles from './ToggleCard.module.css';
 
-/** A toggle has no colour of its own, so it takes the accent an outlet tile has. */
-const toggleAccent = '#3489fa';
+/** A toggle has no colour of its own, so it shares the default on-state accent with lights and switches. */
+const toggleAccent = defaultAccent;
 
 interface Props {
   name: string;

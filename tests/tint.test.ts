@@ -1,5 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import {
+  createDevice,
+  deviceAccent,
+  mapState,
+} from '@everdash/dashboard/features/accessories/data/model';
 import { defaultAccent, deviceTint, glyphOn } from '@everdash/dashboard/shared/color/tint';
 
 function luminance(hex: string): number {
@@ -67,4 +72,39 @@ test('the glyph on a solid fill is white, or dark when the fill is pale', () => 
   assert.equal(glyphOn('#f4e9cf'), '#1c2533');
   assert.equal(glyphOn('#ffd60a'), '#1c2533');
   assert.equal(glyphOn('not a colour'), glyphOn(defaultAccent));
+});
+
+test('non-RGB lights, switches, and toggles share the same on-state tint while RGB lights keep their colour', () => {
+  const plainLight = createDevice({
+    entityId: 'light.hall',
+    icon: 'lamp',
+    name: 'Hall',
+    room: 'Home',
+    type: 'light',
+  });
+  const outlet = createDevice({
+    entityId: 'switch.lamp',
+    icon: 'outlet',
+    name: 'Lamp',
+    room: 'Home',
+    type: 'outlet',
+  });
+  const toggle = createDevice({
+    entityId: 'input_boolean.guest',
+    icon: 'toggle',
+    name: 'Guest',
+    room: 'Home',
+    type: 'toggle',
+  });
+  const rgbLight = mapState(plainLight, {
+    attributes: { rgb_color: [255, 124, 121], supported_color_modes: ['rgb'] },
+    entity_id: plainLight.id,
+    state: 'on',
+  });
+
+  const expectedDefaultTint = deviceTint(defaultAccent);
+  assert.deepEqual(deviceTint(deviceAccent(plainLight)), expectedDefaultTint);
+  assert.deepEqual(deviceTint(deviceAccent(outlet)), expectedDefaultTint);
+  assert.deepEqual(deviceTint(deviceAccent(toggle)), expectedDefaultTint);
+  assert.deepEqual(deviceTint(deviceAccent(rgbLight)), deviceTint('#ff7c79'));
 });

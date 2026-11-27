@@ -1,3 +1,4 @@
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import { useDraft } from '@/app/DraftContext';
 import { draftIssues } from '@/app/draft/draftReducer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,21 +7,21 @@ import { EntityCombobox } from '@/features/editor/EntityCombobox';
 import { InspectorField } from '@/features/editor/InspectorPanel';
 import type { PollingConfig } from '@everdash/contracts/config/types';
 
-const pollingFields: { key: keyof PollingConfig; label: string; hint: string }[] = [
+const pollingFields: { key: keyof PollingConfig; label: () => string; hint: () => string }[] = [
   {
     key: 'controlsMs',
-    label: 'Control polling (ms)',
-    hint: 'How often tablets refresh lights, outlets and climate controls.',
+    label: () => m.admin_settings_polling_controls_label(),
+    hint: () => m.admin_settings_polling_controls_hint(),
   },
   {
     key: 'observationsMs',
-    label: 'Sensor polling (ms)',
-    hint: 'How often tablets refresh sensor badges, weather and energy readings.',
+    label: () => m.admin_settings_polling_observations_label(),
+    hint: () => m.admin_settings_polling_observations_hint(),
   },
   {
     key: 'metadataMs',
-    label: 'Entity metadata polling (ms)',
-    hint: 'How often tablets refresh entity names and icons.',
+    label: () => m.admin_settings_polling_metadata_label(),
+    hint: () => m.admin_settings_polling_metadata_hint(),
   },
 ];
 
@@ -39,16 +40,14 @@ export function SettingsPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Dashboard settings</CardTitle>
-        <CardDescription>
-          These settings apply to every tablet. Changes join the draft and go live when you save.
-        </CardDescription>
+        <CardTitle>{m.admin_route_settings()}</CardTitle>
+        <CardDescription>{m.admin_settings_description()}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
         <InspectorField
-          label="Home timezone"
+          label={m.admin_settings_timezone_label()}
           htmlFor="timezone"
-          hint="An IANA timezone such as Europe/Warsaw, used for the clock and sun times."
+          hint={m.admin_settings_timezone_hint()}
           error={issueFor(issues, 'timeZone')}
         >
           <Input
@@ -61,9 +60,9 @@ export function SettingsPage() {
           />
         </InspectorField>
         <InspectorField
-          label="Sun entity"
+          label={m.admin_settings_sun_label()}
           htmlFor="sun-entity"
-          hint="Optional. Lets the dashboard follow sunrise and sunset."
+          hint={m.admin_settings_sun_hint()}
           error={issueFor(issues, 'sun')}
         >
           <EntityCombobox
@@ -82,9 +81,9 @@ export function SettingsPage() {
         {pollingFields.map((field) => (
           <InspectorField
             key={field.key}
-            label={field.label}
+            label={field.label()}
             htmlFor={`poll-${field.key}`}
-            hint={field.hint}
+            hint={field.hint()}
             error={issueFor(issues, `polling.${field.key}`)}
           >
             <Input

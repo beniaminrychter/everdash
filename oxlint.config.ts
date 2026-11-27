@@ -5,7 +5,12 @@ import react from 'ultracite/oxlint/react';
 export default defineConfig({
   env: { browser: true, es2022: true, node: true },
   extends: [core, react],
-  ignorePatterns: [...core.ignorePatterns, 'test-results/**', 'playwright-report/**'],
+  ignorePatterns: [
+    ...core.ignorePatterns,
+    'packages/ui/src/i18n/paraglide/**',
+    'test-results/**',
+    'playwright-report/**',
+  ],
   jsPlugins: [{ name: 'css-modules', specifier: '@stale-styles/eslint-plugin' }],
   overrides: [
     {

@@ -1,13 +1,18 @@
 import { useEffect, useState } from 'preact/hooks';
+import type { Language } from '@everdash/ui/i18n/index';
 import { readPreferences, savePreferences, resolveTheme, preferenceKey } from '../data/preferences';
 import type { Preferences } from '../data/preferences';
 
-export function usePreferences(pages: readonly { id: string }[], sun: string | undefined) {
+export function usePreferences(
+  pages: readonly { id: string }[],
+  sun: string | undefined,
+  defaultLanguage: Language = 'en',
+) {
   const [preferences, setPreferences] = useState<Preferences>(() => {
     try {
-      return readPreferences(window.localStorage, pages);
+      return readPreferences(window.localStorage, pages, defaultLanguage);
     } catch {
-      return { appearance: 'auto', language: 'en', page: pages[0].id };
+      return { appearance: 'auto', language: defaultLanguage, page: pages[0].id };
     }
   });
   const [storageError, setStorageError] = useState(false);
@@ -32,7 +37,7 @@ export function usePreferences(pages: readonly { id: string }[], sun: string | u
     const listener = (event: StorageEvent) => {
       if (event.key === preferenceKey || event.key === null) {
         try {
-          setPreferences(readPreferences(window.localStorage, pages));
+          setPreferences(readPreferences(window.localStorage, pages, defaultLanguage));
         } catch {
           setStorageError(true);
         }
@@ -40,7 +45,7 @@ export function usePreferences(pages: readonly { id: string }[], sun: string | u
     };
     window.addEventListener('storage', listener);
     return () => window.removeEventListener('storage', listener);
-  }, [pages]);
+  }, [defaultLanguage, pages]);
   const theme = resolveTheme(preferences.appearance, sun, systemDark);
   useEffect(() => {
     document.documentElement.dataset.theme = theme;

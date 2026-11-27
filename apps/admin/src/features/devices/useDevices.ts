@@ -1,6 +1,184 @@
-import { useCallback, useEffect, useState } from 'react';
-import type { DevicesOverview, RegisteredDevice } from '@everdash/contracts/auth/devices';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type {
+  DashboardAddressesResponse,
+  DashboardAddressInfo,
+  DashboardAddressReasonCode,
+  DevicesOverview,
+  RegisteredDevice,
+} from '@everdash/contracts/auth/devices';
 import { apiUrl } from '@/lib/api';
+
+const REASON_CODES = new Set<DashboardAddressReasonCode>([
+  'connection_refused',
+  'timeout',
+  'dns_failed',
+  'tls_error',
+  'wrong_service',
+  'network_unreachable',
+  'unknown',
+]);
+
+function parseAddressInfo(value: unknown): DashboardAddressInfo | null {
+  if (typeof value !== 'object' || value === null) {
+    return null;
+  }
+
+  const record = value as {
+    url?: unknown;
+    reachable?: unknown;
+    reasonCode?: unknown;
+    httpStatus?: unknown;
+  };
+
+  if (typeof record.url !== 'string' || typeof record.reachable !== 'boolean') {
+    return null;
+  }
+
+  const info: DashboardAddressInfo = {
+    url: record.url,
+    reachable: record.reachable,
+  };
+
+  if (
+    typeof record.reasonCode === 'string' &&
+    REASON_CODES.has(record.reasonCode as DashboardAddressReasonCode)
+  ) {
+    info.reasonCode = record.reasonCode as DashboardAddressReasonCode;
+  }
+
+  if (typeof record.httpStatus === 'number' && Number.isInteger(record.httpStatus)) {
+    info.httpStatus = record.httpStatus;
+  }
+
+  return info;
+}
+
+const ADDRESSES_STORAGE_PREFIX = 'everdash:dashboard-addresses:v1:';
+
+function addressesStorageKey(): string {
+  return `${ADDRESSES_STORAGE_PREFIX}${window.location.origin}`;
+}
+
+function readCachedDashboardAddresses(): DashboardAddressesResponse | null {
+  try {
+    const raw = window.localStorage.getItem(addressesStorageKey());
+
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw) as Partial<DashboardAddressesResponse> | null;
+
+    if (!parsed || typeof parsed !== 'object') {
+      return null;
+    }
+
+    return {
+      local: parseAddressInfo(parsed.local),
+      external: parseAddressInfo(parsed.external),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function saveCachedDashboardAddresses(addresses: DashboardAddressesResponse): void {
+  try {
+    window.localStorage.setItem(addressesStorageKey(), JSON.stringify(addresses));
+  } catch {
+    // Ignore storage errors in restricted contexts.
+  }
+}
+
+export async function readDashboardAddresses(): Promise<DashboardAddressesResponse | null> {
+  try {
+    const query = encodeURIComponent(window.location.origin);
+    const response = await fetch(apiUrl(`api/manage/devices/addresses?origin=${query}`), {
+      credentials: 'same-origin',
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const body = (await response.json()) as Partial<DashboardAddressesResponse>;
+
+    return {
+      local: parseAddressInfo(body.local),
+      external: parseAddressInfo(body.external),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function useDashboardAddresses() {
+  const [addresses, setAddresses] = useState<DashboardAddressesResponse | null>(
+    readCachedDashboardAddresses,
+  );
+  const [initialLoading, setInitialLoading] = useState(() => addresses === null);
+  const [rechecking, setRechecking] = useState(false);
+  const mountedRef = useRef(true);
+  const requestIdRef = useRef(0);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+
+    const refreshInBackground = async () => {
+      const result = await readDashboardAddresses();
+
+      if (!mountedRef.current || requestIdRef.current !== requestId) {
+        return;
+      }
+
+      if (result) {
+        saveCachedDashboardAddresses(result);
+        setAddresses(result);
+      } else {
+        setAddresses((current) => current ?? { local: null, external: null });
+      }
+
+      setInitialLoading(false);
+    };
+
+    refreshInBackground();
+
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const recheck = useCallback(async () => {
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+    setRechecking(true);
+
+    const result = await readDashboardAddresses();
+
+    if (!mountedRef.current || requestIdRef.current !== requestId) {
+      return;
+    }
+
+    if (result) {
+      saveCachedDashboardAddresses(result);
+      setAddresses(result);
+    } else {
+      setAddresses((current) => current ?? { local: null, external: null });
+    }
+
+    setInitialLoading(false);
+    setRechecking(false);
+  }, []);
+
+  return {
+    addresses,
+    initialLoading,
+    rechecking,
+    recheck,
+  };
+}
 
 export async function readDevicesOverview(): Promise<DevicesOverview | null> {
   try {

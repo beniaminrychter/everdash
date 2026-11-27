@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import { api, onUnauthorized } from '@/lib/api';
+import { AdminI18nProvider } from '@/lib/i18n';
 import { takeAuthErrorFromUrl } from '@/features/sign-in/authErrors';
 import { SignIn } from '@/features/sign-in/SignIn';
 import { AppShell } from './AppShell';
@@ -12,6 +14,34 @@ interface Session {
   connectionMode?: 'oauth' | 'supervisor';
   ingress?: boolean;
   tabletPort?: number;
+  language?: string;
+}
+
+function AdminContent({ session, error }: { session: Session | null; error: string }) {
+  if (!session) {
+    return (
+      <p className="text-muted-foreground flex min-h-svh items-center justify-center text-sm">
+        {m.admin_checking_session()}
+      </p>
+    );
+  }
+
+  if (!session.authenticated) {
+    return (
+      <SignIn connected={session.connected} savedOrigin={session.origin} initialError={error} />
+    );
+  }
+
+  return (
+    <DraftProvider>
+      <AppShell
+        origin={session.origin}
+        connectionMode={session.connectionMode}
+        ingress={session.ingress}
+        tabletPort={session.tabletPort}
+      />
+    </DraftProvider>
+  );
 }
 
 export function AdminRoot() {
@@ -35,6 +65,7 @@ export function AdminRoot() {
           connectionMode: result.connectionMode,
           ingress: result.ingress,
           tabletPort: result.tabletPort,
+          language: result.language,
         });
       })
       .catch(() => {
@@ -42,7 +73,7 @@ export function AdminRoot() {
           return;
         }
 
-        setError('Unable to connect to EverDash.');
+        setError(m.admin_unable_to_connect());
         setSession({ authenticated: false, connected: false, origin: '' });
       });
 
@@ -56,28 +87,9 @@ export function AdminRoot() {
     };
   }, []);
 
-  if (!session) {
-    return (
-      <p className="text-muted-foreground flex min-h-svh items-center justify-center text-sm">
-        Checking your session…
-      </p>
-    );
-  }
-
-  if (!session.authenticated) {
-    return (
-      <SignIn connected={session.connected} savedOrigin={session.origin} initialError={error} />
-    );
-  }
-
   return (
-    <DraftProvider>
-      <AppShell
-        origin={session.origin}
-        connectionMode={session.connectionMode}
-        ingress={session.ingress}
-        tabletPort={session.tabletPort}
-      />
-    </DraftProvider>
+    <AdminI18nProvider language={session?.language}>
+      <AdminContent session={session} error={error} />
+    </AdminI18nProvider>
   );
 }

@@ -7,6 +7,7 @@ import type { CardSize } from '@everdash/contracts/config/cardSize';
 import type { CardConfig, ClockDisplay, ValueTemplate } from '@everdash/contracts/config/types';
 import { defaultForecastType } from '@everdash/contracts/config/weatherForecast';
 import type { ForecastType } from '@everdash/contracts/config/weatherForecast';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -20,7 +21,7 @@ import { useDraft } from '@/app/DraftContext';
 import { convertCard } from '@/app/draft/builder';
 import { isIncomplete } from '@/app/draft/incomplete';
 import type { CardKind } from '@/app/draft/builder';
-import { cardKindInfo, cardKinds, isEntityForDomain } from './cardKinds';
+import { cardKindInfo, getCardKinds, isEntityForDomain } from './cardKinds';
 import type { DeleteTarget } from './DeleteItemDialog';
 import { CardRowsField } from './CardRowsField';
 import { CardSizeField } from './CardSizeField';
@@ -39,35 +40,11 @@ interface CardInspectorProps {
   onRequestDelete: (target: DeleteTarget) => void;
 }
 
-const valueTemplates: readonly { value: ValueTemplate; label: string }[] = [
-  { value: 'tile', label: 'Tile' },
-  { value: 'compact', label: 'Compact' },
-  { value: 'hero', label: 'Hero' },
-];
-
-const forecastOptions: readonly { value: ForecastType; label: string }[] = [
-  { value: 'hourly', label: 'Every hour' },
-  { value: 'daily', label: 'Every day' },
-];
-
-const clockDisplays: readonly { value: ClockDisplay; label: string }[] = [
-  { value: 'time', label: 'Time' },
-  { value: 'date', label: 'Date' },
-  { value: 'datetime', label: 'Both' },
-];
-
 /** Select values: section ids are prefixed so none can equal the value for the unsectioned cards. */
 const noSection = 'none';
 const sectionPrefix = 'section:';
 
 const precisionOptions = ['auto', '0', '1', '2', '3'] as const;
-
-const pstrykSources = [
-  ['sellPrice', 'Sell price sensor'],
-  ['nextPrice', 'Next price sensor'],
-  ['usage', 'Usage sensor'],
-  ['schedule', 'Schedule sensor'],
-] as const;
 
 function patch(card: CardConfig, changes: Record<string, unknown>): CardConfig {
   return { ...card, ...changes } as CardConfig;
@@ -86,6 +63,30 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
     return null;
   }
 
+  const valueTemplates: readonly { value: ValueTemplate; label: string }[] = [
+    { value: 'tile', label: m.admin_inspector_template_tile() },
+    { value: 'compact', label: m.admin_inspector_template_compact() },
+    { value: 'hero', label: m.admin_inspector_template_hero() },
+  ];
+
+  const forecastOptions: readonly { value: ForecastType; label: string }[] = [
+    { value: 'hourly', label: m.admin_inspector_forecast_hourly() },
+    { value: 'daily', label: m.admin_inspector_forecast_daily() },
+  ];
+
+  const clockDisplays: readonly { value: ClockDisplay; label: string }[] = [
+    { value: 'time', label: m.admin_inspector_clock_time() },
+    { value: 'date', label: m.admin_inspector_clock_date() },
+    { value: 'datetime', label: m.admin_inspector_clock_both() },
+  ];
+
+  const pstrykSources = [
+    ['sellPrice', m.admin_inspector_pstryk_sell_price()],
+    ['nextPrice', m.admin_inspector_pstryk_next_price()],
+    ['usage', m.admin_inspector_pstryk_usage()],
+    ['schedule', m.admin_inspector_pstryk_schedule()],
+  ] as const;
+
   const info = cardKindInfo(card.type);
   // A card that was just added is finished (or cancelled) here before it can be saved.
   const pending = isIncomplete(card);
@@ -94,10 +95,7 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
   const entityInvalid =
     entity !== undefined && entity.length > 0 && !isEntityForDomain(entity, info.domains);
   const canAdd = entity === undefined || isEntityForDomain(entity, info.domains);
-  const allKinds = cardKinds.map((item) => item.kind);
-  // Any card can become any type: the entity is kept when the new type accepts it, and a new one
-  // is chosen when it does not. Cancel puts the old card back.
-  const typeChoices = allKinds;
+  const allKinds = getCardKinds();
   // A card whose type needs an entity cannot be left without one.
   const entityMissing = !pending && entity !== undefined && entity.length === 0;
 
@@ -117,13 +115,13 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
         disabled={!canAdd}
         onClick={() => dispatch({ type: 'finish-card', section, index: selection.index })}
       >
-        Add card
+        {m.admin_editor_add_card()}
       </Button>
       <Button
         variant="ghost"
         onClick={() => dispatch({ type: 'delete-card', section, index: selection.index })}
       >
-        Cancel
+        {m.admin_cancel()}
       </Button>
     </>
   ) : (
@@ -131,7 +129,7 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
       <Button
         variant="outline"
         size="icon-sm"
-        aria-label="Move card up"
+        aria-label={m.admin_inspector_move_card_up()}
         disabled={selection.index === 0}
         onClick={() => dispatch({ type: 'move-card', section, index: selection.index, offset: -1 })}
       >
@@ -140,7 +138,7 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
       <Button
         variant="outline"
         size="icon-sm"
-        aria-label="Move card down"
+        aria-label={m.admin_inspector_move_card_down()}
         disabled={selection.index >= cardCount - 1}
         onClick={() => dispatch({ type: 'move-card', section, index: selection.index, offset: 1 })}
       >
@@ -153,24 +151,32 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
         onClick={() => onRequestDelete({ kind: 'card', section, index: selection.index })}
       >
         <Trash2Icon />
-        Delete card
+        {m.admin_inspector_delete_card()}
       </Button>
     </>
   );
 
   return (
     <InspectorPanel
-      eyebrow={pending ? `New ${info.label.toLowerCase()} card` : `${info.label} card`}
-      title={card.name || entity || (entity === undefined ? info.label : 'Choose an entity')}
+      eyebrow={
+        pending
+          ? m.admin_inspector_new_card_eyebrow({ kind: info.label.toLowerCase() })
+          : m.admin_inspector_card_eyebrow({ kind: info.label })
+      }
+      title={
+        card.name ||
+        entity ||
+        (entity === undefined ? info.label : m.admin_inspector_choose_entity())
+      }
       footer={footer}
       preview
       done={!pending}
       doneDisabled={entityMissing}
     >
       <InspectorField
-        label="Card type"
+        label={m.admin_inspector_card_type()}
         htmlFor="card-type"
-        hint={pending ? undefined : 'The entity is kept if the new type can show it.'}
+        hint={pending ? undefined : m.admin_inspector_card_type_hint()}
       >
         <Select
           value={card.type}
@@ -184,24 +190,20 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            {typeChoices.map((kind) => {
-              const { label, description, icon: Icon } = cardKindInfo(kind);
-
-              return (
-                <SelectItem key={kind} value={kind} textValue={label}>
-                  <Icon aria-hidden="true" />
-                  <span className="flex flex-col">
-                    <span>{label}</span>
-                    <span className="text-muted-foreground text-xs">{description}</span>
-                  </span>
-                </SelectItem>
-              );
-            })}
+            {allKinds.map(({ kind, label, description, icon: Icon }) => (
+              <SelectItem key={kind} value={kind} textValue={label}>
+                <Icon aria-hidden="true" />
+                <span className="flex flex-col">
+                  <span>{label}</span>
+                  <span className="text-muted-foreground text-xs">{description}</span>
+                </span>
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </InspectorField>
       {sections.length > 0 && (
-        <InspectorField label="Section" htmlFor="card-section">
+        <InspectorField label={m.admin_inspector_section()} htmlFor="card-section">
           <Select
             value={section === null ? noSection : `${sectionPrefix}${section}`}
             onValueChange={(value) => {
@@ -214,10 +216,10 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={noSection}>No section (top of the view)</SelectItem>
+              <SelectItem value={noSection}>{m.admin_inspector_no_section_top()}</SelectItem>
               {sections.map((item) => (
                 <SelectItem key={item.id} value={`${sectionPrefix}${item.id}`}>
-                  {item.title || 'Untitled section'}
+                  {item.title || m.editor_untitled_section()}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -226,9 +228,15 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
       )}
       {entity !== undefined && (
         <InspectorField
-          label="Home Assistant entity"
+          label={m.admin_inspector_ha_entity()}
           htmlFor="card-entity"
-          error={entityInvalid ? `Choose a ${info.domains.join(' or ')} entity.` : undefined}
+          error={
+            entityInvalid
+              ? m.admin_inspector_choose_domain_entity({
+                  domains: info.domains.join(m.admin_inspector_or()),
+                })
+              : undefined
+          }
         >
           <EntityCombobox
             id="card-entity"
@@ -238,10 +246,14 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
           />
         </InspectorField>
       )}
-      <InspectorField label="Display name" htmlFor="card-name">
+      <InspectorField label={m.admin_inspector_display_name()} htmlFor="card-name">
         <Input
           id="card-name"
-          placeholder={card.type === 'clock' ? 'No heading' : 'Use Home Assistant name'}
+          placeholder={
+            card.type === 'clock'
+              ? m.admin_inspector_placeholder_no_heading()
+              : m.admin_inspector_placeholder_ha_name()
+          }
           value={card.name ?? ''}
           onChange={(event) => change(patch(card, { name: event.target.value || undefined }))}
         />
@@ -251,9 +263,9 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
         card.type === 'value' ||
         card.type === 'toggle' ||
         card.type === 'scene') && (
-        <InspectorField label="Icon">
+        <InspectorField label={m.admin_inspector_icon()}>
           <IconGrid
-            label="Card icon"
+            label={m.admin_inspector_card_icon()}
             value={card.icon}
             auto={card.type === 'value' || card.type === 'toggle'}
             onChange={(icon) => change(patch(card, { icon }))}
@@ -261,9 +273,9 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
         </InspectorField>
       )}
       {card.type === 'clock' && (
-        <InspectorField label="Show">
+        <InspectorField label={m.admin_inspector_show()}>
           <fieldset className="grid grid-cols-3 gap-1.5">
-            <legend className="sr-only">Show</legend>
+            <legend className="sr-only">{m.admin_inspector_show()}</legend>
             {clockDisplays.map(({ value, label }) => {
               const selected = (card.display ?? 'datetime') === value;
 
@@ -286,9 +298,12 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
         </InspectorField>
       )}
       {card.type === 'weather' && (
-        <InspectorField label="Forecast" hint="One entry per hour, or one per day.">
+        <InspectorField
+          label={m.admin_inspector_forecast()}
+          hint={m.admin_inspector_forecast_hint()}
+        >
           <fieldset className="grid grid-cols-2 gap-1.5">
-            <legend className="sr-only">Forecast</legend>
+            <legend className="sr-only">{m.admin_inspector_forecast()}</legend>
             {forecastOptions.map(({ value, label }) => {
               const selected = (card.forecast ?? defaultForecastType) === value;
 
@@ -320,9 +335,9 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
       )}
       {card.type === 'value' && (
         <>
-          <InspectorField label="Template">
+          <InspectorField label={m.admin_inspector_template()}>
             <fieldset className="grid grid-cols-3 gap-1.5">
-              <legend className="sr-only">Template</legend>
+              <legend className="sr-only">{m.admin_inspector_template()}</legend>
               {valueTemplates.map(({ value, label }) => {
                 const selected = (card.template ?? 'tile') === value;
 
@@ -343,10 +358,10 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
               })}
             </fieldset>
           </InspectorField>
-          <InspectorField label="Unit" htmlFor="card-value-unit">
+          <InspectorField label={m.admin_inspector_unit()} htmlFor="card-value-unit">
             <Input
               id="card-value-unit"
-              placeholder="Use Home Assistant unit"
+              placeholder={m.admin_inspector_unit_placeholder()}
               maxLength={12}
               disabled={card.unit === ''}
               value={card.unit ?? ''}
@@ -360,10 +375,10 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
                   change(patch(card, { unit: event.target.checked ? '' : undefined }))
                 }
               />
-              Hide unit
+              {m.admin_inspector_hide_unit()}
             </label>
           </InspectorField>
-          <InspectorField label="Decimal places" htmlFor="card-value-precision">
+          <InspectorField label={m.admin_inspector_decimal_places()} htmlFor="card-value-precision">
             <Select
               value={card.precision === undefined ? 'auto' : String(card.precision)}
               onValueChange={(value) =>
@@ -376,7 +391,7 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
               <SelectContent>
                 {precisionOptions.map((option) => (
                   <SelectItem key={option} value={option}>
-                    {option === 'auto' ? 'Auto' : option}
+                    {option === 'auto' ? m.admin_inspector_auto() : option}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -385,7 +400,7 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
         </>
       )}
       {card.type === 'climate' && (
-        <InspectorField label="Temperature unit" htmlFor="card-unit">
+        <InspectorField label={m.admin_inspector_temperature_unit()} htmlFor="card-unit">
           <Select
             value={card.temperatureUnit ?? 'ha-default'}
             onValueChange={(value) =>
@@ -396,16 +411,16 @@ export function CardInspector({ selection, onRequestDelete }: CardInspectorProps
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ha-default">Use Home Assistant unit</SelectItem>
-              <SelectItem value="°C">°C Celsius</SelectItem>
-              <SelectItem value="°F">°F Fahrenheit</SelectItem>
+              <SelectItem value="ha-default">{m.admin_inspector_unit_placeholder()}</SelectItem>
+              <SelectItem value="°C">{m.admin_inspector_temp_celsius()}</SelectItem>
+              <SelectItem value="°F">{m.admin_inspector_temp_fahrenheit()}</SelectItem>
             </SelectContent>
           </Select>
         </InspectorField>
       )}
       {card.type === 'pstryk' && (
         <div className="space-y-4 border-t pt-4">
-          <p className="text-muted-foreground text-xs">Optional Pstryk sources</p>
+          <p className="text-muted-foreground text-xs">{m.admin_inspector_pstryk_optional()}</p>
           {pstrykSources.map(([field, label]) => (
             <InspectorField key={field} label={label} htmlFor={`card-${field}`}>
               <EntityCombobox

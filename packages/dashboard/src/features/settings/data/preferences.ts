@@ -11,8 +11,13 @@ type PreferenceStorage = Pick<Storage, 'getItem' | 'setItem'>;
 export function readPreferences(
   storage: PreferenceStorage,
   pages: readonly { id: string }[],
+  defaultLanguage: Language = 'en',
 ): Preferences {
-  const fallback: Preferences = { appearance: 'auto', language: 'en', page: pages[0].id };
+  const fallback: Preferences = {
+    appearance: 'auto',
+    language: defaultLanguage,
+    page: pages[0].id,
+  };
   try {
     const value: unknown = JSON.parse(storage.getItem(preferenceKey) || 'null');
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -23,7 +28,7 @@ export function readPreferences(
       appearance: ['auto', 'dark', 'light'].includes(saved.appearance || '')
         ? saved.appearance!
         : 'auto',
-      language: saved.language === 'pl' ? 'pl' : 'en',
+      language: saved.language === 'pl' ? 'pl' : saved.language === 'en' ? 'en' : defaultLanguage,
       page: pages.some((page) => page.id === saved.page) ? saved.page! : fallback.page,
     };
   } catch {

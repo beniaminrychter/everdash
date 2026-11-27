@@ -1,4 +1,5 @@
 import type { AuthDiscoverResponse, DiscoveredHomeAssistant } from '@everdash/contracts/auth/oauth';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import { adminHomeUrl, apiUrl } from '@/lib/api';
 
 /** Starts the Home Assistant sign-in again. Returns false when the server refused. */
@@ -50,7 +51,7 @@ export async function discoverHomeAssistantInstances(
   });
 
   if (!response.ok) {
-    throw new Error('Could not scan the local network for Home Assistant.');
+    throw new Error(m.admin_ha_scan_error());
   }
 
   const result = (await response.json()) as AuthDiscoverResponse;

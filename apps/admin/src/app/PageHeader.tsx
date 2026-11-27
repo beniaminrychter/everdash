@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import { Separator } from '@/components/ui/separator';
 import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -10,10 +11,10 @@ const shortcut = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘B' : 'Ctrl+B';
 function SidebarToggle() {
   const { state, isMobile } = useSidebar();
   const label = isMobile
-    ? 'Open sidebar'
+    ? m.admin_sidebar_open()
     : state === 'expanded'
-      ? 'Collapse sidebar'
-      : 'Expand sidebar';
+      ? m.admin_sidebar_collapse()
+      : m.admin_sidebar_expand();
 
   return (
     <Tooltip>

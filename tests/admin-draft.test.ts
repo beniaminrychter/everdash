@@ -580,15 +580,50 @@ test('saved keeps selection and view; loaded resets selection', () => {
   assert.deepEqual(loaded.selection, { kind: 'view' });
 });
 
-test('editing back keeps changes above zero but is not dirty', () => {
-  const state = run(
-    start(),
-    { type: 'rename-view', title: 'Other' },
-    { type: 'rename-view', title: 'Home' },
-  );
+test('editing back to the saved state resets changes to zero and is not dirty', () => {
+  const renamed = draftReducer(start(), { type: 'rename-view', title: 'Other' });
 
-  assert.equal(isDirty(state), false);
-  assert.equal(state.changes, 2);
+  assert.equal(isDirty(renamed), true);
+  assert.equal(renamed.changes, 1);
+
+  const reverted = draftReducer(renamed, { type: 'rename-view', title: 'Home' });
+
+  assert.equal(isDirty(reverted), false);
+  assert.equal(reverted.changes, 0);
+});
+
+test('repeatedly changing and reverting a card icon counts actual JSON differences', () => {
+  const base = start();
+  const card = base.document.views[0]!.cards![0]!;
+
+  const firstIcon = draftReducer(base, {
+    type: 'update-card',
+    index: 0,
+    card: { ...card, icon: 'lamp' },
+  });
+  assert.equal(firstIcon.changes, 1);
+
+  const secondIcon = draftReducer(firstIcon, {
+    type: 'update-card',
+    index: 0,
+    card: { ...card, icon: 'ceiling' },
+  });
+  assert.equal(secondIcon.changes, 1);
+
+  const reverted = draftReducer(secondIcon, {
+    type: 'update-card',
+    index: 0,
+    card: { ...card, icon: undefined },
+  });
+  assert.equal(isDirty(reverted), false);
+  assert.equal(reverted.changes, 0);
+
+  const twoFields = draftReducer(firstIcon, {
+    type: 'update-card',
+    index: 0,
+    card: { ...card, icon: 'lamp', name: 'Entryway' },
+  });
+  assert.equal(twoFields.changes, 2);
 });
 
 test('update-home merges polling', () => {
@@ -634,7 +669,7 @@ test('edits made during save survive', () => {
   assert.equal(saved.revision, 'r2');
   assert.equal(isDirty(saved), true);
   assert.deepEqual(saved.selection, { kind: 'card', index: 1 });
-  assert.equal(saved.changes, during.changes);
+  assert.equal(saved.changes, 1);
   assert.equal(saved.generation, during.generation);
 
   const reverted = draftReducer(saved, { type: 'rename-view', title: 'Lobby' });

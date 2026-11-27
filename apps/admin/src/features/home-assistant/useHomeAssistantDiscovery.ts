@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DiscoveredHomeAssistant } from '@everdash/contracts/auth/oauth';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import { discoverHomeAssistantInstances } from './connectionActions';
 
 interface DiscoveryState {
@@ -12,15 +13,15 @@ interface DiscoveryState {
 export function sourceLabel(source: DiscoveredHomeAssistant['source']): string {
   switch (source) {
     case 'mdns': {
-      return 'mDNS';
+      return m.admin_ha_source_mdns();
     }
 
     case 'local': {
-      return 'Local';
+      return m.admin_ha_source_local();
     }
 
     default: {
-      return 'Network';
+      return m.admin_ha_source_network();
     }
   }
 }
@@ -80,10 +81,7 @@ export function useHomeAssistantDiscovery(
         ...previous,
         scanning: false,
         scannedOnce: true,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Could not scan the local network for Home Assistant.',
+        error: error instanceof Error ? error.message : m.admin_ha_scan_error(),
       }));
     }
   }, []);
@@ -116,10 +114,7 @@ export function useHomeAssistantDiscovery(
           ...previous,
           scanning: false,
           scannedOnce: true,
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Could not scan the local network for Home Assistant.',
+          error: error instanceof Error ? error.message : m.admin_ha_scan_error(),
         }));
       }
     }

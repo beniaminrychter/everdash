@@ -11,6 +11,7 @@ import {
   ZapIcon,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import type { CardKind } from '@/app/draft/builder';
 
 export interface CardKindInfo {
@@ -24,74 +25,98 @@ export interface CardKindInfo {
   icon: LucideIcon;
 }
 
-export const cardKinds: readonly CardKindInfo[] = [
+const cardKindDefs: readonly {
+  kind: CardKind;
+  label: () => string;
+  description: () => string;
+  domains: readonly string[];
+  icon: LucideIcon;
+}[] = [
   {
     kind: 'light',
-    label: 'Light',
-    description: 'Switch and dim a light',
+    label: () => m.admin_card_kind_light_label(),
+    description: () => m.admin_card_kind_light_desc(),
     domains: cardEntityDomains('light'),
     icon: LightbulbIcon,
   },
   {
     kind: 'outlet',
-    label: 'Outlet',
-    description: 'Switch a smart plug',
+    label: () => m.admin_card_kind_outlet_label(),
+    description: () => m.admin_card_kind_outlet_desc(),
     domains: cardEntityDomains('outlet'),
     icon: PlugIcon,
   },
   {
     kind: 'climate',
-    label: 'Climate',
-    description: 'Thermostat and heating',
+    label: () => m.admin_card_kind_climate_label(),
+    description: () => m.admin_card_kind_climate_desc(),
     domains: cardEntityDomains('climate'),
     icon: ThermometerIcon,
   },
   {
     kind: 'weather',
-    label: 'Weather',
-    description: 'Current conditions and forecast',
+    label: () => m.admin_card_kind_weather_label(),
+    description: () => m.admin_card_kind_weather_desc(),
     domains: cardEntityDomains('weather'),
     icon: CloudSunIcon,
   },
   {
     kind: 'clock',
-    label: 'Time and date',
-    description: 'This device’s own clock',
+    label: () => m.admin_card_kind_clock_label(),
+    description: () => m.admin_card_kind_clock_desc(),
     domains: cardEntityDomains('clock'),
     icon: ClockIcon,
   },
   {
     kind: 'pstryk',
-    label: 'Pstryk energy',
-    description: 'Energy prices and usage',
+    label: () => m.admin_card_kind_pstryk_label(),
+    description: () => m.admin_card_kind_pstryk_desc(),
     domains: cardEntityDomains('pstryk'),
     icon: ZapIcon,
   },
   {
     kind: 'value',
-    label: 'Value',
-    description: 'Show a sensor or number',
+    label: () => m.admin_card_kind_value_label(),
+    description: () => m.admin_card_kind_value_desc(),
     domains: cardEntityDomains('value'),
     icon: GaugeIcon,
   },
   {
     kind: 'toggle',
-    label: 'Switch',
-    description: 'Toggle or show on/off',
+    label: () => m.admin_card_kind_toggle_label(),
+    description: () => m.admin_card_kind_toggle_desc(),
     domains: cardEntityDomains('toggle'),
     icon: ToggleRightIcon,
   },
   {
     kind: 'scene',
-    label: 'Scene',
-    description: 'Run a scene or script',
+    label: () => m.admin_card_kind_scene_label(),
+    description: () => m.admin_card_kind_scene_desc(),
     domains: cardEntityDomains('scene'),
     icon: SparklesIcon,
   },
 ];
 
+export function getCardKinds(): CardKindInfo[] {
+  return cardKindDefs.map((item) => ({
+    kind: item.kind,
+    label: item.label(),
+    description: item.description(),
+    domains: item.domains,
+    icon: item.icon,
+  }));
+}
+
 export function cardKindInfo(kind: CardKind): CardKindInfo {
-  return cardKinds.find((item) => item.kind === kind) ?? cardKinds[0]!;
+  const item = cardKindDefs.find((candidate) => candidate.kind === kind) ?? cardKindDefs[0]!;
+
+  return {
+    kind: item.kind,
+    label: item.label(),
+    description: item.description(),
+    domains: item.domains,
+    icon: item.icon,
+  };
 }
 
 /** Whether an entity ID is well formed for one of the given Home Assistant domains. */

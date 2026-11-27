@@ -1,5 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import { useDraft } from '@/app/DraftContext';
 import { CanvasIsland } from './CanvasIsland';
 import { itemPreviewDocument } from './itemPreviewDocument';
@@ -11,12 +12,25 @@ const stageWidth = 720;
 
 type PreviewState = 'live' | 'on' | 'off' | 'unavailable';
 
-const stateLabels: Record<PreviewState, string> = {
-  live: 'Live',
-  on: 'On',
-  off: 'Off',
-  unavailable: 'Unavailable',
-};
+function previewStateLabel(state: PreviewState): string {
+  switch (state) {
+    case 'live': {
+      return m.admin_editor_state_live();
+    }
+
+    case 'on': {
+      return m.admin_editor_state_on();
+    }
+
+    case 'off': {
+      return m.admin_editor_state_off();
+    }
+
+    default: {
+      return m.admin_editor_state_unavailable();
+    }
+  }
+}
 
 /** What each choice shows, by the kind of entity. Domains not listed offer Live and Unavailable. */
 const forcedValues: Record<string, Partial<Record<PreviewState, string>>> = {
@@ -131,7 +145,7 @@ export function ItemPreview() {
     <div className="flex min-h-0 flex-col gap-4 p-5">
       <div className="flex items-center gap-2 text-xs font-medium text-slate-600">
         <span className="size-1.5 rounded-full bg-emerald-600" aria-hidden="true" />
-        Preview · as on the tablet
+        {m.admin_editor_preview_as_tablet()}
       </div>
       <ScaledStage>
         <CanvasIsland
@@ -145,9 +159,9 @@ export function ItemPreview() {
       </ScaledStage>
       {entity && (
         <fieldset className="flex flex-wrap items-center gap-2">
-          <legend className="sr-only">Preview state</legend>
+          <legend className="sr-only">{m.admin_editor_preview_state()}</legend>
           <span className="text-xs text-slate-600" aria-hidden="true">
-            Show as
+            {m.admin_editor_show_as()}
           </span>
           <div className="flex rounded-lg bg-slate-300/70 p-0.5">
             {choices.map((choice) => (
@@ -160,7 +174,7 @@ export function ItemPreview() {
                 }`}
                 onClick={() => setShown(choice)}
               >
-                {stateLabels[choice]}
+                {previewStateLabel(choice)}
               </button>
             ))}
           </div>

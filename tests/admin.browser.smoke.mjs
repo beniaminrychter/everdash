@@ -200,6 +200,17 @@ const server = createServer(async (request, response) => {
       });
       return;
     }
+    if (url.pathname === '/api/manage/devices/addresses' && request.method === 'GET') {
+      sendJson(200, {
+        local: { url: 'http://192.168.1.10:8095/', reachable: true },
+        external: {
+          url: 'http://your-smart-home.example:8095/',
+          reachable: false,
+          reasonCode: 'connection_refused',
+        },
+      });
+      return;
+    }
     if (url.pathname === '/api/manage/devices/code' && request.method === 'POST') {
       adminRegistrationCode = '918273';
       sendJson(200, { registrationCode: adminRegistrationCode, codeCreatedAt: 1700000001000 });
@@ -356,9 +367,9 @@ async function chooseMenuItem(target, name, item) {
   await target.getByRole('menuitem', { name: item, exact: true }).click();
 }
 
-/** Starts a new card of the given kind: + Add card, then the type in the picker. */
+/** Starts a new card of the given kind: + Card, then the type in the picker. */
 async function addCard(target, kind) {
-  await target.getByRole('button', { name: '+ Add card' }).click();
+  await target.getByRole('button', { name: '+ Card' }).click();
   await target
     .getByRole('dialog', { name: 'Add card' })
     .getByRole('button', { name: new RegExp(`^${kind}`) })
@@ -441,6 +452,15 @@ try {
   await sidebar('Devices').click();
   await expect(page.getByRole('heading', { name: 'Devices' })).toBeVisible();
   await expect(page.getByText('Register a device', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Local network address', { exact: true })).toHaveValue(
+    'http://192.168.1.10:8095/',
+  );
+  await expect(page.getByText('Reachable', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('External address', { exact: true })).toHaveValue(
+    'http://your-smart-home.example:8095/',
+  );
+  await expect(page.getByText('Not reachable', { exact: true })).toBeVisible();
+  await expect(page.getByText(/External tunnels and reverse proxies/)).toBeVisible();
   await expect(page.getByLabel('Registration code', { exact: true })).toHaveText('123 456');
   await page.getByRole('button', { name: 'Regenerate', exact: true }).click();
   await expect(page.getByLabel('Registration code', { exact: true })).toHaveText('918 273');
@@ -522,15 +542,13 @@ try {
   assert.equal(Math.round((await viewportFrame.boundingBox()).width), 390);
   assert.equal(Math.round((await viewportFrame.boundingBox()).height), 844);
   const viewportBox = await page.getByRole('combobox', { name: 'Preview viewport' }).boundingBox();
-  const addCardBox = await page.getByRole('button', { name: '+ Add card' }).boundingBox();
+  const addCardBox = await page.getByRole('button', { name: '+ Card' }).boundingBox();
   assert.ok(viewportBox && addCardBox && Math.abs(viewportBox.y - addCardBox.y) <= 6);
   const toolbarTopBeforeScroll = addCardBox.y;
   await scrollPane.evaluate((element) => {
     element.scrollTop = 120;
   });
-  const addCardBoxAfterScroll = await page
-    .getByRole('button', { name: '+ Add card' })
-    .boundingBox();
+  const addCardBoxAfterScroll = await page.getByRole('button', { name: '+ Card' }).boundingBox();
   assert.ok(
     addCardBoxAfterScroll && Math.abs(addCardBoxAfterScroll.y - toolbarTopBeforeScroll) <= 1,
   );
@@ -538,7 +556,7 @@ try {
   const viewportBox1280 = await page
     .getByRole('combobox', { name: 'Preview viewport' })
     .boundingBox();
-  const addCardBox1280 = await page.getByRole('button', { name: '+ Add card' }).boundingBox();
+  const addCardBox1280 = await page.getByRole('button', { name: '+ Card' }).boundingBox();
   assert.ok(
     viewportBox1280 && addCardBox1280 && Math.abs(viewportBox1280.y - addCardBox1280.y) <= 6,
   );
@@ -774,11 +792,18 @@ try {
   await expect(page.getByRole('menuitem', { name: 'Delete view' })).toBeDisabled();
   await page.keyboard.press('Escape');
 
-  // Dashboard settings join the draft immediately and show up in the JSON page.
+  // Dashboard settings join the draft immediately and show up in the JSON page and its Diff view.
   await sidebar('Dashboard settings').click();
   await expect(page.getByRole('heading', { name: 'Dashboard settings' })).toBeVisible();
   await page.getByLabel('Home timezone').fill('Europe/Warsaw');
   await sidebar('JSON import / export').click();
+  await page.getByRole('tab', { name: 'Diff' }).click();
+  const diffView = page.locator('[data-json-diff]');
+  await expect(diffView).toBeVisible();
+  await expect(
+    diffView.locator('[data-diff-line="added"]').filter({ hasText: 'Europe/Warsaw' }),
+  ).toBeVisible();
+  await page.getByRole('tab', { name: 'Editor' }).click();
   const dashboardJson = page.getByRole('textbox', { name: 'Dashboard JSON' });
   const jsonEditor = page.locator('[data-json-editor]');
   const jsonActions = page.locator('[data-json-actions]');
@@ -1622,6 +1647,35 @@ try {
   await setupPage.getByRole('button', { name: /http:\/\/192\.168\.1\.80:8123/ }).click();
   await expect(setupPage.getByLabel('Home Assistant URL')).toHaveValue('http://192.168.1.80:8123');
   await setupPage.close();
+  authSessionState = {
+    authenticated: true,
+    connection: 'connected',
+    homeAssistantOrigin: 'http://192.168.1.10:8123',
+    language: 'pl',
+  };
+  const polishPage = await openPage({ width: 1280, height: 800 });
+  await expect(polishPage.getByRole('button', { name: '+ Karta', exact: true })).toBeVisible();
+  await expect(polishPage.getByRole('button', { name: '+ Plakietka', exact: true })).toBeVisible();
+  await expect(polishPage.getByRole('button', { name: 'Urządzenia', exact: true })).toBeVisible();
+  await polishPage.getByRole('button', { name: 'Urządzenia', exact: true }).click();
+  await expect(polishPage.getByText('Zarejestruj urządzenie', { exact: true })).toBeVisible();
+  await expect(polishPage.getByLabel('Adres w sieci lokalnej', { exact: true })).toHaveValue(
+    'http://192.168.1.10:8095/',
+  );
+  await expect(polishPage.getByText('Dostępny', { exact: true })).toBeVisible();
+  await expect(polishPage.getByLabel('Adres zewnętrzny', { exact: true })).toHaveValue(
+    'http://your-smart-home.example:8095/',
+  );
+  await expect(polishPage.getByText('Niedostępny', { exact: true })).toBeVisible();
+  await expect(polishPage.getByText(/Zewnętrzne tunele i serwery proxy/)).toBeVisible();
+  // Switching admin language manually in the sidebar immediately updates the UI.
+  await polishPage.getByRole('button', { name: 'Język', exact: true }).click();
+  await polishPage.getByRole('menuitem', { name: 'English', exact: true }).click();
+  await expect(polishPage.getByText('Register a device', { exact: true })).toBeVisible();
+  await polishPage.getByRole('button', { name: 'Language', exact: true }).click();
+  await polishPage.getByRole('menuitem', { name: 'Auto (Home Assistant)', exact: true }).click();
+  await expect(polishPage.getByText('Zarejestruj urządzenie', { exact: true })).toBeVisible();
+  await polishPage.close();
   authSessionState = {
     authenticated: true,
     connection: 'connected',

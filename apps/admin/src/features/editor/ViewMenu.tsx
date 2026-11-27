@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { EllipsisIcon } from 'lucide-react';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,7 +37,7 @@ export function ViewMenu({ onRename }: ViewMenuProps) {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon-sm" aria-label="View options">
+          <Button variant="ghost" size="icon-sm" aria-label={m.admin_view_options()}>
             <EllipsisIcon />
           </Button>
         </DropdownMenuTrigger>
@@ -56,22 +57,22 @@ export function ViewMenu({ onRename }: ViewMenuProps) {
               onRename();
             }}
           >
-            Rename
+            {m.editor_rename()}
           </DropdownMenuItem>
           <DropdownMenuItem
             disabled={index <= 0}
             onSelect={() => dispatch({ type: 'move-view', offset: -1 })}
           >
-            Move earlier
+            {m.editor_move_earlier()}
           </DropdownMenuItem>
           <DropdownMenuItem
             disabled={index === -1 || index >= views.length - 1}
             onSelect={() => dispatch({ type: 'move-view', offset: 1 })}
           >
-            Move later
+            {m.editor_move_later()}
           </DropdownMenuItem>
           <DropdownMenuItem disabled={!view} onSelect={() => dispatch({ type: 'duplicate-view' })}>
-            Duplicate
+            {m.editor_duplicate()}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
@@ -79,26 +80,25 @@ export function ViewMenu({ onRename }: ViewMenuProps) {
             disabled={views.length <= 1}
             onSelect={() => setConfirmingDelete(true)}
           >
-            Delete view
+            {m.admin_view_delete()}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
       <AlertDialog open={confirmingDelete} onOpenChange={setConfirmingDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete “{view?.title || 'this view'}”?</AlertDialogTitle>
-            <AlertDialogDescription>
-              The view and its cards and badges are removed from the dashboard draft. Discard
-              restores them until you save.
-            </AlertDialogDescription>
+            <AlertDialogTitle>
+              {m.admin_view_delete_title({ title: view?.title || m.admin_view_this_view() })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>{m.admin_view_delete_description()}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{m.admin_cancel()}</AlertDialogCancel>
             <AlertDialogAction
               className={buttonVariants({ variant: 'destructive' })}
               onClick={() => dispatch({ type: 'delete-view' })}
             >
-              Delete view
+              {m.admin_view_delete()}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

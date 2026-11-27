@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { defineConfig } from '@everdash/contracts/config';
 import { HomeAssistantStore } from '@everdash/dashboard/features/accessories/data/store';
+import { createDevice, deviceAccent } from '@everdash/dashboard/features/accessories/data/model';
 import type { PageConfig } from '@everdash/dashboard/features/accessories/data/model';
+import { defaultAccent } from '@everdash/dashboard/shared/color/tint';
 import { isWidget, resolveDashboard } from '@everdash/dashboard/features/dashboard/data/discovery';
 import { readValue, valueIcon } from '@everdash/dashboard/features/values/data/reading';
 import { sceneUnavailable } from '@everdash/dashboard/features/scenes/data/availability';
@@ -287,4 +289,13 @@ test('a failed input_boolean command rolls the card back and reports the failure
   assert.equal(device.availability, 'available');
   assert.equal(store.getSnapshot().actionFailure?.entityId, 'input_boolean.guest');
   store.stop();
+});
+
+test('toggle devices use the default accent instead of blue', () => {
+  for (const card of togglePage.cards) {
+    const device = createDevice(card);
+    assert.equal(device.color, defaultAccent);
+    assert.notEqual(device.color, '#3498eb');
+    assert.equal(deviceAccent(device), defaultAccent);
+  }
 });

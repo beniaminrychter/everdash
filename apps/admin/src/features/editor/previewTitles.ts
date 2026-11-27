@@ -1,4 +1,5 @@
 import type { DashboardDocument } from '@everdash/contracts/config/types';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 
 /**
  * Fills temporarily blank view or section titles with non-empty fallback labels so the live
@@ -17,12 +18,12 @@ export function withPreviewTitles(document: DashboardDocument): DashboardDocumen
     ...document,
     views: document.views.map((view) => ({
       ...view,
-      title: view.title.trim() ? view.title : 'Untitled view',
+      title: view.title.trim() ? view.title : m.admin_untitled_view(),
       ...(view.sections
         ? {
             sections: view.sections.map((section) => ({
               ...section,
-              title: section.title.trim() ? section.title : 'Untitled section',
+              title: section.title.trim() ? section.title : m.editor_untitled_section(),
             })),
           }
         : {}),

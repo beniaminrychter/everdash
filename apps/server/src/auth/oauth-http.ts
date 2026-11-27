@@ -10,6 +10,8 @@ import {
   clearTransactionCookie,
   readCookie,
 } from './admin-cookies';
+import type { HomeAssistantTransport } from '../home-assistant/client';
+import { readHomeAssistantLanguage } from '../home-assistant/language';
 import type { OAuthCoordinator } from './oauth-coordinator';
 import { OAuthFlowError } from './oauth-flow-error';
 import { parseHomeAssistantOrigin } from './origin';
@@ -84,6 +86,7 @@ export interface OAuthHttpOptions {
   supervisorConnected?: boolean;
   tabletPort?: number;
   isAdmin?: (request: FastifyRequest) => boolean;
+  homeAssistant?: HomeAssistantTransport;
 }
 
 export function registerOAuthRoutes(
@@ -199,6 +202,12 @@ export function registerOAuthRoutes(
     }
     if (status.state === 'connected' && status.durability === 'uncertain') {
       result.durability = 'uncertain';
+    }
+    if (result.connection === 'connected' && options?.homeAssistant?.getConfig) {
+      const haLanguage = await readHomeAssistantLanguage(options.homeAssistant);
+      if (haLanguage) {
+        result.language = haLanguage;
+      }
     }
     return reply.send(result);
   });

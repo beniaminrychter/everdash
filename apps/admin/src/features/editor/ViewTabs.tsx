@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useDraft } from '@/app/DraftContext';
@@ -30,7 +31,7 @@ function ViewTab({ id, title, active }: ViewTabProps) {
       value={id}
       className="data-[state=active]:border-border dark:data-[state=active]:border-border h-full max-w-40 flex-none px-3 data-[state=active]:font-semibold"
     >
-      <span className="truncate">{title || 'Untitled'}</span>
+      <span className="truncate">{title || m.admin_untitled()}</span>
     </TabsTrigger>
   );
 }
@@ -40,7 +41,7 @@ export function ViewTabs({ onRename }: ViewTabsProps) {
 
   return (
     <>
-      <h1 className="sr-only">Editor</h1>
+      <h1 className="sr-only">{m.admin_route_editor()}</h1>
       <Tabs
         value={state.viewId}
         onValueChange={(viewId) => dispatch({ type: 'select-view', viewId })}
@@ -67,7 +68,7 @@ export function ViewTabs({ onRename }: ViewTabsProps) {
         className="text-muted-foreground shrink-0"
         onClick={() => dispatch({ type: 'add-view' })}
       >
-        + View
+        {m.admin_editor_add_view_plus()}
       </Button>
     </>
   );

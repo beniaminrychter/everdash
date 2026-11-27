@@ -3,6 +3,7 @@ import type { Device } from '@everdash/contracts/types/index';
 import { Icon } from '@everdash/ui/ui/Icon/Icon';
 import type { IconName } from '@everdash/ui/ui/Icon/Icon';
 import { deviceTint } from '../../../../shared/color/tint';
+import { deviceAccent } from '../../data/model';
 import styles from './AccessoryCard.module.css';
 
 interface AccessoryCardProps {
@@ -33,8 +34,7 @@ export function AccessoryCard({
         ? `${device.brightness}%`
         : 'On'
       : 'Off';
-  const accent = device.colorCapable ? device.color : isLight ? '#ffd60a' : '#3489fa';
-  const tint = deviceTint(accent);
+  const tint = deviceTint(deviceAccent(device));
 
   return (
     <article

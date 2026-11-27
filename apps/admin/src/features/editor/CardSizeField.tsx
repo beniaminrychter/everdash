@@ -1,5 +1,6 @@
 import { cardSizes } from '@everdash/contracts/config/cardSize';
 import type { CardSize } from '@everdash/contracts/config/cardSize';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import { Button } from '@/components/ui/button';
 import { InspectorField } from './InspectorPanel';
 
@@ -14,9 +15,9 @@ interface CardSizeFieldProps {
 /** How much of the row a widget card takes, for any widget card that supports a size. */
 export function CardSizeField({ value, onChange }: CardSizeFieldProps) {
   return (
-    <InspectorField label="Size" hint="Share of the row the card takes.">
+    <InspectorField label={m.admin_inspector_size()} hint={m.admin_inspector_size_hint()}>
       <fieldset className="grid grid-cols-3 gap-1.5">
-        <legend className="sr-only">Size</legend>
+        <legend className="sr-only">{m.admin_inspector_size()}</legend>
         {cardSizes.map((size) => {
           const selected = value === size;
 

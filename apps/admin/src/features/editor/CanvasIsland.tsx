@@ -6,11 +6,14 @@ import type {
   CanvasHandle,
   DashboardCanvasProps,
 } from '@everdash/dashboard/editor/mountDashboardCanvas';
+import type { Language } from '@everdash/ui/i18n/locale';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { draftIssues, initialDraft } from '@/app/draft/draftReducer';
 import { api } from '@/lib/api';
+import { useAdminLocale } from '@/lib/i18n';
 
 type Snapshot = Awaited<ReturnType<typeof api.preview>>;
 
@@ -32,6 +35,7 @@ interface CanvasIslandProps {
 interface CanvasMountProps {
   snapshot: DashboardCanvasProps['snapshot'];
   selectedView: string;
+  language: Language;
   selectionKind?: 'card' | 'badge' | 'section';
   /** The section id of the selected card or section; null for the unsectioned cards. */
   selectionSection?: string | null;
@@ -65,6 +69,7 @@ function canvasSelection(
 function CanvasMountView({
   snapshot,
   selectedView,
+  language,
   selectionKind,
   selectionSection,
   selectionIndex,
@@ -90,6 +95,7 @@ function CanvasMountView({
     const props: DashboardCanvasProps = {
       snapshot,
       selectedView,
+      language,
       selection: canvasSelection(selectionKind, selectionSection, selectionIndex),
       incomplete,
       onAction: (action) => onMessageRef.current(action),
@@ -100,7 +106,15 @@ function CanvasMountView({
     } else {
       handle.current = mountDashboardCanvas(element, props);
     }
-  }, [snapshot, selectedView, selectionKind, selectionSection, selectionIndex, incomplete]);
+  }, [
+    snapshot,
+    selectedView,
+    language,
+    selectionKind,
+    selectionSection,
+    selectionIndex,
+    incomplete,
+  ]);
 
   useLayoutEffect(
     () => () => {
@@ -188,6 +202,7 @@ export function CanvasIsland({
   forcedStates,
   onMessage,
 }: CanvasIslandProps) {
+  const { locale } = useAdminLocale();
   const latestRequest = useRef(0);
   const [preview, setPreview] = useState<{ result: Snapshot; now: number } | null>(null);
   // Failure belongs to one document, so editing (or retrying) clears it without an effect.
@@ -249,15 +264,13 @@ export function CanvasIsland({
   }, [document, forcedStates, generation, preview, readOnly]);
 
   if (invalid && readOnly) {
-    return (
-      <p className="text-muted-foreground text-sm">Fix the highlighted fields to see a preview.</p>
-    );
+    return <p className="text-muted-foreground text-sm">{m.admin_editor_fix_fields_preview()}</p>;
   }
 
   if (invalid) {
     return (
       <Alert variant="destructive">
-        <AlertTitle>This dashboard has problems</AlertTitle>
+        <AlertTitle>{m.admin_editor_dashboard_problems()}</AlertTitle>
         <AlertDescription>
           <ul className="list-disc pl-4">
             {issues.map((issue, index) => (
@@ -273,7 +286,7 @@ export function CanvasIsland({
     <>
       {failed && (
         <Alert variant="destructive">
-          <AlertTitle>Dashboard data could not be loaded.</AlertTitle>
+          <AlertTitle>{m.admin_editor_data_load_error()}</AlertTitle>
           <AlertDescription>
             <Button
               variant="outline"
@@ -283,7 +296,7 @@ export function CanvasIsland({
                 load();
               }}
             >
-              Retry
+              {m.admin_retry()}
             </Button>
           </AlertDescription>
         </Alert>
@@ -292,6 +305,7 @@ export function CanvasIsland({
         <CanvasMount
           snapshot={snapshot}
           selectedView={viewId}
+          language={locale}
           selectionKind={selection?.kind}
           selectionSection={selection && 'section' in selection ? selection.section : undefined}
           selectionIndex={selection && 'index' in selection ? selection.index : undefined}
@@ -301,7 +315,7 @@ export function CanvasIsland({
         />
       )}
       {!snapshot && !failed && (
-        <output className="block space-y-3" aria-label="Loading preview">
+        <output className="block space-y-3" aria-label={m.admin_editor_loading_preview()}>
           <Skeleton className="h-10 w-2/3" />
           <Skeleton className="h-40 w-full" />
           <Skeleton className="h-40 w-full" />

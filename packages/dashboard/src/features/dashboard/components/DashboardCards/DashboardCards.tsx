@@ -2,6 +2,7 @@ import { useRef } from 'preact/hooks';
 import { defaultCardRows } from '@everdash/contracts/config/cardRows';
 import { defaultForecastType, forecastKey } from '@everdash/contracts/config/weatherForecast';
 import { translateText, useI18n } from '@everdash/ui/i18n/index';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import { createClimate } from '../../../climate/data/model';
 import type { LiveClimate, ClimateChange } from '../../../climate/data/model';
 import { ClimateCard } from '../../../climate/components/ClimateCard/ClimateCard';
@@ -97,7 +98,7 @@ export function DashboardCards({
 
   usePackedGrids(surface, styles.cards);
 
-  const { t, locale } = useI18n();
+  const { t, locale, language } = useI18n();
   const reading = (id: string | undefined) => (id ? readings[id] : undefined);
 
   const renderAccessory = (card: ResolvedAccessory) => {
@@ -427,11 +428,14 @@ export function DashboardCards({
           {renderArea(
             section.id,
             section.cards,
-            'No cards in this section yet. Add one or drag one here.',
+            m.editor_no_cards_in_section({}, { locale: language }),
           )}
           {editing && (
             <editor.AddCardButton
-              label={`Add card to ${section.title || 'section'}`}
+              label={m.editor_add_card_to_section(
+                { section: section.title || m.editor_section_fallback({}, { locale: language }) },
+                { locale: language },
+              )}
               section={section.id}
               onEvent={onEditorEvent ?? noEvent}
             />
@@ -449,10 +453,14 @@ export function DashboardCards({
       )}
       {showRoot && (
         <div class={styles.section}>
-          {renderArea(null, view.cards, 'No cards outside sections. Drag one here.')}
+          {renderArea(
+            null,
+            view.cards,
+            m.editor_no_cards_outside_sections({}, { locale: language }),
+          )}
           {editing && hasSections && (
             <editor.AddCardButton
-              label="Add card outside sections"
+              label={m.editor_add_card_outside_sections({}, { locale: language })}
               section={null}
               onEvent={onEditorEvent ?? noEvent}
             />

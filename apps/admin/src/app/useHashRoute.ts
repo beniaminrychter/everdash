@@ -1,14 +1,37 @@
 import { useEffect, useRef, useState } from 'react';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 
 export type Route = 'editor' | 'settings' | 'json' | 'devices' | 'home-assistant';
 
-export const routeTitles: Record<Route, string> = {
-  editor: 'Editor',
-  settings: 'Dashboard settings',
-  json: 'JSON import / export',
-  devices: 'Devices',
-  'home-assistant': 'Home Assistant',
-};
+const validRoutes = new Set<Route>(['editor', 'settings', 'json', 'devices', 'home-assistant']);
+
+export function routeTitle(route: Route): string {
+  switch (route) {
+    case 'editor': {
+      return m.admin_route_editor();
+    }
+
+    case 'settings': {
+      return m.admin_route_settings();
+    }
+
+    case 'json': {
+      return m.admin_route_json();
+    }
+
+    case 'devices': {
+      return m.admin_route_devices();
+    }
+
+    case 'home-assistant': {
+      return m.admin_route_home_assistant();
+    }
+
+    default: {
+      return m.admin_route_editor();
+    }
+  }
+}
 
 /** Returns true to keep the current page, for example while it has unapplied edits. */
 type RouteBlocker = (target: Route) => boolean;
@@ -20,7 +43,7 @@ export function setRouteBlocker(blocker: RouteBlocker | null) {
 }
 
 function isRoute(value: string): value is Route {
-  return Object.prototype.hasOwnProperty.call(routeTitles, value);
+  return validRoutes.has(value as Route);
 }
 
 function readRoute(): Route {

@@ -1,3 +1,4 @@
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,17 +27,17 @@ export function UnappliedJsonDialog({
     <AlertDialog open={open} onOpenChange={(next) => !next && onKeepEditing()}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Unapplied JSON changes</AlertDialogTitle>
-          <AlertDialogDescription>
-            Apply the JSON to the editor draft, or discard the raw edits before leaving this page.
-          </AlertDialogDescription>
+          <AlertDialogTitle>{m.admin_json_unapplied_title()}</AlertDialogTitle>
+          <AlertDialogDescription>{m.admin_json_unapplied_description()}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Keep editing</AlertDialogCancel>
+          <AlertDialogCancel>{m.admin_json_keep_editing()}</AlertDialogCancel>
           <AlertDialogAction variant="outline" onClick={onDiscard}>
-            Discard JSON
+            {m.admin_json_discard()}
           </AlertDialogAction>
-          <AlertDialogAction onClick={onApply}>Validate and apply</AlertDialogAction>
+          <AlertDialogAction onClick={onApply}>
+            {m.admin_json_validate_and_apply()}
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

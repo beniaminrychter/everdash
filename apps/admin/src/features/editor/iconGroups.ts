@@ -1,14 +1,17 @@
 import type { IconName } from '@everdash/contracts/iconNames';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 
 export interface IconGroup {
-  label: string;
+  id: string;
+  label: () => string;
   icons: readonly IconName[];
 }
 
 /** How the icon picker groups the icons; any icon missing here still appears under "More". */
 export const iconGroups: readonly IconGroup[] = [
   {
-    label: 'Lighting',
+    id: 'lighting',
+    label: () => m.admin_icon_group_lighting(),
     icons: [
       'bulb',
       'bulb-off',
@@ -23,7 +26,8 @@ export const iconGroups: readonly IconGroup[] = [
     ],
   },
   {
-    label: 'Rooms',
+    id: 'rooms',
+    label: () => m.admin_icon_group_rooms(),
     icons: [
       'home',
       'sofa',
@@ -43,7 +47,8 @@ export const iconGroups: readonly IconGroup[] = [
     ],
   },
   {
-    label: 'Climate',
+    id: 'climate',
+    label: () => m.admin_icon_group_climate(),
     icons: [
       'thermometer',
       'heating',
@@ -60,7 +65,8 @@ export const iconGroups: readonly IconGroup[] = [
     ],
   },
   {
-    label: 'Energy and utilities',
+    id: 'energy',
+    label: () => m.admin_icon_group_energy(),
     icons: [
       'plug',
       'outlet',
@@ -75,15 +81,18 @@ export const iconGroups: readonly IconGroup[] = [
     ],
   },
   {
-    label: 'Security',
+    id: 'security',
+    label: () => m.admin_icon_group_security(),
     icons: ['lock', 'unlock', 'shield', 'camera', 'motion', 'siren', 'smoke', 'doorbell', 'key'],
   },
   {
-    label: 'Media',
+    id: 'media',
+    label: () => m.admin_icon_group_media(),
     icons: ['tv', 'speaker', 'music', 'play', 'gamepad', 'movie'],
   },
   {
-    label: 'Appliances',
+    id: 'appliances',
+    label: () => m.admin_icon_group_appliances(),
     icons: [
       'washing-machine',
       'dryer',
@@ -97,7 +106,8 @@ export const iconGroups: readonly IconGroup[] = [
     ],
   },
   {
-    label: 'Weather and outdoors',
+    id: 'weather',
+    label: () => m.admin_icon_group_weather(),
     icons: [
       'sun',
       'sunrise',
@@ -116,11 +126,13 @@ export const iconGroups: readonly IconGroup[] = [
     ],
   },
   {
-    label: 'Devices',
+    id: 'devices',
+    label: () => m.admin_icon_group_devices(),
     icons: ['laptop', 'computer', 'phone', 'printer', 'wifi', 'router'],
   },
   {
-    label: 'General',
+    id: 'general',
+    label: () => m.admin_icon_group_general(),
     icons: [
       'check',
       'close',

@@ -9,6 +9,7 @@ import type {
   SectionConfig,
   ViewConfig,
 } from '@everdash/contracts/config/types';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 
 export type CardKind = CardConfig['type'];
 
@@ -76,7 +77,7 @@ export function createSection(view: ViewConfig): SectionConfig {
     id = `${id}-1`;
   }
 
-  return { id, title: 'New section', cards: [] };
+  return { id, title: m.admin_default_new_section(), cards: [] };
 }
 
 export function createCard(type: CardKind): CardConfig {

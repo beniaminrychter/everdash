@@ -1,3 +1,4 @@
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -9,7 +10,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import type { CardKind } from '@/app/draft/builder';
-import { cardKinds } from './cardKinds';
+import { getCardKinds } from './cardKinds';
 
 interface AddCardDialogProps {
   open: boolean;
@@ -19,12 +20,14 @@ interface AddCardDialogProps {
 
 /** The first step of adding a card: choose its type. The editor opens next, with a live preview. */
 export function AddCardDialog({ open, onOpenChange, onPick }: AddCardDialogProps) {
+  const cardKinds = getCardKinds();
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-dvh overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogDescription className="text-xs">Step 1 of 2</DialogDescription>
-          <DialogTitle>Add card</DialogTitle>
+          <DialogDescription className="text-xs">{m.admin_editor_step_1_of_2()}</DialogDescription>
+          <DialogTitle>{m.admin_editor_add_card()}</DialogTitle>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {cardKinds.map(({ kind, label, description, icon: Icon }) => (
@@ -47,7 +50,7 @@ export function AddCardDialog({ open, onOpenChange, onPick }: AddCardDialogProps
         </div>
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant="outline">Cancel</Button>
+            <Button variant="outline">{m.admin_cancel()}</Button>
           </DialogClose>
         </DialogFooter>
       </DialogContent>

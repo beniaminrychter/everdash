@@ -1,5 +1,6 @@
 import { Trash2Icon } from 'lucide-react';
 import type { BadgeConfig } from '@everdash/contracts/config/types';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useDraft } from '@/app/DraftContext';
@@ -50,13 +51,13 @@ export function BadgeInspector({ selection, onRequestDelete }: BadgeInspectorPro
     selection.kind === 'pending-badge' ? (
       <>
         <Button disabled={!canAdd} onClick={() => dispatch({ type: 'commit-pending' })}>
-          Add badge
+          {m.admin_inspector_add_badge()}
         </Button>
         <Button
           variant="ghost"
           onClick={() => dispatch({ type: 'select', selection: { kind: 'view' } })}
         >
-          Cancel
+          {m.admin_cancel()}
         </Button>
       </>
     ) : (
@@ -67,22 +68,22 @@ export function BadgeInspector({ selection, onRequestDelete }: BadgeInspectorPro
         onClick={() => onRequestDelete({ kind: 'badge', index: selection.index })}
       >
         <Trash2Icon />
-        Delete badge
+        {m.admin_inspector_delete_badge()}
       </Button>
     );
 
   return (
     <InspectorPanel
-      eyebrow={pending ? 'New temperature badge' : 'Temperature badge'}
-      title={badge.name || badge.entity || 'Choose an entity'}
+      eyebrow={pending ? m.admin_inspector_new_badge_eyebrow() : m.admin_inspector_badge_eyebrow()}
+      title={badge.name || badge.entity || m.admin_inspector_choose_entity()}
       footer={footer}
       preview
       done={!pending}
     >
       <InspectorField
-        label="Temperature sensor"
+        label={m.admin_inspector_temp_sensor()}
         htmlFor="badge-entity"
-        error={entityInvalid ? 'Choose a sensor entity.' : undefined}
+        error={entityInvalid ? m.admin_inspector_choose_sensor() : undefined}
       >
         <EntityCombobox
           id="badge-entity"
@@ -91,17 +92,17 @@ export function BadgeInspector({ selection, onRequestDelete }: BadgeInspectorPro
           onChange={(entity) => change(patch(badge, { entity }))}
         />
       </InspectorField>
-      <InspectorField label="Display name" htmlFor="badge-name">
+      <InspectorField label={m.admin_inspector_display_name()} htmlFor="badge-name">
         <Input
           id="badge-name"
-          placeholder="Use Home Assistant name"
+          placeholder={m.admin_inspector_placeholder_ha_name()}
           value={badge.name ?? ''}
           onChange={(event) => change(patch(badge, { name: event.target.value || undefined }))}
         />
       </InspectorField>
-      <InspectorField label="Icon">
+      <InspectorField label={m.admin_inspector_icon()}>
         <IconGrid
-          label="Badge icon"
+          label={m.admin_inspector_badge_icon()}
           value={badge.icon}
           onChange={(icon) => change(patch(badge, { icon }))}
         />

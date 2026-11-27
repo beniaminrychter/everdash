@@ -1,6 +1,7 @@
 import type { Device } from '@everdash/contracts/types/index';
 import type { ServiceCommand } from '@everdash/contracts/home-assistant/contracts';
 import type { IconName } from '@everdash/ui/ui/Icon/Icon';
+import { defaultAccent } from '../../../shared/color/tint';
 
 export type CardConfig = {
   name: string;
@@ -33,7 +34,7 @@ export function createDevice(card: CardConfig): LiveDevice {
   return {
     availability: 'loading',
     brightness: 0,
-    color: card.type === 'light' ? '#ffb33f' : '#3498eb',
+    color: card.type === 'light' ? '#ffb33f' : defaultAccent,
     colorCapable: false,
     dimmable: false,
     icon: card.icon,
@@ -45,6 +46,11 @@ export function createDevice(card: CardConfig): LiveDevice {
     room: card.room,
     type: card.type,
   };
+}
+
+/** Accent colour for an accessory tile: RGB lights keep their bulb colour; all others share the default accent. */
+export function deviceAccent(device: Pick<Device, 'color' | 'colorCapable'>): string {
+  return device.colorCapable ? device.color : defaultAccent;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

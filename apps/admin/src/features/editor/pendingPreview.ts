@@ -1,6 +1,8 @@
 import type { CardConfig, DashboardDocument } from '@everdash/contracts/config/types';
 import type { DashboardCanvasProps } from '@everdash/dashboard/editor/mountDashboardCanvas';
 import { hasCardEntity, isCardEntity } from '@everdash/contracts/config/cardDomains';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
+import { getLocale } from '@everdash/ui/i18n/paraglide/runtime.js';
 import { placeholderEntity } from '../../app/draft/builder';
 import type { Selection } from '../../app/draft/draftReducer';
 import { finishCard, hasIncomplete, isIncomplete } from '../../app/draft/incomplete';
@@ -22,17 +24,18 @@ interface PendingPreview {
  * preview card is returned for the same draft card, so the canvas keeps it as one element while
  * it is dragged, moved or deselected.
  */
-const previewCards = new WeakMap<object, CardConfig>();
+const previewCards = new WeakMap<object, { locale: string; card: CardConfig }>();
 
 /**
  * Until an entity is picked a new card uses a placeholder entity and a "New …" name, so it draws
  * like a real card; the draft itself never contains them.
  */
 export function previewCard(card: CardConfig): CardConfig {
+  const locale = getLocale();
   const cached = previewCards.get(card);
 
-  if (cached) {
-    return cached;
+  if (cached && cached.locale === locale) {
+    return cached.card;
   }
 
   const finished = finishCard(card);
@@ -43,11 +46,11 @@ export function previewCard(card: CardConfig): CardConfig {
     ? ({
         ...finished,
         entity: chosen ? finished.entity : placeholderEntity(finished.type),
-        name: finished.name || (chosen ? undefined : `New ${label}`),
+        name: finished.name || (chosen ? undefined : m.admin_new_card_name({ kind: label })),
       } as CardConfig)
     : finished;
 
-  previewCards.set(card, preview);
+  previewCards.set(card, { locale, card: preview });
 
   return preview;
 }
@@ -145,7 +148,7 @@ export function pendingPreview(
   const badgePreview = {
     ...badge,
     entity: chosen ? badge.entity : 'sensor.select_entity',
-    name: badge.name || (chosen ? undefined : 'New badge'),
+    name: badge.name || (chosen ? undefined : m.admin_new_badge_name()),
   };
   const badges = [...(view.badges ?? []), badgePreview];
 

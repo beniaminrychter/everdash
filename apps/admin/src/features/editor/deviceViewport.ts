@@ -1,15 +1,18 @@
 import type { RegisteredDevice } from '@everdash/contracts/auth/devices';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 
 export type ViewportOrientation = 'portrait' | 'landscape';
 
 export type PreviewZoom = 'fit' | '50' | '75' | '100';
 
-export const previewZoomOptions: readonly { value: PreviewZoom; label: string }[] = [
-  { value: 'fit', label: 'Fit to screen' },
-  { value: '50', label: '50%' },
-  { value: '75', label: '75%' },
-  { value: '100', label: '100%' },
-];
+export function getPreviewZoomOptions(): readonly { value: PreviewZoom; label: string }[] {
+  return [
+    { value: 'fit', label: m.admin_editor_zoom_fit_to_screen() },
+    { value: '50', label: '50%' },
+    { value: '75', label: '75%' },
+    { value: '100', label: '100%' },
+  ];
+}
 
 export interface DeviceViewportOption {
   id: string;

@@ -1,0 +1,9 @@
+/**
+* | output |
+* | --- |
+* | "Living room iPad" |
+*
+*/
+export const admin_devices_name_placeholder: ((inputs?: Admin_Devices_Name_PlaceholderInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & import("../runtime.js").MessageMetadata<Admin_Devices_Name_PlaceholderInputs, { locale?: "en" | "pl" }, {}>;
+export type LocalizedString = import("../runtime.js").LocalizedString;
+export type Admin_Devices_Name_PlaceholderInputs = {};

@@ -1,4 +1,6 @@
 import { useState } from 'preact/hooks';
+import { useI18n } from '@everdash/ui/i18n/index';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import type { SectionHeadingProps } from '../../../features/dashboard/data/editorKit';
 import { EditorIcon } from '../EditorIcon/EditorIcon';
 import { EditorMenu } from '../EditorMenu/EditorMenu';
@@ -18,8 +20,10 @@ export function SectionHeading({
   count,
   onEvent,
 }: SectionHeadingProps) {
+  const { language } = useI18n();
+  const locale = { locale: language };
   const [raised, setRaised] = useState(false);
-  const name = title || 'Untitled section';
+  const name = title || m.editor_untitled_section({}, locale);
   const classes = [styles.bar, selected ? styles.selected : '', raised ? styles.raised : '']
     .filter(Boolean)
     .join(' ');
@@ -30,8 +34,8 @@ export function SectionHeading({
         type="button"
         class={styles.handle}
         data-section-handle=""
-        aria-label={`Drag section ${name}`}
-        title="Drag to reorder"
+        aria-label={m.editor_drag_section({ name }, locale)}
+        title={m.editor_drag_to_reorder({}, locale)}
       >
         <EditorIcon name="grip" />
       </button>
@@ -40,7 +44,7 @@ export function SectionHeading({
           type="button"
           class={styles.title}
           aria-pressed={selected}
-          aria-label={`Select section ${name}`}
+          aria-label={m.editor_select_section({ name }, locale)}
           onClick={() => onEvent({ type: 'section.edit', section: id })}
         >
           {name}
@@ -51,32 +55,32 @@ export function SectionHeading({
           type="button"
           class={styles.action}
           data-editor-select=""
-          aria-label={`Edit section ${name}`}
-          title="Edit section"
+          aria-label={m.editor_edit_section_name({ name }, locale)}
+          title={m.editor_edit_section({}, locale)}
           onClick={() => onEvent({ type: 'section.edit', section: id })}
         >
           <EditorIcon name="pencil" />
         </button>
         <EditorMenu
-          label={`More actions for section ${name}`}
+          label={m.editor_more_actions_for_section({ name }, locale)}
           onOpenChange={setRaised}
           items={[
             {
-              label: 'Rename',
+              label: m.editor_rename({}, locale),
               onSelect: () => onEvent({ type: 'section.rename', section: id }),
             },
             {
-              label: 'Move up',
+              label: m.editor_move_up({}, locale),
               disabled: position === 0,
               onSelect: () => onEvent({ type: 'section.move', section: id, offset: -1 }),
             },
             {
-              label: 'Move down',
+              label: m.editor_move_down({}, locale),
               disabled: position === count - 1,
               onSelect: () => onEvent({ type: 'section.move', section: id, offset: 1 }),
             },
             {
-              label: 'Delete',
+              label: m.editor_delete({}, locale),
               danger: true,
               onSelect: () => onEvent({ type: 'section.delete', section: id }),
             },

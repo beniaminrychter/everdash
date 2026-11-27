@@ -1,3 +1,4 @@
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,6 +11,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { buttonVariants } from '@/components/ui/button';
 import { useDraft } from '@/app/DraftContext';
+import { pluralize } from '@/lib/i18n';
 
 export type DeleteTarget =
   | { kind: 'card'; section?: string | null; index: number }
@@ -31,28 +33,55 @@ export function DeleteItemDialog({ target, onClose }: DeleteItemDialogProps) {
           ?.sections?.find((item) => item.id === target.id)
       : undefined;
   const cardCount = section?.cards?.length ?? 0;
-  const noun = target?.kind === 'badge' ? 'badge' : target?.kind === 'section' ? 'section' : 'card';
   const destructive = buttonVariants({ variant: 'destructive' });
+
+  const title =
+    target?.kind === 'badge'
+      ? m.admin_delete_badge_title()
+      : target?.kind === 'section'
+        ? m.admin_delete_section_title()
+        : m.admin_delete_card_title();
+
+  const description =
+    target?.kind === 'section' && cardCount > 0
+      ? m.admin_delete_section_with_cards_description({
+          title: section?.title ?? '',
+          cards: pluralize(cardCount, {
+            one: m.admin_count_cards_one,
+            few: m.admin_count_cards_few,
+            many: m.admin_count_cards_many,
+          }),
+        })
+      : target?.kind === 'badge'
+        ? m.admin_delete_badge_description()
+        : target?.kind === 'section'
+          ? m.admin_delete_section_description()
+          : m.admin_delete_card_description();
+
+  const confirmLabel =
+    target?.kind === 'section' && cardCount > 0
+      ? m.admin_delete_section_and_cards()
+      : target?.kind === 'badge'
+        ? m.admin_inspector_delete_badge()
+        : target?.kind === 'section'
+          ? m.admin_inspector_delete_section()
+          : m.admin_inspector_delete_card();
 
   return (
     <AlertDialog open={target !== null} onOpenChange={(open) => !open && onClose()}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete this {noun}?</AlertDialogTitle>
-          <AlertDialogDescription>
-            {target?.kind === 'section' && cardCount > 0
-              ? `“${section?.title}” has ${cardCount} ${cardCount === 1 ? 'card' : 'cards'}. Delete them with the section, or keep them in the view outside any section. Discard restores everything until you save.`
-              : `The ${noun} is removed from the dashboard draft. Discard restores it until you save.`}
-          </AlertDialogDescription>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{m.admin_cancel()}</AlertDialogCancel>
           {target?.kind === 'section' && cardCount > 0 && (
             <AlertDialogAction
               className={buttonVariants({ variant: 'outline' })}
               onClick={() => dispatch({ type: 'delete-section', id: target.id, cards: 'keep' })}
             >
-              Keep cards
+              {m.admin_delete_keep_cards()}
             </AlertDialogAction>
           )}
           <AlertDialogAction
@@ -75,9 +104,7 @@ export function DeleteItemDialog({ target, onClose }: DeleteItemDialogProps) {
               );
             }}
           >
-            {target?.kind === 'section' && cardCount > 0
-              ? 'Delete section and cards'
-              : `Delete ${noun}`}
+            {confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

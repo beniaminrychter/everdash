@@ -26,6 +26,7 @@ export interface ServerDependencies {
   adminStaticDirectory?: string;
   trustedProxyCidrs?: string[];
   supervisorConnected?: boolean;
+  tabletPort?: number;
   ingress?: IngressAppOptions;
   logger?: boolean;
 }
@@ -105,8 +106,9 @@ export async function buildApp(dependencies: ServerDependencies): Promise<Fastif
     registerOAuthRoutes(app, dependencies.oauth, {
       isIngress: Boolean(ingress),
       supervisorConnected: dependencies.supervisorConnected,
-      tabletPort: ingress?.tabletPort,
+      tabletPort: ingress?.tabletPort ?? dependencies.tabletPort,
       isAdmin: dependencies.access.isAdmin,
+      homeAssistant: dependencies.homeAssistant,
     });
   }
   registerApiRoutes(app, dependencies);

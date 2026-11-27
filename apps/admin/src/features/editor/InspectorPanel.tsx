@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import { Button } from '@/components/ui/button';
 import { DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -56,10 +57,10 @@ export function InspectorPanel({
                 className={footer ? undefined : 'ml-auto'}
                 onClick={actions.cancel}
               >
-                Cancel
+                {m.admin_cancel()}
               </Button>
               <Button disabled={doneDisabled} onClick={actions.done}>
-                Done
+                {m.admin_done()}
               </Button>
             </>
           )}

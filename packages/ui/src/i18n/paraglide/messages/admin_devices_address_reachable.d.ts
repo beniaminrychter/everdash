@@ -1,0 +1,9 @@
+/**
+* | output |
+* | --- |
+* | "Reachable" |
+*
+*/
+export const admin_devices_address_reachable: ((inputs?: Admin_Devices_Address_ReachableInputs, options?: { locale?: "en" | "pl" }) => LocalizedString) & import("../runtime.js").MessageMetadata<Admin_Devices_Address_ReachableInputs, { locale?: "en" | "pl" }, {}>;
+export type LocalizedString = import("../runtime.js").LocalizedString;
+export type Admin_Devices_Address_ReachableInputs = {};

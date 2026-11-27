@@ -88,6 +88,7 @@ const api = process.env.EVERDASH_API_URL ?? 'http://127.0.0.1:8790';
 
 export default defineConfig(({ mode }) => ({
   root: resolve('apps/tablet'),
+  define: { globalThis: 'window' },
   resolve: { alias: workspaceAliases(resolve('apps/tablet/src')) },
   server: {
     port: 5173,

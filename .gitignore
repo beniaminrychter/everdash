@@ -13,3 +13,4 @@ playwright-report/
 .env.*
 !.env.example
 /docs/
+project.inlang/cache/

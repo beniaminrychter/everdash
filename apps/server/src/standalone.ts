@@ -26,6 +26,7 @@ export interface StandaloneOptions {
   supervisorToken?: string;
   supervisorApiRoot?: string;
   supervisorRequest?: typeof fetch;
+  tabletPort?: number;
   ingress?: StandaloneIngressOptions;
 }
 
@@ -77,12 +78,14 @@ export async function createStandaloneApp(options: StandaloneOptions = {}) {
   const homeAssistant: HomeAssistantTransport = {
     getStates: (signal) => activeClient().getStates(signal),
     getState: (entityId, signal) => activeClient().getState(entityId, signal),
+    getConfig: (signal) => activeClient().getConfig?.(signal) ?? Promise.resolve(null),
     callService: (domain, service, data, signal) =>
       activeClient().callService(domain, service, data, signal),
   };
 
   const staticDirectory = options.staticDirectory ?? resolve('dist');
   const adminStaticDirectory = options.adminStaticDirectory ?? resolve('dist-admin');
+  const tabletPort = options.tabletPort ?? options.ingress?.tabletPort;
 
   const app = await buildApp({
     config,
@@ -102,6 +105,7 @@ export async function createStandaloneApp(options: StandaloneOptions = {}) {
     logger: options.logger ?? true,
     trustedProxyCidrs,
     supervisorConnected: Boolean(supervisorClient),
+    tabletPort,
     expectedOrigin,
   });
 
@@ -122,6 +126,7 @@ export async function createStandaloneApp(options: StandaloneOptions = {}) {
       adminStaticDirectory,
       logger: options.logger ?? true,
       supervisorConnected: Boolean(supervisorClient),
+      tabletPort,
       ingress: {
         allowedProxyIps,
         tabletPort: options.ingress.tabletPort,

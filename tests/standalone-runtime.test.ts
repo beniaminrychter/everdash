@@ -43,6 +43,7 @@ test('all management data routes reject spoofed identity and device cookies', as
       ['GET', '/api/manage/entities'],
       ['GET', '/api/manage/access'],
       ['GET', '/api/manage/devices'],
+      ['GET', '/api/manage/devices/addresses'],
       ['POST', '/api/manage/devices/code'],
       ['POST', '/api/manage/config/validate'],
       ['POST', '/api/manage/preview'],

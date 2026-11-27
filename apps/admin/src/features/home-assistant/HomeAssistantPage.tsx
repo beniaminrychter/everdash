@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { CircleAlertIcon, RefreshCwIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import type { DiscoveredHomeAssistant } from '@everdash/contracts/auth/oauth';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   AlertDialog,
@@ -43,7 +44,7 @@ import {
 
 async function reconnect() {
   if (!(await reconnectHomeAssistant())) {
-    toast.error('Unable to reconnect. Sign in again.');
+    toast.error(m.admin_ha_reconnect_error());
   }
 }
 
@@ -71,7 +72,7 @@ export function HomeAssistantPage({
 
     setDisconnecting(false);
     setConfirming(false);
-    toast.error('Unable to disconnect Home Assistant.');
+    toast.error(m.admin_ha_disconnect_error());
   }
 
   async function confirmSwitch() {
@@ -87,28 +88,22 @@ export function HomeAssistantPage({
 
     setSwitching(false);
     setSwitchTarget(null);
-    toast.error('Unable to switch Home Assistant instance.');
+    toast.error(m.admin_ha_switch_error());
   }
 
   if (isSupervisor) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Connection</CardTitle>
-          <CardDescription>
-            EverDash talks to Home Assistant through the built-in app connection on behalf of every
-            tablet.
-          </CardDescription>
+          <CardTitle>{m.admin_ha_connection_title()}</CardTitle>
+          <CardDescription>{m.admin_ha_supervisor_description()}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between gap-4 rounded-md border p-3">
-            <span className="text-sm font-medium">Home Assistant Supervisor</span>
-            <Badge variant="secondary">Connected</Badge>
+            <span className="text-sm font-medium">{m.admin_ha_supervisor_name()}</span>
+            <Badge variant="secondary">{m.admin_ha_connected()}</Badge>
           </div>
-          <p className="text-muted-foreground text-xs">
-            Managed automatically while running inside Home Assistant. No separate login or OAuth
-            token is required.
-          </p>
+          <p className="text-muted-foreground text-xs">{m.admin_ha_supervisor_hint()}</p>
         </CardContent>
       </Card>
     );
@@ -118,26 +113,26 @@ export function HomeAssistantPage({
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Connection</CardTitle>
-          <CardDescription>
-            EverDash talks to this Home Assistant on behalf of every tablet.
-          </CardDescription>
+          <CardTitle>{m.admin_ha_connection_title()}</CardTitle>
+          <CardDescription>{m.admin_ha_connection_description()}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center justify-between gap-4 rounded-md border p-3">
-            <code className="min-w-0 truncate font-mono text-sm">{origin || 'Not connected'}</code>
+            <code className="min-w-0 truncate font-mono text-sm">
+              {origin || m.admin_ha_not_connected()}
+            </code>
             {origin ? (
-              <Badge variant="secondary">Connected</Badge>
+              <Badge variant="secondary">{m.admin_ha_connected()}</Badge>
             ) : (
-              <Badge variant="outline">Not connected</Badge>
+              <Badge variant="outline">{m.admin_ha_not_connected()}</Badge>
             )}
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={reconnect}>
-              Reconnect
+              {m.admin_ha_reconnect()}
             </Button>
             <Button variant="destructive" onClick={() => setConfirming(true)}>
-              Disconnect…
+              {m.admin_ha_disconnect_ellipsis()}
             </Button>
           </div>
         </CardContent>
@@ -145,10 +140,8 @@ export function HomeAssistantPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Network discovery</CardTitle>
-          <CardDescription>
-            Automatically scans your home network for Home Assistant instances.
-          </CardDescription>
+          <CardTitle>{m.admin_ha_discovery_title()}</CardTitle>
+          <CardDescription>{m.admin_ha_discovery_description()}</CardDescription>
           <CardAction>
             <Button
               variant="outline"
@@ -157,15 +150,13 @@ export function HomeAssistantPage({
               onClick={discovery.rescan}
             >
               <RefreshCwIcon className={cn(discovery.scanning && 'animate-spin')} />
-              {discovery.scanning ? 'Scanning…' : 'Rescan'}
+              {discovery.scanning ? m.admin_signin_scanning() : m.admin_signin_rescan()}
             </Button>
           </CardAction>
         </CardHeader>
         <CardContent className="space-y-4">
           {discovery.scanning && discovery.instances.length === 0 && (
-            <p className="text-muted-foreground text-sm">
-              Scanning your home network for Home Assistant…
-            </p>
+            <p className="text-muted-foreground text-sm">{m.admin_signin_scanning_network()}</p>
           )}
           {discovery.error && (
             <Alert variant="destructive">
@@ -174,7 +165,7 @@ export function HomeAssistantPage({
             </Alert>
           )}
           {discovery.instances.length > 0 && (
-            <ul className="space-y-2" aria-label="Discovered Home Assistant instances">
+            <ul className="space-y-2" aria-label={m.admin_signin_discovered_aria()}>
               {discovery.instances.map((instance) => {
                 const urls = instanceOrigins(instance);
                 const key = instance.origin;
@@ -208,7 +199,9 @@ export function HomeAssistantPage({
                         >
                           <SelectTrigger
                             size="sm"
-                            aria-label={`URL for ${instance.name ?? instance.origin}`}
+                            aria-label={m.admin_signin_url_for({
+                              name: instance.name ?? instance.origin,
+                            })}
                             className="h-8 w-full max-w-full font-mono text-xs sm:max-w-md"
                           >
                             <SelectValue />
@@ -228,14 +221,14 @@ export function HomeAssistantPage({
                       )}
                     </div>
                     {isCurrent ? (
-                      <Badge variant="secondary">Current</Badge>
+                      <Badge variant="secondary">{m.admin_ha_current()}</Badge>
                     ) : (
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setSwitchTarget({ ...instance, origin: selectedUrl })}
                       >
-                        Connect…
+                        {m.admin_ha_connect_ellipsis()}
                       </Button>
                     )}
                   </li>
@@ -247,9 +240,7 @@ export function HomeAssistantPage({
             discovery.scannedOnce &&
             !discovery.error &&
             discovery.instances.length === 0 && (
-              <p className="text-muted-foreground text-sm">
-                No Home Assistant instances were found on this network.
-              </p>
+              <p className="text-muted-foreground text-sm">{m.admin_ha_none_found()}</p>
             )}
         </CardContent>
       </Card>
@@ -257,17 +248,15 @@ export function HomeAssistantPage({
       <AlertDialog open={confirming} onOpenChange={(open) => !disconnecting && setConfirming(open)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Disconnect Home Assistant?</AlertDialogTitle>
+            <AlertDialogTitle>{m.admin_ha_disconnect_dialog_title()}</AlertDialogTitle>
             <AlertDialogDescription>
-              EverDash forgets this Home Assistant connection and signs you out. Your dashboard
-              layout is kept. Then you can sign in to any Home Assistant instance. Tablets show no
-              data until you connect again.
+              {m.admin_ha_disconnect_dialog_description()}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={disconnecting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={disconnecting}>{m.admin_cancel()}</AlertDialogCancel>
             <Button variant="destructive" disabled={disconnecting} onClick={disconnect}>
-              {disconnecting ? 'Disconnecting…' : 'Disconnect'}
+              {disconnecting ? m.admin_ha_disconnecting() : m.admin_ha_disconnect()}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -279,18 +268,21 @@ export function HomeAssistantPage({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Switch Home Assistant instance?</AlertDialogTitle>
+            <AlertDialogTitle>{m.admin_ha_switch_dialog_title()}</AlertDialogTitle>
             <AlertDialogDescription>
-              EverDash will disconnect from{' '}
-              <code className="text-foreground">{origin || 'the current instance'}</code> and open
-              sign-in for <code className="text-foreground">{switchTarget?.origin}</code>. Your
-              dashboard layout is kept.
+              {m.admin_ha_switch_dialog_prefix()}{' '}
+              <code className="text-foreground">
+                {origin || m.admin_ha_switch_current_fallback()}
+              </code>{' '}
+              {m.admin_ha_switch_dialog_middle()}{' '}
+              <code className="text-foreground">{switchTarget?.origin}</code>
+              {m.admin_ha_switch_dialog_suffix()}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={switching}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={switching}>{m.admin_cancel()}</AlertDialogCancel>
             <Button disabled={switching} onClick={confirmSwitch}>
-              {switching ? 'Switching…' : 'Disconnect & connect'}
+              {switching ? m.admin_ha_switching() : m.admin_ha_disconnect_and_connect()}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { RotateCwIcon } from 'lucide-react';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -11,7 +12,7 @@ import {
 import { useDraft } from '@/app/DraftContext';
 import { unfinishedCardIssue } from '@/app/draft/draftReducer';
 import { hasIncomplete } from '@/app/draft/incomplete';
-import { previewZoomOptions } from './deviceViewport';
+import { getPreviewZoomOptions } from './deviceViewport';
 import type { DeviceViewportOption, PreviewZoom, ResolvedViewport } from './deviceViewport';
 import { AddCardDialog } from './AddCardDialog';
 import { focusInspectorField } from './focusInspectorField';
@@ -41,14 +42,20 @@ export function CanvasToolbar({
   const [pickingCard, setPickingCard] = useState(false);
 
   const unfinished = unfinishedCardIssue(state);
+  const previewZoomOptions = getPreviewZoomOptions();
 
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
         <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-          <span className="text-muted-foreground flex items-center gap-2" title="Live preview">
+          <span
+            className="text-muted-foreground flex items-center gap-2"
+            title={m.admin_editor_live_preview()}
+          >
             <span className="size-1.5 shrink-0 rounded-full bg-emerald-500" aria-hidden="true" />
-            <span className={selectedViewport ? 'hidden 2xl:inline' : undefined}>Live preview</span>
+            <span className={selectedViewport ? 'hidden 2xl:inline' : undefined}>
+              {m.admin_editor_live_preview()}
+            </span>
           </span>
           {deviceOptions.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5">
@@ -56,11 +63,17 @@ export function CanvasToolbar({
                 value={selectedViewport?.deviceId ?? 'default'}
                 onValueChange={onSelectViewport}
               >
-                <SelectTrigger size="sm" aria-label="Preview viewport" className="max-w-36 px-2.5">
-                  <SelectValue>{selectedViewport?.label ?? 'Default'}</SelectValue>
+                <SelectTrigger
+                  size="sm"
+                  aria-label={m.admin_editor_preview_viewport()}
+                  className="max-w-36 px-2.5"
+                >
+                  <SelectValue>
+                    {selectedViewport?.label ?? m.admin_editor_viewport_default()}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent position="popper">
-                  <SelectItem value="default">Default</SelectItem>
+                  <SelectItem value="default">{m.admin_editor_viewport_default()}</SelectItem>
                   {deviceOptions.map((device) => (
                     <SelectItem key={device.id} value={device.id}>
                       <span>{device.label}</span>
@@ -80,22 +93,30 @@ export function CanvasToolbar({
                     className="px-2.5"
                     title={
                       selectedViewport.orientation === 'portrait'
-                        ? 'Switch to landscape mode'
-                        : 'Switch to portrait mode'
+                        ? m.admin_editor_switch_to_landscape()
+                        : m.admin_editor_switch_to_portrait()
                     }
                     onClick={onToggleOrientation}
                   >
                     <RotateCwIcon className="size-3.5" aria-hidden="true" />
                     <span>
-                      {selectedViewport.orientation === 'portrait' ? 'Portrait' : 'Landscape'}
+                      {selectedViewport.orientation === 'portrait'
+                        ? m.admin_editor_portrait()
+                        : m.admin_editor_landscape()}
                     </span>
                   </Button>
                   <Select
                     value={zoom}
                     onValueChange={(value) => onChangeZoom(value as PreviewZoom)}
                   >
-                    <SelectTrigger size="sm" aria-label="Preview zoom" className="px-2.5">
-                      <SelectValue>{zoom === 'fit' ? 'Fit' : `${zoom}%`}</SelectValue>
+                    <SelectTrigger
+                      size="sm"
+                      aria-label={m.admin_editor_preview_zoom()}
+                      className="px-2.5"
+                    >
+                      <SelectValue>
+                        {zoom === 'fit' ? m.admin_editor_zoom_fit() : `${zoom}%`}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent position="popper">
                       {previewZoomOptions.map((option) => (
@@ -126,7 +147,7 @@ export function CanvasToolbar({
               onEdit();
             }}
           >
-            + Badge
+            {m.admin_editor_add_badge_plus()}
           </Button>
           {/* Sections are optional titled groups of cards; the new one is named in the editor. */}
           <Button
@@ -139,7 +160,7 @@ export function CanvasToolbar({
               focusInspectorField('section-name');
             }}
           >
-            + Section
+            {m.admin_editor_add_section_plus()}
           </Button>
           {/* Pick a type first; the new card is then added to the view and finished in the editor. */}
           <Button
@@ -149,7 +170,7 @@ export function CanvasToolbar({
             disabled={pendingCard}
             onClick={() => setPickingCard(true)}
           >
-            + Add card
+            {m.admin_editor_add_card_plus()}
           </Button>
         </div>
       </div>

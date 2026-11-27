@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { ServerDependencies } from '../app';
 import {
   clearTabletCookie,
@@ -7,10 +7,40 @@ import {
   tabletCookie,
   tabletSameSite,
 } from '../auth/admin-cookies';
+import { actualOrigin } from '../auth/oauth-http';
+import { parseHomeAssistantOrigin } from '../auth/origin';
 import type { TabletAccess } from '../auth/tablet-access';
 import { expectedOriginFor, requireAdminAccess } from './access-policy';
+import { resolveDashboardAddresses } from './dashboard-addresses';
 import { apiError } from './errors';
+import { requestSignal } from './request-signal';
 import { requireMutationOrigin } from './security';
+
+function parseOriginQuery(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    return parseHomeAssistantOrigin(trimmed);
+  } catch {
+    return null;
+  }
+}
+
+function safeActualOrigin(request: FastifyRequest): string | null {
+  try {
+    return actualOrigin(request);
+  } catch {
+    return null;
+  }
+}
 
 /** Admin device management routes (`/api/manage/devices*`). */
 export function registerTabletDeviceManagementRoutes(
@@ -26,6 +56,28 @@ export function registerTabletDeviceManagementRoutes(
     }
     return access.overview();
   });
+
+  app.get<{ Querystring: { origin?: unknown } }>(
+    '/api/manage/devices/addresses',
+    async (request, reply) => {
+      if (!requireAdminAccess(request, reply, dependencies)) {
+        return;
+      }
+
+      return resolveDashboardAddresses(
+        {
+          isIngress: Boolean(dependencies.ingress),
+          tabletPort: dependencies.ingress?.tabletPort ?? dependencies.tabletPort,
+          browserOrigin: parseOriginQuery(request.query?.origin),
+          requestOrigin: safeActualOrigin(request),
+        },
+        {
+          getHaConfig: dependencies.homeAssistant.getConfig,
+        },
+        requestSignal(request, reply),
+      );
+    },
+  );
 
   app.post('/api/manage/devices/code', async (request, reply) => {
     if (

@@ -7,6 +7,8 @@ import type {
   ViewConfig,
 } from '@everdash/contracts/config/types';
 import { validateDashboard } from '@everdash/contracts/config/validate';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
+import { countSerializedJsonChanges } from './jsonDiff';
 import { createPendingCard, createSection, createView, moveItem, toDocument } from './builder';
 import type { CardKind } from './builder';
 import {
@@ -134,8 +136,8 @@ export function unfinishedCardIssue(state: DraftState): string | null {
   const elsewhere = unfinished.find((view) => view.id !== state.viewId);
 
   return elsewhere
-    ? `Finish or remove the new card in “${elsewhere.title}” before saving.`
-    : 'Finish or remove the new card before saving.';
+    ? m.admin_unfinished_card_in_view({ title: elsewhere.title })
+    : m.admin_unfinished_card();
 }
 
 /** Why the dashboard cannot be saved yet; empty when it can. */
@@ -237,12 +239,15 @@ function changeDocument(
   document: DashboardDocument,
   patch: Partial<DraftState> = {},
 ): DraftState {
+  const baseline = patch.baseline ?? state.baseline;
+  const changes = countSerializedJsonChanges(baseline, serializeDocument(document));
+
   return {
     ...state,
     ...patch,
     document,
     generation: state.generation + 1,
-    changes: state.changes + 1,
+    changes,
   };
 }
 
@@ -831,8 +836,10 @@ function duplicateViewTitle(title: string, views: readonly ViewConfig[]): string
   }
 
   const taken = new Set(views.map((view) => view.title.trim()));
-  const stem = trimmed.replace(/\s+copy(?:\s+\d+)?$/i, '');
-  const first = `${stem} copy`;
+  const copySuffix = m.admin_view_copy_suffix();
+  const escaped = copySuffix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const stem = trimmed.replace(new RegExp(`\\s+(?:${escaped}|copy)(?:\\s+\\d+)?$`, 'i'), '');
+  const first = `${stem} ${copySuffix}`;
 
   if (!taken.has(first)) {
     return first;
@@ -901,13 +908,18 @@ export function draftReducer(state: DraftState, action: DraftAction): DraftState
     }
 
     case 'saved': {
-      if (serializeDocument(state.document) !== serializeDocument(action.sent)) {
+      const currentSerialized = serializeDocument(state.document);
+
+      if (currentSerialized !== serializeDocument(action.sent)) {
         // The user kept editing while the request was pending: keep those edits and
         // treat the server copy as the new baseline, so they still count as unsaved.
+        const baseline = serializeDocument(action.document);
+
         return {
           ...state,
-          baseline: serializeDocument(action.document),
+          baseline,
           revision: action.revision,
+          changes: countSerializedJsonChanges(baseline, currentSerialized),
         };
       }
 
@@ -953,7 +965,7 @@ export function draftReducer(state: DraftState, action: DraftAction): DraftState
 
     case 'add-view': {
       const id = createViewId(state.document);
-      const views = [...state.document.views, createView(id, 'New view')];
+      const views = [...state.document.views, createView(id, m.admin_default_new_view())];
 
       return changeDocument(
         state,

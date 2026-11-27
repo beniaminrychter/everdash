@@ -18,6 +18,8 @@ export interface AuthSessionResponse {
   ingress?: boolean;
   /** Direct HTTP port serving the tablet dashboard, when served over Ingress. */
   tabletPort?: number;
+  /** Language configured in Home Assistant (for example `en` or `pl`), when available. */
+  language?: string;
 }
 
 export type DiscoverySource = 'mdns' | 'network' | 'local';

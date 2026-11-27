@@ -3,8 +3,10 @@ import test from 'node:test';
 import {
   createCommand,
   createDevice,
+  deviceAccent,
   mapState,
 } from '@everdash/dashboard/features/accessories/data/model';
+import { defaultAccent } from '@everdash/dashboard/shared/color/tint';
 import { homePage } from './fixtures/home';
 
 const light = homePage.cards[0];
@@ -109,4 +111,29 @@ test('commands call real domain services with only the configured entity', () =>
   assert.throws(() => createCommand(outlet, { brightness: 50 }), /light/);
   assert.throws(() => createCommand(light, { brightness: Number.NaN }), /brightness/);
   assert.throws(() => createCommand(light, { color: 'red' }), /color/);
+});
+
+test('non-RGB lights and switches share the default accent while RGB lights keep their bulb colour', () => {
+  const switchDevice = createDevice(outlet);
+  const plainLight = mapState(createDevice(light), {
+    attributes: { brightness: 255, supported_color_modes: ['brightness'] },
+    entity_id: light.entityId,
+    state: 'on',
+  });
+  const rgbLight = mapState(createDevice(light), {
+    attributes: {
+      brightness: 204,
+      rgb_color: [255, 124, 121],
+      supported_color_modes: ['rgb'],
+    },
+    entity_id: light.entityId,
+    state: 'on',
+  });
+
+  assert.equal(createDevice(light).color, '#ffb33f');
+  assert.equal(switchDevice.color, defaultAccent);
+  assert.notEqual(switchDevice.color, '#3498eb');
+  assert.equal(deviceAccent(plainLight), defaultAccent);
+  assert.equal(deviceAccent(switchDevice), defaultAccent);
+  assert.equal(deviceAccent(rgbLight), '#ff7c79');
 });

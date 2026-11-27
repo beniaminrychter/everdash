@@ -3,6 +3,7 @@ import type { KeyboardEvent } from 'react';
 import { SearchIcon } from 'lucide-react';
 import { iconNames } from '@everdash/contracts/iconNames';
 import type { IconName } from '@everdash/contracts/iconNames';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { IconGlyph } from './IconGlyph';
@@ -17,23 +18,29 @@ const buttonOff = 'border-input text-muted-foreground hover:bg-accent hover:text
 const listed = new Set<IconName>(iconGroups.flatMap((group) => group.icons));
 const unlisted = iconNames.filter((name) => !listed.has(name));
 const allGroups: readonly IconGroup[] = unlisted.length
-  ? [...iconGroups, { label: 'More', icons: unlisted }]
+  ? [...iconGroups, { id: 'more', label: () => m.admin_icon_group_more(), icons: unlisted }]
   : iconGroups;
 
-function visibleGroups(query: string): IconGroup[] {
+function visibleGroups(query: string): { id: string; label: string; icons: readonly IconName[] }[] {
   const needle = query.trim().toLowerCase().replace(/-/g, ' ');
+  const resolved = allGroups.map((group) => ({
+    id: group.id,
+    label: group.label(),
+    icons: group.icons,
+  }));
+
   if (!needle) {
-    return [...allGroups];
+    return resolved;
   }
 
-  return allGroups
+  return resolved
     .map((group) => {
       const groupMatches = group.label.toLowerCase().includes(needle);
       const icons = group.icons.filter(
         (name) => groupMatches || name.replace(/-/g, ' ').includes(needle),
       );
 
-      return { label: group.label, icons };
+      return { id: group.id, label: group.label, icons };
     })
     .filter((group) => group.icons.length > 0);
 }
@@ -117,7 +124,7 @@ export function IconGrid({ value, label, onChange, auto = false }: IconGridProps
           onClick={() => onChange(undefined)}
           className={cn(buttonBase, 'h-9', value === undefined ? buttonOn : buttonOff)}
         >
-          Auto (from the entity type)
+          {m.admin_icon_auto()}
         </button>
       )}
       <div className="relative">
@@ -127,8 +134,8 @@ export function IconGrid({ value, label, onChange, auto = false }: IconGridProps
         />
         <Input
           type="search"
-          aria-label={`Search ${label.toLowerCase()}s`}
-          placeholder="Search icons"
+          aria-label={m.admin_icon_search_aria({ label: label.toLowerCase() })}
+          placeholder={m.admin_icon_search_placeholder()}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           className="pl-8"
@@ -136,7 +143,7 @@ export function IconGrid({ value, label, onChange, auto = false }: IconGridProps
       </div>
       <div ref={list} role="presentation" onKeyDown={move} className="grid gap-3">
         {groups.map((group) => (
-          <fieldset key={group.label} className="grid gap-1.5">
+          <fieldset key={group.id} className="grid gap-1.5">
             <legend className="text-muted-foreground mb-1.5 text-xs font-medium">
               {group.label}
             </legend>
@@ -170,7 +177,7 @@ export function IconGrid({ value, label, onChange, auto = false }: IconGridProps
         ))}
         {groups.length === 0 && (
           <p className="text-muted-foreground py-4 text-center text-sm">
-            No icons match “{query}”.
+            {m.admin_icon_no_matches({ query })}
           </p>
         )}
       </div>

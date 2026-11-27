@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'preact/hooks';
 import { LanguageProvider, createTranslator, translateMessage } from '@everdash/ui/i18n/index';
+import type { Language } from '@everdash/ui/i18n/index';
 import type { AppConfig } from '@everdash/contracts/config';
 import { viewCards } from '@everdash/contracts/config/sections';
 import type { DashboardDocument } from '@everdash/contracts/config/types';
@@ -41,6 +42,7 @@ interface Props {
   onConfigPublished: (snapshot: RuntimeSnapshot) => void;
   sessionAuthorized: boolean;
   pinEnabled?: boolean;
+  defaultLanguage?: Language;
 }
 export function App({
   config,
@@ -50,6 +52,7 @@ export function App({
   onConfigPublished,
   sessionAuthorized: _sessionAuthorized,
   pinEnabled = false,
+  defaultLanguage = 'en',
 }: Props) {
   usePreventZoom();
   const dashboard = useDashboard(config);
@@ -73,7 +76,11 @@ export function App({
   const { online, now } = useEnvironment();
   const reading = (id: string | undefined) => (id ? dashboard.readings[id] : undefined);
   const sun = online ? reading(dashboard.resolved.sun?.entityId)?.state : undefined;
-  const { preferences, setPreferences, storageError } = usePreferences(config.views, sun);
+  const { preferences, setPreferences, storageError } = usePreferences(
+    config.views,
+    sun,
+    defaultLanguage,
+  );
   const t = useMemo(() => createTranslator(preferences.language), [preferences.language]);
   useEffect(() => {
     document.documentElement.lang = preferences.language;

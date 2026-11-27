@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyReply } from 'fastify';
 import { validateDashboard } from '@everdash/contracts/config/validate';
 import type { ServerDependencies } from '../app';
 import { readCookie, TABLET_COOKIE } from '../auth/admin-cookies';
+import { readHomeAssistantLanguage } from '../home-assistant/language';
 import { filterConfiguredStates, validateServiceCommand } from '../home-assistant/policy';
 import { expectedOriginFor, requireTabletAccess } from './access-policy';
 import { apiError } from './errors';
@@ -51,11 +52,16 @@ export function registerApiRoutes(app: FastifyInstance, dependencies: ServerDepe
       recoveryError(reply, config.diagnostic?.message ?? 'Dashboard configuration needs recovery.');
       return;
     }
+    const language = await readHomeAssistantLanguage(
+      dependencies.homeAssistant,
+      requestSignal(request, reply),
+    );
     return {
       mode: 'direct',
       configured: config.isConfigured,
       revision: snapshot.revision,
       config: snapshot.config,
+      ...(language ? { language } : {}),
     };
   });
 

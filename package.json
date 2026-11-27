@@ -18,6 +18,7 @@
     "test": "node --import tsx --test tests/*.test.ts",
     "test:browser": "node --import tsx tests/browser.smoke.mjs && node tests/admin.browser.smoke.mjs",
     "check:compat": "node scripts/check-compat.mjs",
+    "i18n:compile": "node scripts/compile-i18n.mjs",
     "smoke:server": "node scripts/server-smoke.mjs",
     "config:export": "node --import tsx scripts/export-config.ts"
   },
@@ -26,6 +27,7 @@
     "preact": "^10.29.8"
   },
   "devDependencies": {
+    "@inlang/paraglide-js": "^3.2.2",
     "@playwright/test": "^1.56.0",
     "@preact/preset-vite": "^2.10.6",
     "@stale-styles/eslint-plugin": "^1.0.2",

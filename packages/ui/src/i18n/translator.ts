@@ -1,19 +1,27 @@
-import { polish } from './messages';
+import { tabletMessages } from './messages';
 import type { Language, TranslationKey } from './messages';
 
 export type Translator = (
   key: TranslationKey,
   values?: Readonly<Record<string, string | number>>,
 ) => string;
+
+type DynamicMessage = (
+  inputs?: Readonly<Record<string, string | number>>,
+  options?: { locale?: Language },
+) => string;
+
 export function createTranslator(language: Language): Translator {
   return (key, values = {}) =>
-    (language === 'pl' ? polish[key] : key).replace(/\{(\w+)\}/g, (match, name: string) =>
-      String(values[name] ?? match),
-    );
+    (tabletMessages[key] as unknown as DynamicMessage)(values, { locale: language });
 }
+
 export function translateText(text: string, t: Translator): string {
-  return Object.prototype.hasOwnProperty.call(polish, text) ? t(text as TranslationKey) : text;
+  return Object.prototype.hasOwnProperty.call(tabletMessages, text)
+    ? t(text as TranslationKey)
+    : text;
 }
+
 export function translateMessage(message: string, t: Translator): string {
   const update = message.match(/^Couldn’t update (.+)\.$/);
   if (update) {

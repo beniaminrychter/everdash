@@ -2,12 +2,15 @@ import { useMemo, useRef, useState } from 'react';
 import {
   CheckCircle2Icon,
   CircleAlertIcon,
+  Code2Icon,
   DownloadIcon,
+  GitCompareArrowsIcon,
   RotateCcwIcon,
   UploadIcon,
   WandSparklesIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import { useDraft } from '@/app/DraftContext';
 import { serializeDocument } from '@/app/draft/draftReducer';
 import { withoutIncomplete } from '@/app/draft/incomplete';
@@ -23,10 +26,15 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { pluralize } from '@/lib/i18n';
 import { JsonCodeEditor } from './JsonCodeEditor';
+import { JsonDiffView } from './JsonDiffView';
 import { validateJsonText } from './jsonValidation';
 import { UnappliedJsonDialog } from './UnappliedJsonDialog';
 import { useJsonGuard } from './useJsonGuard';
+
+type JsonViewMode = 'editor' | 'diff';
 
 export function JsonPage() {
   const { state, dispatch } = useDraft();
@@ -35,9 +43,11 @@ export function JsonPage() {
   // Null while the editor just mirrors the draft, so a draft that finishes loading shows up.
   const [edited, setEdited] = useState<string | null>(null);
   const [readError, setReadError] = useState<string | null>(null);
+  const [mode, setMode] = useState<JsonViewMode>('editor');
   const text = edited ?? current;
   const fileInput = useRef<HTMLInputElement>(null);
   const dirty = edited !== null && edited !== current;
+  const hasSavedDiff = text !== state.baseline;
 
   const validation = useMemo(() => validateJsonText(text), [text]);
   const issues = readError ? [readError, ...validation.issues] : validation.issues;
@@ -54,7 +64,9 @@ export function JsonPage() {
 
     setEdited(null);
     setReadError(null);
-    toast.success('Validated JSON applied', { description: 'Save to publish these changes.' });
+    toast.success(m.admin_json_applied_toast(), {
+      description: m.admin_json_applied_description(),
+    });
 
     return true;
   }
@@ -96,7 +108,7 @@ export function JsonPage() {
       setEdited(await file.text());
       setReadError(null);
     } catch (error) {
-      setReadError(error instanceof Error ? error.message : 'JSON file could not be read.');
+      setReadError(error instanceof Error ? error.message : m.admin_json_file_read_error());
     }
   }
 
@@ -114,43 +126,70 @@ export function JsonPage() {
   return (
     <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden py-0">
       <CardHeader className="shrink-0 border-b px-6 py-4">
-        <CardTitle>Advanced JSON editor</CardTitle>
-        <CardDescription>
-          Raw JSON stays isolated until you validate and apply it to the draft.
-        </CardDescription>
-        <CardAction className="flex items-center gap-2">
+        <CardTitle>{m.admin_json_title()}</CardTitle>
+        <CardDescription>{m.admin_json_description()}</CardDescription>
+        <CardAction className="flex flex-wrap items-center gap-2">
+          <Tabs value={mode} onValueChange={(next) => setMode(next as JsonViewMode)}>
+            <TabsList className="h-8">
+              <TabsTrigger value="editor" className="gap-1.5 px-2.5 text-xs">
+                <Code2Icon className="size-3.5" aria-hidden="true" />
+                {m.admin_json_tab_editor()}
+              </TabsTrigger>
+              <TabsTrigger value="diff" className="gap-1.5 px-2.5 text-xs">
+                <GitCompareArrowsIcon className="size-3.5" aria-hidden="true" />
+                {m.admin_json_tab_diff()}
+                {hasSavedDiff && (
+                  <span className="bg-primary size-1.5 rounded-full" aria-hidden="true" />
+                )}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
           {validation.ok ? (
             <Badge
               variant="secondary"
               className="gap-1.5 bg-emerald-500/12 text-emerald-700 dark:text-emerald-400"
             >
               <CheckCircle2Icon className="size-3.5" aria-hidden="true" />
-              <span>Valid JSON · {lineCount} lines</span>
+              <span>
+                {pluralize(lineCount, {
+                  one: m.admin_json_valid_lines_one,
+                  few: m.admin_json_valid_lines_few,
+                  many: m.admin_json_valid_lines_many,
+                })}
+              </span>
             </Badge>
           ) : (
             <Badge variant="destructive" className="gap-1.5">
               <CircleAlertIcon className="size-3.5" aria-hidden="true" />
               <span>
-                {issues.length} {issues.length === 1 ? 'issue' : 'issues'}
+                {pluralize(issues.length, {
+                  one: m.admin_json_issues_one,
+                  few: m.admin_json_issues_few,
+                  many: m.admin_json_issues_many,
+                })}
               </span>
             </Badge>
           )}
         </CardAction>
       </CardHeader>
       <CardContent className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden px-6 py-4">
-        <JsonCodeEditor
-          aria-label="Dashboard JSON"
-          value={text}
-          errorLine={validation.errorLine}
-          onChange={(nextText) => {
-            setEdited(nextText);
-            setReadError(null);
-          }}
-        />
+        {mode === 'diff' ? (
+          <JsonDiffView previous={state.baseline} current={text} />
+        ) : (
+          <JsonCodeEditor
+            aria-label={m.admin_json_editor_aria()}
+            value={text}
+            errorLine={validation.errorLine}
+            onChange={(nextText) => {
+              setEdited(nextText);
+              setReadError(null);
+            }}
+          />
+        )}
         {issues.length > 0 && (
           <Alert variant="destructive" className="max-h-32 shrink-0 overflow-y-auto">
             <CircleAlertIcon />
-            <AlertTitle>The JSON can not be applied</AlertTitle>
+            <AlertTitle>{m.admin_json_cannot_apply()}</AlertTitle>
             <AlertDescription>
               <ul className="list-disc space-y-1 pl-4">
                 {issues.map((issue) => (
@@ -162,29 +201,29 @@ export function JsonPage() {
         )}
       </CardContent>
       <CardFooter data-json-actions className="bg-card shrink-0 flex-wrap gap-2 border-t px-6 py-3">
-        <Button onClick={apply}>Validate &amp; apply</Button>
+        <Button onClick={apply}>{m.admin_json_validate_and_apply_amp()}</Button>
         <Button variant="outline" onClick={() => fileInput.current?.click()}>
-          <UploadIcon /> Import file
+          <UploadIcon /> {m.admin_json_import_file()}
         </Button>
         <input
           ref={fileInput}
           type="file"
           accept="application/json,.json"
           className="hidden"
-          aria-label="Import JSON file"
+          aria-label={m.admin_json_import_file_aria()}
           onChange={(event) => {
             importFile(event.target.files?.[0]);
             event.target.value = '';
           }}
         />
         <Button variant="outline" onClick={download}>
-          <DownloadIcon /> Download
+          <DownloadIcon /> {m.admin_json_download()}
         </Button>
         <Button variant="outline" disabled={!canFormat} onClick={formatJson}>
-          <WandSparklesIcon /> Format
+          <WandSparklesIcon /> {m.admin_json_format()}
         </Button>
         <Button variant="ghost" disabled={!dirty} onClick={reset}>
-          <RotateCcwIcon /> Reset from editor
+          <RotateCcwIcon /> {m.admin_json_reset()}
         </Button>
       </CardFooter>
       <UnappliedJsonDialog

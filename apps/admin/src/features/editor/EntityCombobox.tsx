@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CheckIcon, ChevronsUpDownIcon } from 'lucide-react';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import { Button } from '@/components/ui/button';
 import {
   Command,
@@ -28,14 +29,14 @@ const searchDelayMs = 250;
 
 function describeState(option: EntityOption): string {
   if (!option.available) {
-    return 'unavailable';
+    return m.admin_entity_unavailable();
   }
 
   return option.unit ? `${option.state} ${option.unit}` : option.state;
 }
 
 export function EntityCombobox({ id, value, domain, onChange, clearable }: EntityComboboxProps) {
-  const domainLabel = typeof domain === 'string' ? domain : domain.join(' or ');
+  const domainLabel = typeof domain === 'string' ? domain : domain.join(m.admin_inspector_or());
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [options, setOptions] = useState<EntityOption[]>([]);
@@ -62,7 +63,7 @@ export function EntityCombobox({ id, value, domain, onChange, clearable }: Entit
           }
         } catch (error) {
           if (active) {
-            setError(error instanceof Error ? error.message : 'Entity search failed.');
+            setError(error instanceof Error ? error.message : m.admin_entity_search_failed());
           }
         }
 
@@ -111,9 +112,9 @@ export function EntityCombobox({ id, value, domain, onChange, clearable }: Entit
   let caption = '';
 
   if (known?.option) {
-    caption = `Now ${describeState(known.option)}`;
+    caption = m.admin_entity_now_state({ state: describeState(known.option) });
   } else if (known) {
-    caption = 'Not found in Home Assistant. The saved ID stays unchanged.';
+    caption = m.admin_entity_not_found_ha();
   }
 
   return (
@@ -150,7 +151,7 @@ export function EntityCombobox({ id, value, domain, onChange, clearable }: Entit
               </span>
             ) : (
               <span className="text-muted-foreground min-w-0 flex-1 truncate">
-                {`Search ${domainLabel} entities`}
+                {m.admin_entity_search_entities({ domain: domainLabel })}
               </span>
             )}
             <ChevronsUpDownIcon className="text-muted-foreground shrink-0" />
@@ -165,11 +166,11 @@ export function EntityCombobox({ id, value, domain, onChange, clearable }: Entit
             <CommandInput
               value={query}
               onValueChange={setQuery}
-              placeholder={`Search ${domainLabel} by name or ID`}
+              placeholder={m.admin_entity_search_placeholder({ domain: domainLabel })}
             />
             <CommandList>
               <CommandEmpty>
-                {error || (loading ? 'Searching Home Assistant…' : 'No matching entities.')}
+                {error || (loading ? m.admin_entity_searching() : m.admin_entity_no_matches())}
               </CommandEmpty>
               <CommandGroup>
                 {clearable && value && (
@@ -180,7 +181,7 @@ export function EntityCombobox({ id, value, domain, onChange, clearable }: Entit
                       setOpen(false);
                     }}
                   >
-                    <span className="text-muted-foreground">No entity</span>
+                    <span className="text-muted-foreground">{m.admin_entity_none()}</span>
                   </CommandItem>
                 )}
                 {options.map((option) => (

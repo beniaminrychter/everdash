@@ -1,4 +1,6 @@
 import { useState } from 'preact/hooks';
+import { useI18n } from '@everdash/ui/i18n/index';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import type { EditorCardProps } from '../../../features/dashboard/data/editorKit';
 import { justDragged } from '../../sortable/useSortable';
 import { EditorIcon } from '../EditorIcon/EditorIcon';
@@ -27,6 +29,8 @@ export function EditorCard({
   onEvent,
   children,
 }: EditorCardProps) {
+  const { language } = useI18n();
+  const locale = { locale: language };
   const [raised, setRaised] = useState(false);
   const edit = () => onEvent({ type: 'card.edit', section, index });
   const classes = [
@@ -39,21 +43,21 @@ export function EditorCard({
     .filter(Boolean)
     .join(' ');
 
-  const items: MenuItem[] = [{ label: 'Edit', onSelect: edit }];
+  const items: MenuItem[] = [{ label: m.editor_edit({}, locale), onSelect: edit }];
 
   if (sections.length > 0) {
     items.push({
-      label: 'Move to section',
+      label: m.editor_move_to_section({}, locale),
       onSelect: () => undefined,
       choices: [
         {
-          label: 'No section',
+          label: m.editor_no_section({}, locale),
           current: section === null,
           onSelect: () =>
             onEvent({ type: 'card.move', section, index, toSection: null, toEnd: true }),
         },
         ...sections.map((choice) => ({
-          label: choice.title || 'Untitled section',
+          label: choice.title || m.editor_untitled_section({}, locale),
           current: section === choice.id,
           onSelect: () =>
             onEvent({ type: 'card.move', section, index, toSection: choice.id, toEnd: true }),
@@ -64,22 +68,22 @@ export function EditorCard({
 
   items.push(
     {
-      label: 'Move earlier',
+      label: m.editor_move_earlier({}, locale),
       disabled: index === 0,
       onSelect: () => onEvent({ type: 'card.move', section, index, offset: -1 }),
     },
     {
-      label: 'Move later',
+      label: m.editor_move_later({}, locale),
       disabled: index >= count - 1,
       onSelect: () => onEvent({ type: 'card.move', section, index, offset: 1 }),
     },
     {
-      label: 'Duplicate',
+      label: m.editor_duplicate({}, locale),
       disabled: incomplete,
       onSelect: () => onEvent({ type: 'card.duplicate', section, index }),
     },
     {
-      label: 'Delete',
+      label: m.editor_delete({}, locale),
       danger: true,
       onSelect: () => onEvent({ type: 'card.delete', section, index }),
     },
@@ -95,7 +99,7 @@ export function EditorCard({
           type="button"
           class={styles.layer}
           data-editor-select=""
-          aria-label={`Select ${name}`}
+          aria-label={m.editor_select_item({ name }, locale)}
           aria-pressed={selected}
           onClick={() => {
             if (!justDragged()) {
@@ -105,7 +109,9 @@ export function EditorCard({
         />
         {incomplete && (
           <span class={styles.hint}>
-            {type === 'clock' ? 'Press Add card to finish' : 'Choose an entity'}
+            {type === 'clock'
+              ? m.editor_hint_press_add_card({}, locale)
+              : m.editor_hint_choose_entity({}, locale)}
           </span>
         )}
         <div class={styles.actions} data-editor-nodrag="">
@@ -113,13 +119,17 @@ export function EditorCard({
             type="button"
             class={styles.action}
             data-editor-select=""
-            aria-label={`Edit ${name}`}
-            title="Edit"
+            aria-label={m.editor_edit_item({ name }, locale)}
+            title={m.editor_edit({}, locale)}
             onClick={edit}
           >
             <EditorIcon name="pencil" />
           </button>
-          <EditorMenu label={`More actions for ${name}`} items={items} onOpenChange={setRaised} />
+          <EditorMenu
+            label={m.editor_more_actions_for({ name }, locale)}
+            items={items}
+            onOpenChange={setRaised}
+          />
         </div>
       </div>
     </div>

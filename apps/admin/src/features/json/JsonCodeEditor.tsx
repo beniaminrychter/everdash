@@ -1,5 +1,6 @@
 import type { KeyboardEvent } from 'react';
 import { useMemo, useRef } from 'react';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import { cn } from '@/lib/utils';
 import { tokenizeJsonLines } from './jsonHighlight';
 import type { JsonTokenKind } from './jsonHighlight';
@@ -29,8 +30,9 @@ export function JsonCodeEditor({
   value,
   onChange,
   errorLine = null,
-  'aria-label': ariaLabel = 'Dashboard JSON',
+  'aria-label': ariaLabel,
 }: JsonCodeEditorProps) {
+  const resolvedAriaLabel = ariaLabel ?? m.admin_json_editor_aria();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const tokenLines = useMemo(() => tokenizeJsonLines(value), [value]);
 
@@ -190,7 +192,7 @@ export function JsonCodeEditor({
           </pre>
           <textarea
             ref={textareaRef}
-            aria-label={ariaLabel}
+            aria-label={resolvedAriaLabel}
             aria-invalid={errorLine !== null || undefined}
             spellCheck={false}
             autoCapitalize="off"

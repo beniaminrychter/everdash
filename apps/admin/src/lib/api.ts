@@ -1,5 +1,6 @@
 import type { AuthSessionResponse } from '@everdash/contracts/auth/oauth';
 import type { DashboardDocument } from '@everdash/contracts/config/types';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 
 export interface EntityOption {
   entityId: string;
@@ -25,7 +26,7 @@ export interface ManagedConfig {
 export class UnauthorizedError extends Error {
   readonly status = 401;
 
-  constructor(message = 'Your session has expired. Sign in again.') {
+  constructor(message = m.admin_session_expired()) {
     super(message);
     this.name = 'UnauthorizedError';
   }
@@ -95,7 +96,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     const error = new Error(
-      result.message || `EverDash request failed (${response.status}).`,
+      result.message || m.admin_request_failed({ status: response.status }),
     ) as Error & {
       status?: number;
       code?: string;

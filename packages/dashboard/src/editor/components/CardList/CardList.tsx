@@ -1,4 +1,6 @@
 import { useRef } from 'preact/hooks';
+import { useI18n } from '@everdash/ui/i18n/index';
+import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import type { CardListProps } from '../../../features/dashboard/data/editorKit';
 import {
   areaSection,
@@ -42,6 +44,7 @@ export function CardList({
   onEvent,
   children,
 }: CardListProps) {
+  const { language } = useI18n();
   const list = useRef<HTMLDivElement>(null);
   const report = useRef(onEvent);
 
@@ -96,7 +99,7 @@ export function CardList({
       {empty && (
         <p class={styles.hint}>
           <span class={styles.idle}>{emptyLabel}</span>
-          <span class={styles.drop}>Drop here</span>
+          <span class={styles.drop}>{m.editor_drop_here({}, { locale: language })}</span>
         </p>
       )}
     </div>

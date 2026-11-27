@@ -294,12 +294,13 @@ async function startFromCommandLine() {
     const { app, ingressApp } = await createStandaloneApp(
       ingressNetwork
         ? {
+            tabletPort: port,
             ingress: {
               allowedProxyIps: ingressNetwork.allowedProxyIps,
               tabletPort: port,
             },
           }
-        : {},
+        : { tabletPort: port },
     );
     await listenWithHostFallback(app, {
       host: process.env.EVERDASH_HOST,

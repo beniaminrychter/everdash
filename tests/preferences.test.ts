@@ -67,3 +67,13 @@ test('language is persisted, existing preferences migrate to English, invalid la
   );
   assert.equal(readPreferences(storage('{"language":"de"}'), pages).language, 'en');
 });
+
+test('defaultLanguage applies when no language is saved, without overriding an explicit preference', () => {
+  assert.equal(readPreferences(storage(null), pages, 'pl').language, 'pl');
+  assert.equal(
+    readPreferences(storage('{"page":"upstairs","appearance":"light"}'), pages, 'pl').language,
+    'pl',
+  );
+  assert.equal(readPreferences(storage('{"language":"en"}'), pages, 'pl').language, 'en');
+  assert.equal(readPreferences(storage('{"language":"pl"}'), pages, 'en').language, 'pl');
+});
