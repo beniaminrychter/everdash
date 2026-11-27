@@ -458,15 +458,14 @@ try {
   await phone.getByRole('button', { name: 'Open sidebar' }).click();
   await phone.getByRole('button', { name: 'JSON import / export', exact: true }).click();
   await expect(phone.getByRole('dialog', { name: 'Sidebar' })).toHaveCount(0);
-  const jsonTitle = phone.getByRole('heading', { name: 'Dashboard JSON', level: 2 });
   const phoneDiff = phone.getByRole('tab', { name: 'Diff', exact: true });
-  const [titleBox, diffTabBox] = await Promise.all([
-    jsonTitle.boundingBox(),
+  const [diffTabBox, editorBox] = await Promise.all([
     phoneDiff.boundingBox(),
+    phone.locator('[data-json-editor]').boundingBox(),
   ]);
   assert.ok(
-    titleBox && diffTabBox && titleBox.y + titleBox.height <= diffTabBox.y,
-    'Editor and Diff sit below the JSON card title',
+    diffTabBox && editorBox && diffTabBox.y + diffTabBox.height <= editorBox.y,
+    'Editor and Diff sit above the JSON editor',
   );
   await phoneDiff.click();
   await expect(phone.getByRole('tabpanel')).toContainText('No unsaved changes');
@@ -474,7 +473,6 @@ try {
   await expect(phone.getByRole('button', { name: 'Validate & apply' })).toBeInViewport();
   await phone.getByRole('button', { name: 'Open sidebar' }).click();
   await phone.getByRole('button', { name: 'Dashboard settings', exact: true }).click();
-  await expect(phone.getByRole('heading', { name: 'Tablet settings', level: 2 })).toBeVisible();
   await expect(phone.getByLabel('Home timezone')).toBeInViewport();
   assert.equal(await phone.evaluate(() => document.documentElement.scrollWidth), 320);
   await phone.close();

@@ -1,7 +1,7 @@
 import * as m from '@everdash/ui/i18n/paraglide/messages.js';
 import { useDraft } from '@/app/DraftContext';
 import { draftIssues } from '@/app/draft/draftReducer';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { EntityCombobox } from '@/features/editor/EntityCombobox';
 import { InspectorField } from '@/features/editor/InspectorPanel';
